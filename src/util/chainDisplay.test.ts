@@ -46,7 +46,7 @@ describe('getDefaultVisibleChains', () => {
   it('shows every chain of an empty wallet', () => {
     const chains: ApiChain[] = ['ton', 'tron', 'solana'];
 
-    expect([...getDefaultVisibleChains(chains, new Set())]).toEqual(chains);
+    expect([...getDefaultVisibleChains(chains, new Set())]).toEqual(['tron']);
   });
 
   it('shows only the funded chains of a non-empty wallet', () => {

@@ -101,19 +101,12 @@ export function initAuth(_onUpdate: OnApiUpdate) {
   onUpdate = _onUpdate;
 }
 
-export function generateMnemonic(isBip39: boolean) {
-  if (isBip39) return generateBip39Mnemonic();
-  return ton.generateMnemonic();
+export function generateMnemonic(_isBip39: boolean) {
+  return generateBip39Mnemonic();
 }
 
-export async function validateMnemonic(mnemonic: string[]) {
-  // Every build accepts a BIP39 phrase, even one that only ever mints TON-specific ones: a wallet has to stay
-  // restorable in the app that created it, whichever way that app was built at the time.
-  if (validateBip39Mnemonic(mnemonic)) {
-    return true;
-  }
-
-  return await ton.validateMnemonic(mnemonic);
+export function validateMnemonic(mnemonic: string[]) {
+  return Promise.resolve(validateBip39Mnemonic(mnemonic));
 }
 
 export async function importMnemonic(
@@ -121,10 +114,7 @@ export async function importMnemonic(
   mnemonic: string[],
   shouldSkipDiscovery?: boolean,
 ) {
-  const isBip39Mnemonic = validateBip39Mnemonic(mnemonic);
-  const isTonMnemonic = await ton.validateMnemonic(mnemonic);
-
-  if (!isBip39Mnemonic && !isTonMnemonic) {
+  if (!validateBip39Mnemonic(mnemonic)) {
     throw new Error('Invalid mnemonic');
   }
 
@@ -133,31 +123,7 @@ export async function importMnemonic(
     // unreachable node, so deriving up front means such a failure aborts before anything is persisted; a partial
     // write would otherwise leave a ghost account that a retry duplicates.
     const derivedByNetwork = await Promise.all(networks.map(async (network) => {
-      let accounts: (ApiAccountWithMnemonic & { derivedFromIndex?: number })[] = [];
-      let tonWallet: ApiTonWallet & { lastTxId?: string } | undefined;
-      let shouldForceTonMnemonic = false;
-
-      if (!shouldSkipDiscovery && isBip39Mnemonic && isTonMnemonic) {
-        // On-chain history is the only tiebreaker between the two derivations, and they yield different addresses.
-        // An unreachable node must therefore abort the import (the caller turns it into a retriable error) rather
-        // than read as "no history" and quietly hand the user a BIP39 address instead of their funded one.
-        tonWallet = await ton.getWalletFromMnemonic(network, mnemonic, false);
-        if (tonWallet.lastTxId) {
-          shouldForceTonMnemonic = true;
-        }
-      }
-
-      if (isBip39Mnemonic && !shouldForceTonMnemonic) {
-        accounts = await buildBip39Accounts(network, mnemonic, shouldSkipDiscovery);
-      } else {
-        tonWallet ||= await ton.getWalletFromMnemonic(network, mnemonic);
-        accounts = [{
-          type: 'ton',
-          byChain: {
-            ton: tonWallet,
-          },
-        }];
-      }
+      const accounts = await buildBip39Accounts(network, mnemonic, shouldSkipDiscovery);
 
       // We need to preserve accountId in account object for return
       const sortedAccounts: (ApiAccountWithMnemonic & { id?: string; derivedFromIndex?: number })[]

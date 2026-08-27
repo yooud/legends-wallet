@@ -21,6 +21,10 @@ import {
   MONAD,
   MYCOIN_MAINNET,
   MYCOIN_TESTNET,
+  NO_EVM,
+  NO_SOLANA,
+  NO_TON,
+  NO_TRON,
   POLYGON,
   ROBINHOOD,
   SOLANA,
@@ -181,7 +185,7 @@ export interface ChainConfig {
 // A pasted address is matched against chains in this order and the first match wins, so the chain with the more
 // specific address regex must come first: e.g. a TRON address also matches Solana's regex, so `tron` must precede
 // `solana`; and all EVM chains share the same regex, so the first EVM chain (`ethereum`) is the default match.
-export const CHAIN_ORDER: ApiChain[] = [
+const ALL_CHAIN_ORDER: ApiChain[] = [
   'ton',
   'tron',
   'solana',
@@ -196,10 +200,19 @@ export const CHAIN_ORDER: ApiChain[] = [
   'robinhood',
 ];
 
+function isChainEnabled(chain: ApiChain) {
+  if (chain === 'ton') return !NO_TON;
+  if (chain === 'tron') return !NO_TRON;
+  if (chain === 'solana') return !NO_SOLANA;
+  return !NO_EVM;
+}
+
+export const CHAIN_ORDER = ALL_CHAIN_ORDER.filter(isChainEnabled);
+
 // Display order for chains everywhere in the UI. Independent of `CHAIN_ORDER`,
 // which is constrained by address-matching correctness.
 // Must contain the same chains as `CHAIN_ORDER`.
-export const CHAIN_DISPLAY_ORDER: ApiChain[] = [
+const ALL_CHAIN_DISPLAY_ORDER: ApiChain[] = [
   'ethereum',
   'solana',
   'hyperliquid',
@@ -213,6 +226,8 @@ export const CHAIN_DISPLAY_ORDER: ApiChain[] = [
   'polygon',
   'avalanche',
 ];
+
+export const CHAIN_DISPLAY_ORDER = ALL_CHAIN_DISPLAY_ORDER.filter(isChainEnabled);
 
 const CHAIN_CONFIG: Record<ApiChain, ChainConfig> = {
   ton: {
@@ -338,8 +353,8 @@ const CHAIN_CONFIG: Record<ApiChain, ChainConfig> = {
       testnet: TRC20_USDT_TESTNET.slug,
     },
     defaultEnabledSlugs: {
-      mainnet: [TRX.slug],
-      testnet: [TRX.slug],
+      mainnet: [TRX.slug, TRC20_USDT_MAINNET.slug],
+      testnet: [TRX.slug, TRC20_USDT_TESTNET.slug],
     },
     crosschainSwapSlugs: [TRX.slug, TRC20_USDT_MAINNET.slug],
     tokenInfo: [
@@ -1024,9 +1039,9 @@ const CHAIN_CONFIG: Record<ApiChain, ChainConfig> = {
 export const VIEW_ACCOUNT_EVM_PARAM = 'evm';
 
 if (DEBUG) {
-  const configKeys = new Set(Object.keys(CHAIN_CONFIG));
+  const configKeys = new Set((Object.keys(CHAIN_CONFIG) as ApiChain[]).filter(isChainEnabled));
   const supportedSet = new Set(CHAIN_ORDER);
-  const missing = [...configKeys].filter((k) => !supportedSet.has(k as ApiChain));
+  const missing = [...configKeys].filter((k) => !supportedSet.has(k));
   if (missing.length) {
     throw new Error(`SUPPORTED_CHAINS is missing chains from CHAIN_CONFIG: ${missing.join(', ')}`);
   }
@@ -1050,7 +1065,8 @@ export function getChainConfig(chain: ApiChain): ChainConfig {
 }
 
 export function findChainConfig(chain: string | undefined): ChainConfig | undefined {
-  return chain ? CHAIN_CONFIG[chain as ApiChain] : undefined;
+  if (!chain || !isChainEnabled(chain as ApiChain)) return undefined;
+  return CHAIN_CONFIG[chain as ApiChain];
 }
 
 export function getAvailableExplorers(chain: ApiChain): ExplorerConfig[] {
@@ -1127,7 +1143,7 @@ export const getChainsSupportingNft = /* #__PURE__ */ withCache((): ReadonlySet<
 
 export const getTrustedUsdtSlugs = /* #__PURE__ */ withCache((): ReadonlySet<string> => {
   return new Set(
-    Object.values(CHAIN_CONFIG).flatMap(({ usdtSlug }) => {
+    getSupportedChains().map(getChainConfig).flatMap(({ usdtSlug }) => {
       return compact([
         usdtSlug.mainnet,
         usdtSlug.testnet,
@@ -1141,7 +1157,7 @@ export const getDefaultEnabledSlugs = /* #__PURE__ */ withCache((network: ApiNet
   // though they support every chain, matching Air (`ApiToken.defaultSlugs`). It also spares the wallet.ton.org
   // accounts, whose TON-native mnemonic cannot derive foreign addresses, zero-balance rows they can never use:
   // `updateBalances` (`global/reducers/misc.ts`) seeds every default slug and empty wallets render them all.
-  const chainConfigs = IS_CORE_WALLET ? [CHAIN_CONFIG.ton] : Object.values(CHAIN_CONFIG);
+  const chainConfigs = IS_CORE_WALLET ? [CHAIN_CONFIG.ton] : getSupportedChains().map(getChainConfig);
 
   return new Set(
     chainConfigs.flatMap((chainConfig) => chainConfig.defaultEnabledSlugs[network]),
@@ -1159,7 +1175,7 @@ export const getAllSupportedVisibleChains = /* #__PURE__ */ withCache((): Readon
 
 export const getSlugsSupportingCexSwap = /* #__PURE__ */ withCache((): ReadonlySet<string> => {
   return new Set(
-    Object.values(CHAIN_CONFIG)
+    getSupportedChains().map(getChainConfig)
       .flatMap((chainConfig) => chainConfig.crosschainSwapSlugs),
   );
 });
@@ -1172,7 +1188,7 @@ export const getTokenInfo = /* #__PURE__ */ withCache((): Readonly<Record<string
     percentChange24h: 0,
   };
 
-  const allTokens = Object.values(CHAIN_CONFIG).flatMap((chainConfig) => {
+  const allTokens = getSupportedChains().map(getChainConfig).flatMap((chainConfig) => {
     return chainConfig.tokenInfo.map((token) => ({ ...commonToken, ...token }));
   });
 

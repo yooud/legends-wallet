@@ -1,24 +1,25 @@
 import { ApiServerError } from '../errors';
-import { importMnemonic } from './auth';
+import { importMnemonic, validateMnemonic } from './auth';
 
 jest.mock('../chains', () => ({
   __esModule: true,
   default: {
-    ton: { getWalletFromBip39Mnemonic: jest.fn() },
+    tron: {
+      getDefaultDerivation: jest.fn().mockReturnValue({ path: 'm/44\'/195\'/0\'/0/0', index: 0 }),
+      getWalletFromBip39Mnemonic: jest.fn(),
+    },
   },
 }));
 
 jest.mock('../chains/ton', () => ({
   __esModule: true,
-  validateMnemonic: jest.fn(),
-  getWalletFromMnemonic: jest.fn(),
-  generateMnemonic: jest.fn(),
+  getKeyPairFromStoredMnemonic: jest.fn(),
+  buildBackendAuthToken: jest.fn(),
+  getOtherVersionWallet: jest.fn(),
 }));
 
 jest.mock('../common/mnemonic', () => ({
   validateBip39Mnemonic: jest.fn(),
-  encryptMnemonic: jest.fn().mockResolvedValue('encrypted'),
-  decryptMnemonic: jest.fn().mockResolvedValue(['word']),
   generateBip39Mnemonic: jest.fn(),
   getMnemonic: jest.fn(),
 }));
@@ -26,7 +27,7 @@ jest.mock('../common/mnemonic', () => ({
 jest.mock('../common/accounts', () => ({
   getNewAccountId: jest.fn(),
   setAccountValue: jest.fn(),
-  getAccountChains: jest.fn().mockReturnValue({}),
+  getAccountChains: jest.fn((account) => account.byChain),
   fetchStoredAccount: jest.fn(),
   fetchStoredAccounts: jest.fn(),
   fetchStoredChainAccount: jest.fn(),
@@ -56,12 +57,7 @@ jest.mock('../storages', () => ({
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const ton = require('../chains/ton') as {
-  validateMnemonic: jest.Mock;
-  getWalletFromMnemonic: jest.Mock;
-};
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const chains = require('../chains').default as { ton: { getWalletFromBip39Mnemonic: jest.Mock } };
+const chains = require('../chains').default as { tron: { getWalletFromBip39Mnemonic: jest.Mock } };
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { validateBip39Mnemonic } = require('../common/mnemonic') as { validateBip39Mnemonic: jest.Mock };
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -70,64 +66,58 @@ const { setAccountValue, getNewAccountId } = require('../common/accounts') as {
   getNewAccountId: jest.Mock;
 };
 
-// A phrase that validates as both a TON-native and a BIP39 mnemonic (~1/256): the only tiebreaker between the two
-// derivations, which yield different addresses, is whether the TON derivation has on-chain history.
-const DUAL_VALID = ['dual', 'valid', 'phrase'];
+const MNEMONIC = ['valid', 'bip39', 'phrase'];
 
-// Let any promise that the aborted import left detached (a sibling network branch still running) settle, so the
-// assertion sees writes that happen after the error is returned rather than racing them.
-const flushPromises = () => new Promise((resolve) => {
-  setTimeout(resolve, 0);
-});
-
-describe('importMnemonic', () => {
+describe('TRON-only mnemonic import', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     validateBip39Mnemonic.mockReturnValue(true);
-    ton.validateMnemonic.mockResolvedValue(true);
-    chains.ton.getWalletFromBip39Mnemonic.mockResolvedValue([
-      { address: 'EQ-bip39', publicKey: 'pk', version: 'W5', index: 0 },
-    ]);
+    chains.tron.getWalletFromBip39Mnemonic.mockResolvedValue([{
+      address: 'TVpWp3GMyNY8Zemo3JHogbWq4o4eDLa5r8',
+      derivation: { path: 'm/44\'/195\'/0\'/0/0', index: 0 },
+    }]);
     getNewAccountId.mockImplementation((network: string) => Promise.resolve(`0-${network}`));
     setAccountValue.mockResolvedValue(undefined);
   });
 
-  it('aborts with a server error and persists nothing when the history probe cannot reach the node', async () => {
-    ton.getWalletFromMnemonic.mockRejectedValue(new ApiServerError('node unreachable'));
+  it('accepts only BIP39 mnemonics', async () => {
+    await expect(validateMnemonic(MNEMONIC)).resolves.toBe(true);
 
-    const result = await importMnemonic(['mainnet'], DUAL_VALID);
-
-    // A failed probe must surface as a retriable error, never fall through to a silent BIP39 import at a
-    // different address than the user's funded TON wallet.
-    expect(result).toEqual({ error: expect.any(String) });
-    expect(setAccountValue).not.toHaveBeenCalled();
-    expect(ton.getWalletFromMnemonic).toHaveBeenCalledWith('mainnet', DUAL_VALID, false);
+    validateBip39Mnemonic.mockReturnValue(false);
+    await expect(validateMnemonic(MNEMONIC)).resolves.toBe(false);
+    await expect(importMnemonic(['mainnet'], MNEMONIC)).rejects.toThrow('Invalid mnemonic');
   });
 
-  it('persists no account on any network when the probe fails for one of several networks', async () => {
-    ton.getWalletFromMnemonic.mockImplementation((network: string) => (
-      network === 'testnet'
-        ? Promise.reject(new ApiServerError('node unreachable'))
-        : Promise.resolve({ address: 'EQ-ton', publicKey: 'pk', version: 'W5', index: 0 })
+  it('persists a TRON-only BIP39 account', async () => {
+    const result = await importMnemonic(['mainnet'], MNEMONIC, true);
+
+    expect(result).toEqual([{
+      accountId: '0-mainnet',
+      byChain: expect.objectContaining({
+        tron: expect.objectContaining({ address: 'TVpWp3GMyNY8Zemo3JHogbWq4o4eDLa5r8' }),
+      }),
+    }]);
+    expect(setAccountValue).toHaveBeenCalledWith(
+      '0-mainnet',
+      'accounts',
+      expect.objectContaining({
+        type: 'bip39',
+        byChain: expect.objectContaining({ tron: expect.any(Object) }),
+      }),
+    );
+  });
+
+  it('persists nothing when derivation fails on one network', async () => {
+    chains.tron.getWalletFromBip39Mnemonic.mockImplementation((network: string) => (
+      network === 'testnet' ? Promise.reject(new ApiServerError('node unavailable')) : Promise.resolve([{
+        address: 'TVpWp3GMyNY8Zemo3JHogbWq4o4eDLa5r8',
+        derivation: { path: 'm/44\'/195\'/0\'/0/0', index: 0 },
+      }])
     ));
 
-    const result = await importMnemonic(['mainnet', 'testnet'], DUAL_VALID);
-    await flushPromises();
+    const result = await importMnemonic(['mainnet', 'testnet'], MNEMONIC, true);
 
-    // The multi-network import derives every network before writing, so a transient failure on one network
-    // cannot leave a ghost account behind on the other (which a retry would duplicate). Flushing first defeats
-    // the version where the surviving branch persists after the error.
     expect(result).toEqual({ error: expect.any(String) });
     expect(setAccountValue).not.toHaveBeenCalled();
-  });
-
-  it('imports the TON derivation when its address has on-chain history', async () => {
-    ton.getWalletFromMnemonic.mockResolvedValue({
-      address: 'EQ-ton', publicKey: 'pk', version: 'W5', index: 0, lastTxId: 'tx1',
-    });
-
-    await importMnemonic(['mainnet'], DUAL_VALID);
-
-    expect(setAccountValue).toHaveBeenCalledWith('0-mainnet', 'accounts', expect.objectContaining({ type: 'ton' }));
   });
 });

@@ -415,7 +415,7 @@ addActionHandler('createAccount', async (global, actions) => {
   const isPrivateKeyBased = isMnemonicPrivateKey(mnemonic);
   const accounts = isPrivateKeyBased
     // TODO: Create a separate screen for private key importing, where users will choose the chain
-    ? await callApi('importPrivateKey', 'ton', networks, mnemonic[0])
+    ? await callApi('importPrivateKey', 'tron', networks, mnemonic[0])
     : await callApi('importMnemonic', networks, mnemonic, !isImporting);
 
   global = getGlobal();

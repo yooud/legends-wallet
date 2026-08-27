@@ -1,7 +1,7 @@
 {
-  "name": "mytonwallet",
+  "name": "legends-wallet",
   "version": "26.8.8",
-  "description": "The most feature-rich web wallet and browser extension for TON – with support of multi-accounts, tokens (jettons), NFT, TON DNS, TON Sites, TON Proxy, and TON Magic.",
+  "description": "Legends Wallet is a self-custodial TRON wallet for TRX and USDT TRC-20.",
   "main": "index.js",
   "scripts": {
     "dev": "cross-env APP_ENV=development webpack serve --mode development",
@@ -100,29 +100,8 @@
     "*.{ts,tsx,js}": "eslint --fix",
     "*.{css,scss}": "stylelint --fix"
   },
-  "author": "MyTonWallet",
+  "author": "Legends Energy",
   "license": "GPL-3.0-or-later",
-  "protocols": [
-    {
-      "name": "Ton",
-      "schemes": [
-        "ton"
-      ]
-    },
-    {
-      "name": "TonConnect",
-      "schemes": [
-        "tc",
-        "mytonwallet-tc"
-      ]
-    },
-    {
-      "name": "My Wallet",
-      "schemes": [
-        "mtw"
-      ]
-    }
-  ],
   "devDependencies": {
     "@babel/core": "7.27.1",
     "@babel/preset-env": "7.27.2",

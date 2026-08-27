@@ -15,6 +15,7 @@ import type {
 import { IS_FEATURE_LIMITED, IS_STAKING_DISABLED, NO_MFA, NO_STAKING, NO_SWAP } from '../../config';
 import { parseAccountId } from '../../util/account';
 import { areDeepEqual } from '../../util/areDeepEqual';
+import { getIsSupportedChain } from '../../util/chain';
 import { omit } from '../../util/iteratees';
 import { logDebugError } from '../../util/logs';
 import { OrGate } from '../../util/orGate';
@@ -141,7 +142,8 @@ function setupCommonBackendPolling() {
 async function tryUpdateTokens() {
   try {
     const langCode = await storage.getItem('langCode');
-    const tokens = await callBackendGet<ApiTokenWithPrice[]>('/assets', { langCode });
+    const backendTokens = await callBackendGet<ApiTokenWithPrice[]>('/assets', { langCode });
+    const tokens = backendTokens.filter(({ chain }) => getIsSupportedChain(chain));
 
     for (const token of tokens) {
       token.isFromBackend = true;

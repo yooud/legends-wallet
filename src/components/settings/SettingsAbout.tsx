@@ -29,8 +29,8 @@ import SettingsHeader from './SettingsHeader';
 import activityStyles from '../main/sections/Content/Activity.module.scss';
 import styles from './Settings.module.scss';
 
-import logoWebpPath from '../../assets/logo.webp';
 import gramWalletLogoPath from '../../assets/logoGramWallet.svg';
+import logoWebpPath from '../../assets/logoLegends.svg';
 import helpcenterImg from '../../assets/settings/settings_helpcenter.svg';
 import hotImg from '../../assets/settings/settings_hot.svg';
 import videoImg from '../../assets/settings/settings_video.svg';

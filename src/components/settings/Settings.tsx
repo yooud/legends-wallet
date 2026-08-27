@@ -18,6 +18,7 @@ import {
   IS_MY_WALLET_BRAND,
   LANG_LIST,
   MW_CARDS_WEBSITE,
+  NO_PORTFOLIO,
   PROXY_HOSTS,
   SHOULD_SHOW_ALL_ASSETS_AND_ACTIVITY,
   SUPPORT_USERNAME,
@@ -200,7 +201,7 @@ function Settings({
   const tonToken = useMemo(() => tokens?.find(({ slug }) => slug === TONCOIN.slug), [tokens]);
 
   const isPortfolioAvailable = useMemo(() => {
-    if (!tokens) return false;
+    if (NO_PORTFOLIO || !tokens) return false;
     return calculateFullBalance(tokens, stakingStates, currencyRates[baseCurrency]).primaryValue !== '0';
   }, [tokens, stakingStates, currencyRates, baseCurrency]);
 

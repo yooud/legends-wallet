@@ -1,3 +1,3 @@
 # Netlify redirect rules
-/get/*  https://get.mytonwallet.io/:splat  302
+/get/*  https://wallet.legends.energy/:splat  302
 /*      /index.html                        200

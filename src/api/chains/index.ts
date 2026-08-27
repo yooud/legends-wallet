@@ -16,7 +16,7 @@ import type { ChainSdk } from '../types/chains';
 /* eslint-disable @typescript-eslint/no-require-imports */
 export const chains = {} as { [K in ApiChain]: ChainSdk<K> };
 
-if (process.env.NO_TON !== '1') {
+if (process.env.IS_TRON_ONLY !== '1' && process.env.NO_TON !== '1') {
   chains.ton = require('./ton').default;
 }
 
@@ -24,11 +24,11 @@ if (process.env.NO_TRON !== '1') {
   chains.tron = require('./tron').default;
 }
 
-if (process.env.NO_SOLANA !== '1') {
+if (process.env.IS_TRON_ONLY !== '1' && process.env.NO_SOLANA !== '1') {
   chains.solana = require('./solana').default;
 }
 
-if (process.env.NO_EVM !== '1') {
+if (process.env.IS_TRON_ONLY !== '1' && process.env.NO_EVM !== '1') {
   const EVMSdk = require('./evm').default;
   Object.assign(chains, {
     ethereum: new EVMSdk('ethereum'),

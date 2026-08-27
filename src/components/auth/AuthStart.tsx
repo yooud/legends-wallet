@@ -34,8 +34,8 @@ import { PARTICLE_HEIGHT, PARTICLE_LANDSCAPE_HEIGHT } from '../ui/ImageWithParti
 
 import styles from './Auth.module.scss';
 
-import logoWebpPath from '../../assets/logo.webp';
 import gramWalletLogoPath from '../../assets/logoGramWallet.svg';
+import logoWebpPath from '../../assets/logoLegends.svg';
 
 interface OwnProps {
   isActive?: boolean;

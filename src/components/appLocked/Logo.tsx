@@ -8,9 +8,9 @@ import Image from '../ui/Image';
 
 import styles from './AppLocked.module.scss';
 
-import logoWebpPath from '../../assets/logo.webp';
 import coreWalletLogoPath from '../../assets/logoCoreWallet.svg';
 import gramWalletLogoPath from '../../assets/logoGramWallet.svg';
+import logoWebpPath from '../../assets/logoLegends.svg';
 
 function Logo() {
   const lang = useLang();

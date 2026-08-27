@@ -5,6 +5,7 @@ import {
   DEFAULT_SWAP_FIRST_TOKEN_SLUG,
   DEFAULT_SWAP_SECOND_TOKEN_SLUG,
   IS_FEATURE_LIMITED,
+  NO_SWAP,
   TONCOIN,
 } from '../../config';
 import { calculateTokenPrice } from '../../util/calculatePrice';
@@ -231,7 +232,8 @@ export function selectSwapType(global: GlobalState) {
 }
 
 export function selectIsSwapDisabled(global: GlobalState) {
-  return IS_FEATURE_LIMITED
+  return NO_SWAP
+    || IS_FEATURE_LIMITED
     || global.restrictions.isSwapDisabled
     || global.settings.isTestnet
     || selectIsHardwareAccount(global);
