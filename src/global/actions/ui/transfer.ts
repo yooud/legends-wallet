@@ -1,5 +1,7 @@
 import { TransferState } from '../../types';
 
+import { DEFAULT_TRANSFER_TOKEN_SLUG } from '../../../config';
+import { findChainConfig } from '../../../util/chain';
 import { fromDecimal, toDecimal } from '../../../util/decimals';
 import { getChainBySlug } from '../../../util/tokens';
 import { addActionHandler, setGlobal } from '../../index';
@@ -7,11 +9,17 @@ import { resetHardware, setCurrentTransferAddress, updateCurrentTransfer } from 
 import { selectEnclaveToken, selectIsEnclaveSessionValid, selectIsHardwareAccount } from '../../selectors';
 
 addActionHandler('startTransfer', (global, actions, payload) => {
-  const { isOfframp, ...rest } = payload ?? {};
+  const { isOfframp, tokenSlug: requestedTokenSlug, ...rest } = payload ?? {};
+  const currentTokenSlug = global.currentTransfer.tokenSlug;
+  const isCurrentTokenSupported = Boolean(
+    currentTokenSlug && findChainConfig(getChainBySlug(currentTokenSlug)),
+  );
+  const tokenSlug = requestedTokenSlug
+    ?? (isCurrentTokenSupported ? currentTokenSlug : DEFAULT_TRANSFER_TOKEN_SLUG);
 
   const nftTokenSlug = Symbol('nft');
   const previousFeeTokenSlug = global.currentTransfer.nfts?.length ? nftTokenSlug : global.currentTransfer.tokenSlug;
-  const nextFeeTokenSlug = payload?.nfts?.length ? nftTokenSlug : payload?.tokenSlug;
+  const nextFeeTokenSlug = payload?.nfts?.length ? nftTokenSlug : tokenSlug;
   const shouldClearFee = nextFeeTokenSlug && nextFeeTokenSlug !== previousFeeTokenSlug;
 
   setGlobal(updateCurrentTransfer(global, {
@@ -19,13 +27,14 @@ addActionHandler('startTransfer', (global, actions, payload) => {
     error: undefined,
     ...(shouldClearFee ? { explainedFee: undefined, diesel: undefined } : {}),
     ...rest,
+    tokenSlug,
     isOfframp,
   }));
 
   // For offramp mode, automatically submit to calculate fee and go to Confirm screen
-  if (isOfframp && payload?.tokenSlug && payload?.amount && payload?.toAddress) {
+  if (isOfframp && payload?.amount && payload?.toAddress) {
     actions.submitTransferInitial({
-      tokenSlug: payload.tokenSlug,
+      tokenSlug,
       amount: payload.amount,
       toAddress: payload.toAddress,
       comment: payload.comment,

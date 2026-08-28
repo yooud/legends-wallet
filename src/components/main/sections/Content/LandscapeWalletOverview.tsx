@@ -8,7 +8,7 @@ import type { CollectiblesMenuHandler } from './hooks/useCollectiblesOverviewMen
 import type { CollectionMenuHandler } from './hooks/useCollectionOverviewMenu';
 import { ContentTab } from '../../../../global/types';
 
-import { ANIMATION_LEVEL_MIN, TELEGRAM_GIFTS_SUPER_COLLECTION } from '../../../../config';
+import { ANIMATION_LEVEL_MIN, NO_NFT, TELEGRAM_GIFTS_SUPER_COLLECTION } from '../../../../config';
 import { getCollectionKey } from '../../../../global/helpers/nfts';
 import {
   selectCurrentAccountId,
@@ -284,7 +284,7 @@ export default memo(
         areUnverifiedNftsHidden: global.settings.areUnverifiedNftsHidden,
         overviewCellSize: accountSettings?.overviewCellSize ?? 'small',
         isAssetCellVisible: !accountSettings?.areAssetsHidden,
-        isCollectibleCellVisible: !accountSettings?.areCollectiblesHidden,
+        isCollectibleCellVisible: !NO_NFT && !accountSettings?.areCollectiblesHidden,
         noAnimation: global.settings.animationLevel === ANIMATION_LEVEL_MIN,
       };
     },

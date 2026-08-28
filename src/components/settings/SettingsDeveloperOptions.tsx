@@ -12,6 +12,7 @@ import {
   APP_VERSION,
   IS_EXTENSION,
   IS_GRAM_WALLET,
+  IS_LEGENDS_WALLET,
   IS_TELEGRAM_APP,
   IS_TON_BRAND,
   SHOULD_CLEANUP_LEGACY_AUTH,
@@ -180,11 +181,13 @@ function SettingsDeveloperOptions({
           onChange={handleNetworkChange}
         />
 
-        <div className={buildClassName(styles.item, styles.item_small)} onClick={handleAddTonOnlyWallet}>
-          <span className={styles.itemTitle}>{lang('Create TON-Only Wallet')}</span>
+        {!IS_LEGENDS_WALLET && (
+          <div className={buildClassName(styles.item, styles.item_small)} onClick={handleAddTonOnlyWallet}>
+            <span className={styles.itemTitle}>{lang('Create TON-Only Wallet')}</span>
 
-          <i className={buildClassName(styles.iconChevronRight, 'icon-plus')} aria-hidden />
-        </div>
+            <i className={buildClassName(styles.iconChevronRight, 'icon-plus')} aria-hidden />
+          </div>
+        )}
 
         {!isViewMode && (
           <div className={buildClassName(styles.item, styles.item_small)} onClick={onOpenPermissions}>
@@ -194,24 +197,30 @@ function SettingsDeveloperOptions({
           </div>
         )}
 
-        <div
-          className={buildClassName(styles.item, styles.item_small, !canViewAllWalletVersions && styles.item_disabled)}
-          onClick={onShowAllWalletVersions}
-        >
-          <span className={styles.itemTitle}>{lang('All Wallet Versions')}</span>
-
-          <div className={styles.itemInfo}>
-            {canViewAllWalletVersions ? (
-              <i className={buildClassName(styles.iconChevronRight, 'icon-chevron-right')} aria-hidden />
-
-            ) : (
-              <>
-                <span className={styles.small}>{lang('Multichain')}</span>
-                <i className={buildClassName(styles.iconChevronRight, 'icon-lock')} aria-hidden />
-              </>
+        {!IS_LEGENDS_WALLET && (
+          <div
+            className={buildClassName(
+              styles.item,
+              styles.item_small,
+              !canViewAllWalletVersions && styles.item_disabled,
             )}
+            onClick={onShowAllWalletVersions}
+          >
+            <span className={styles.itemTitle}>{lang('All Wallet Versions')}</span>
+
+            <div className={styles.itemInfo}>
+              {canViewAllWalletVersions ? (
+                <i className={buildClassName(styles.iconChevronRight, 'icon-chevron-right')} aria-hidden />
+
+              ) : (
+                <>
+                  <span className={styles.small}>{lang('Multichain')}</span>
+                  <i className={buildClassName(styles.iconChevronRight, 'icon-lock')} aria-hidden />
+                </>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       <p className={styles.blockTitle}>{lang('Overrides')}</p>

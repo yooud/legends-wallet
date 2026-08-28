@@ -3,6 +3,7 @@ import React, { memo, useState } from '../../lib/teact/teact';
 import type { TokenChartMode, UserToken } from '../../global/types';
 import type { TokenPricePoint } from './sections/Chart';
 
+import { IS_LEGENDS_WALLET, NO_PRICE_CHART } from '../../config';
 import buildClassName from '../../util/buildClassName';
 
 import TopActions from '../main/sections/Actions/TopActions';
@@ -30,16 +31,20 @@ function Summary({ token, className }: OwnProps) {
 
       <TopActions className={styles.actions} />
 
-      <div className={styles.panels}>
-        <Chart
-          token={token}
-          chartMode={chartMode}
-          className={styles.panel}
-          onChartModeChange={setChartMode}
-          onPricePointChange={setPricePoint}
-        />
-        <Info tokenSlug={slug} className={styles.panel} />
-      </div>
+      {(!NO_PRICE_CHART || !IS_LEGENDS_WALLET) && (
+        <div className={styles.panels}>
+          {!NO_PRICE_CHART && (
+            <Chart
+              token={token}
+              chartMode={chartMode}
+              className={styles.panel}
+              onChartModeChange={setChartMode}
+              onPricePointChange={setPricePoint}
+            />
+          )}
+          {!IS_LEGENDS_WALLET && <Info tokenSlug={slug} className={styles.panel} />}
+        </div>
+      )}
     </div>
   );
 }

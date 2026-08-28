@@ -20,6 +20,7 @@ import {
   ANIMATION_LEVEL_DEFAULT,
   CURRENCIES,
   DEFAULT_AUTOLOCK_OPTION,
+  DEFAULT_NETWORK,
   DEFAULT_PRICE_CURRENCY,
   DEFAULT_SLIPPAGE_VALUE,
   DEFAULT_STAKING_STATE,
@@ -109,6 +110,7 @@ export const INITIAL_STATE: GlobalState = {
 
   settings: {
     state: SettingsState.Initial,
+    isTestnet: DEFAULT_NETWORK === 'testnet',
     theme: THEME_DEFAULT,
     animationLevel: ANIMATION_LEVEL_DEFAULT,
     areTinyTransfersHidden: !SHOULD_SHOW_ALL_ASSETS_AND_ACTIVITY,

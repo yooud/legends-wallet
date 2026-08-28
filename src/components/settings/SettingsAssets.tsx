@@ -6,7 +6,7 @@ import { getActions, withGlobal } from '../../global';
 import type { ApiBaseCurrency, ApiChain, ApiCurrencyRates, ApiNft, ApiStakingState } from '../../api/types';
 import { SettingsState, type UserToken } from '../../global/types';
 
-import { CURRENCIES, TINY_TRANSFER_MAX_COST } from '../../config';
+import { CURRENCIES, NO_NFT, TINY_TRANSFER_MAX_COST } from '../../config';
 import {
   selectAccountStakingStates,
   selectCurrentAccountChainDisplay,
@@ -243,18 +243,20 @@ function SettingsAssets({
               checked={areTinyTransfersHidden}
             />
           </div>
-          <div className={buildClassName(styles.item, styles.item_small)} onClick={handleUnverifiedNftsHiddenToggle}>
-            <span className={styles.itemTitle}>{lang('Hide Unverified NFTs')}</span>
+          {!NO_NFT && (
+            <div className={buildClassName(styles.item, styles.item_small)} onClick={handleUnverifiedNftsHiddenToggle}>
+              <span className={styles.itemTitle}>{lang('Hide Unverified NFTs')}</span>
 
-            <Switcher
-              className={styles.menuSwitcher}
-              label={lang('Hide Unverified NFTs')}
-              checked={areUnverifiedNftsHidden}
-            />
-          </div>
+              <Switcher
+                className={styles.menuSwitcher}
+                label={lang('Hide Unverified NFTs')}
+                checked={areUnverifiedNftsHidden}
+              />
+            </div>
+          )}
         </div>
         {
-          shouldRenderHiddenNftsSection && (
+          !NO_NFT && shouldRenderHiddenNftsSection && (
             <div className={styles.settingsBlock}>
               <div className={buildClassName(styles.item, styles.item_small)} onClick={handleOpenHiddenNfts}>
                 <span className={styles.itemTitle}>{lang('Hidden NFTs')}</span>

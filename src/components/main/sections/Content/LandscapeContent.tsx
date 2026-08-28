@@ -5,6 +5,7 @@ import type { ApiNft, ApiNftCollection, ApiStakingState } from '../../../../api/
 import type { UserToken } from '../../../../global/types';
 import { type Account, ContentTab } from '../../../../global/types';
 
+import { NO_NFT } from '../../../../config';
 import { requestMeasure } from '../../../../lib/fasterdom/fasterdom';
 import {
   selectAccountStakingStates,
@@ -77,7 +78,7 @@ function LandscapeContent({
   byChain,
   tokensCount,
   nfts,
-  currentCollection,
+  currentCollection: storedCurrentCollection,
   selectedNfts,
   blacklistedNftAddresses,
   whitelistedNftAddresses,
@@ -97,7 +98,8 @@ function LandscapeContent({
   const lang = useLang();
   const transitionRef = useRef<HTMLDivElement>();
 
-  const hasNftSelection = Boolean(selectedNfts?.length);
+  const currentCollection = NO_NFT ? undefined : storedCurrentCollection;
+  const hasNftSelection = !NO_NFT && Boolean(selectedNfts?.length);
 
   const {
     tabs,
@@ -119,7 +121,7 @@ function LandscapeContent({
     collectionTabs,
     activeContentTab,
     activityReturnContentTab,
-    currentCollection,
+    currentCollection: storedCurrentCollection,
     currentTokenSlug,
     states,
     hasVesting,
@@ -289,7 +291,7 @@ function LandscapeContent({
         </Transition>
       </div>
       <HideNftModal
-        isOpen={Boolean(selectedNftsToHide?.addresses.length)}
+        isOpen={!NO_NFT && Boolean(selectedNftsToHide?.addresses.length)}
         selectedNftsToHide={selectedNftsToHide}
       />
     </>

@@ -6,6 +6,7 @@ import { TronContractMethodSignature } from './types';
 import { TRX } from '../../../config';
 import { parseAccountId } from '../../../util/account';
 import { mergeSortedActivities, sortActivities } from '../../../util/activities/order';
+import { bucketKey } from '../../../util/circuit-breaker';
 import { fetchJson } from '../../../util/fetch';
 import isEmptyObject from '../../../util/isEmptyObject';
 import { buildCollectionByKey } from '../../../util/iteratees';
@@ -150,7 +151,9 @@ async function getTrxTransactions(
   const baseUrl = NETWORK_CONFIG[network].apiUrl;
   const url = new URL(`${baseUrl}/v1/accounts/${address}/transactions`);
 
-  const result = await fetchJson(url.toString(), queryParams);
+  const result = await fetchJson(url.toString(), queryParams, undefined, {
+    bucketKey: bucketKey(url, { includePathPrefix: true }),
+  });
 
   return result.data;
 }
@@ -226,7 +229,9 @@ export async function getTrc20Transactions(
   const baseUrl = NETWORK_CONFIG[network].apiUrl;
   const url = new URL(`${baseUrl}/v1/accounts/${address}/transactions/trc20`);
 
-  const result = await fetchJson(url.toString(), queryParams);
+  const result = await fetchJson(url.toString(), queryParams, undefined, {
+    bucketKey: bucketKey(url, { includePathPrefix: true }),
+  });
 
   return result.data;
 }

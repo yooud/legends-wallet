@@ -5,7 +5,7 @@ import { getActions, withGlobal } from '../../../../global';
 
 import type { Theme } from '../../../../global/types';
 
-import { IS_FEATURE_LIMITED } from '../../../../config';
+import { IS_FEATURE_LIMITED, NO_AGENT_AND_EXPLORE } from '../../../../config';
 import { selectCurrentAccountSettings } from '../../../../global/selectors';
 import { ACCENT_COLORS } from '../../../../util/accentColor/constants';
 import buildClassName from '../../../../util/buildClassName';
@@ -51,8 +51,9 @@ const TAB_AGENT = 1;
 const TAB_EXPLORE = 2;
 const TAB_SETTINGS_FULL = 3;
 
-const TAB_COUNT = IS_FEATURE_LIMITED ? 2 : 4;
-const SETTINGS_INDEX = IS_FEATURE_LIMITED ? 1 : TAB_SETTINGS_FULL;
+const IS_REDUCED_NAV = IS_FEATURE_LIMITED || NO_AGENT_AND_EXPLORE;
+const TAB_COUNT = IS_REDUCED_NAV ? 2 : 4;
+const SETTINGS_INDEX = IS_REDUCED_NAV ? 1 : TAB_SETTINGS_FULL;
 
 function BottomBar({
   theme, areSettingsOpen, isAgentOpen, isExploreOpen, accentColorIndex,
@@ -73,7 +74,7 @@ function BottomBar({
 
   const activeIndex = getActiveIndex({ isAgentOpen, isExploreOpen, areSettingsOpen });
 
-  const tabs: TabConfig[] = IS_FEATURE_LIMITED
+  const tabs: TabConfig[] = IS_REDUCED_NAV
     ? [
       { index: TAB_WALLET, label: 'Wallet', iconKey: 'iconWallet', onClick: switchToWallet },
       { index: SETTINGS_INDEX, label: 'Settings', iconKey: 'iconSettings', onClick: switchToSettings },
@@ -193,7 +194,7 @@ const TabButton = memo(({
 function getActiveIndex({
   isAgentOpen, isExploreOpen, areSettingsOpen,
 }: Pick<StateProps, 'isAgentOpen' | 'isExploreOpen' | 'areSettingsOpen'>) {
-  if (IS_FEATURE_LIMITED) {
+  if (IS_REDUCED_NAV) {
     return areSettingsOpen ? SETTINGS_INDEX : TAB_WALLET;
   }
 

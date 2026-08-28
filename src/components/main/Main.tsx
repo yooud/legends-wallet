@@ -4,7 +4,7 @@ import { getActions, withGlobal } from '../../global';
 import type { ApiStakingState } from '../../api/types';
 import type { Theme } from '../../global/types';
 
-import { IS_EXPLORER, IS_FEATURE_LIMITED } from '../../config';
+import { IS_EXPLORER, IS_FEATURE_LIMITED, NO_AGENT_AND_EXPLORE } from '../../config';
 import {
   selectAccountStakingState,
   selectCurrentAccountId,
@@ -128,7 +128,7 @@ function Main({
   const { isPortrait, isLandscape } = useDeviceScreen();
 
   useEffectOnce(() => {
-    if (IS_FEATURE_LIMITED) return;
+    if (IS_FEATURE_LIMITED || NO_AGENT_AND_EXPLORE) return;
 
     loadExploreSites({ isLandscape, langCode: lang.code });
   });

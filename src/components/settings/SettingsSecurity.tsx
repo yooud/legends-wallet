@@ -8,6 +8,7 @@ import {
   APP_ENV,
   DEFAULT_AUTOLOCK_OPTION,
   IS_GRAM_WALLET,
+  NO_MFA,
 } from '../../config';
 import {
   selectAccount,
@@ -374,7 +375,9 @@ function SettingsSecurity({
             isAllowSuspiciousActions={isAllowSuspiciousActions}
             isAutoUpdateEnabled={isAutoUpdateEnabled}
             shouldShowBackup={shouldShowBackup}
-            isMfaVisible={SHOULD_FORCE_SHOW_MFA_IN_DEV || (IS_GRAM_WALLET && isMfaEnabled) || hasCurrentAccountMfa}
+            isMfaVisible={!NO_MFA && (
+              SHOULD_FORCE_SHOW_MFA_IN_DEV || (IS_GRAM_WALLET && isMfaEnabled) || hasCurrentAccountMfa
+            )}
             onBackClick={handleBackToSettingsClick}
             onChangePasswordClick={handleChangePasswordClick}
             onOpenBackupWallet={handleOpenBackupWallet}

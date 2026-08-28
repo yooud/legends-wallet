@@ -8,6 +8,7 @@ import { type Account, ContentTab, SettingsState } from '../../../../../global/t
 
 import {
   DEFAULT_CHAIN,
+  NO_NFT,
   PORTRAIT_MIN_ASSETS_TAB_VIEW,
   STAKING_SLUG_PREFIX,
   TELEGRAM_GIFTS_SUPER_COLLECTION,
@@ -118,12 +119,17 @@ export default function useContentTabs({
   });
 
   const visibleCollectionTabs = useMemo(() => (
-    collectionTabs?.filter((tab) => nftCollectionNameByKey.has(`${tab.chain}_${tab.address}`)) ?? []
+    NO_NFT ? [] : collectionTabs?.filter((tab) => nftCollectionNameByKey.has(`${tab.chain}_${tab.address}`)) ?? []
   ), [collectionTabs, nftCollectionNameByKey]);
 
   // Auto close collection when all nfts of this collection have left the wallet
   useEffect(() => {
     if (!currentCollection) return;
+    if (NO_NFT) {
+      closeNftCollection();
+      return;
+    }
+
     const key = `${currentCollection.chain}_${currentCollection.address}`;
     if (!nftCollectionNameByKey.has(key)) {
       closeNftCollection();
@@ -135,7 +141,9 @@ export default function useContentTabs({
 
   const [mainContentTabsCount, tabs] = useMemo(() => {
     const nftChains = getChainsSupportingNft();
-    const doesSupportNft = byChain && getOrderedAccountChains(byChain).some((chain) => nftChains.has(chain));
+    const doesSupportNft = !NO_NFT
+      && byChain
+      && getOrderedAccountChains(byChain).some((chain) => nftChains.has(chain));
 
     const mainContentTabs = compact([
       !shouldShowSeparateAssetsPanel && { id: ContentTab.Assets, title: lang('Assets'), className: styles.tab },

@@ -37,6 +37,7 @@ import {
   IS_FIREFOX_EXTENSION,
   IS_GRAM_WALLET,
   IS_HEADLESS,
+  IS_LEGENDS_WALLET,
   IS_OPERA_EXTENSION,
   IS_PACKAGED_ELECTRON,
   IS_TELEGRAM_APP,
@@ -84,7 +85,11 @@ const isStatoscopeBuild = process.env.IS_STATOSCOPE === '1'; // "Statoscope buil
 const isWebApp = !(IS_EXTENSION || IS_PACKAGED_ELECTRON || IS_HEADLESS);
 const canUseStatoscope = isStatoscopeBuild || isWebApp;
 const cspConnectSrcExtra = APP_ENV === 'development'
-  ? `http://localhost:3000 ${process.env.CSP_CONNECT_SRC_EXTRA_URL}`
+  ? [
+    'http://localhost:3000',
+    process.env.CSP_CONNECT_SRC_EXTRA_URL,
+    process.env.DEV_SERVER_WEBSOCKET_URL,
+  ].filter(Boolean).join(' ')
   : '';
 const cspScriptSrcExtra = IS_TELEGRAM_APP ? 'https://telegram.org' : '';
 const cspFrameSrcExtra = IS_FEATURE_LIMITED ? '' : [
@@ -261,6 +266,9 @@ export default function createConfig(
       host: '0.0.0.0',
       allowedHosts: 'all',
       hot: false,
+      client: process.env.DEV_SERVER_WEBSOCKET_URL ? {
+        webSocketURL: process.env.DEV_SERVER_WEBSOCKET_URL,
+      } : undefined,
       // When using the History API, the index.html page will likely have to be served in place of any 404 responses
       // https://webpack.js.org/configuration/dev-server/#devserverhistoryapifallback
       historyApiFallback: IS_EXPLORER,
@@ -435,7 +443,6 @@ export default function createConfig(
       new PreloadWebpackPlugin({
         include: 'allAssets',
         fileWhitelist: [
-          /duck_.*?\.png/, // Lottie thumbs
           /coin_.*?\.png/, // Coin icons
           /theme_.*?\.png/, // Theme icons
           /chain_.*?\.png/, // Chain icons
@@ -463,17 +470,21 @@ export default function createConfig(
         APP_NAME: '',
         APP_VERSION: appVersion,
         APP_COMMIT_HASH: appCommitHash ?? '',
-        IS_TRON_ONLY: '1',
-        NO_TON: '1',
+        DEFAULT_NETWORK: 'mainnet',
+        IS_TRON_ONLY: IS_LEGENDS_WALLET ? '1' : '0',
+        NO_PRICE_CHART: IS_LEGENDS_WALLET ? '1' : '0',
+        NO_ACCOUNT_CONFIG: IS_LEGENDS_WALLET ? '1' : '0',
+        NO_REFERRER: IS_LEGENDS_WALLET ? '1' : '0',
+        NO_TON: IS_LEGENDS_WALLET ? '1' : '0',
         NO_TRON: '0',
-        NO_SOLANA: '1',
-        NO_EVM: '1',
-        NO_WALLETCONNECT: '1',
-        NO_SWAP: '1',
-        NO_STAKING: '1',
-        NO_PORTFOLIO: '1',
-        NO_MFA: '1',
-        NO_LEDGER: '1',
+        NO_SOLANA: IS_LEGENDS_WALLET ? '1' : '0',
+        NO_EVM: IS_LEGENDS_WALLET ? '1' : '0',
+        NO_WALLETCONNECT: IS_LEGENDS_WALLET ? '1' : '0',
+        NO_SWAP: IS_LEGENDS_WALLET ? '1' : '0',
+        NO_STAKING: IS_LEGENDS_WALLET ? '1' : '0',
+        NO_PORTFOLIO: IS_LEGENDS_WALLET ? '1' : '0',
+        NO_MFA: IS_LEGENDS_WALLET ? '1' : '0',
+        NO_LEDGER: IS_LEGENDS_WALLET ? '1' : '0',
         NO_NOTIFICATIONS: '0',
         TEST_SESSION: '',
         TONCENTER_MAINNET_URL: '',

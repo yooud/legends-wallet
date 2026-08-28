@@ -11,6 +11,7 @@ import {
   IS_FEATURE_LIMITED,
   IS_GRAM_WALLET,
   IS_MY_WALLET_BRAND,
+  NO_HELP_CENTER,
 } from '../../config';
 import { getHelpCenterUrl } from '../../global/helpers/getHelpCenterUrl';
 import renderText from '../../global/helpers/renderText';
@@ -120,18 +121,20 @@ function SettingsAbout({
 
             <i className={buildClassName(styles.iconChevronRight, 'icon-chevron-right')} aria-hidden />
           </a>
-          <a
-            href={getHelpCenterUrl(lang.code, 'home')}
-            target="_blank"
-            rel="noreferrer"
-            className={styles.item}
-            onClick={handleUrlClick}
-          >
-            <img className={styles.menuIcon} src={helpcenterImg} alt={lang('Learn New Things in Help Center')} />
-            <span className={styles.itemTitle}>{lang('Learn New Things in Help Center')}</span>
+          {!NO_HELP_CENTER && (
+            <a
+              href={getHelpCenterUrl(lang.code, 'home')}
+              target="_blank"
+              rel="noreferrer"
+              className={styles.item}
+              onClick={handleUrlClick}
+            >
+              <img className={styles.menuIcon} src={helpcenterImg} alt={lang('Learn New Things in Help Center')} />
+              <span className={styles.itemTitle}>{lang('Learn New Things in Help Center')}</span>
 
-            <i className={buildClassName(styles.iconChevronRight, 'icon-chevron-right')} aria-hidden />
-          </a>
+              <i className={buildClassName(styles.iconChevronRight, 'icon-chevron-right')} aria-hidden />
+            </a>
+          )}
         </div>
 
         <p className={styles.blockTitle}>{lang('Frequent Questions & Answers')}</p>

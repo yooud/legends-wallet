@@ -9,7 +9,7 @@ import type { Wallet } from './wallets/SettingsWalletVariants';
 import { SettingsState } from '../../global/types';
 
 import {
-  APP_ENV_MARKER, APP_INSTALL_URL,
+  APP_ENV, APP_ENV_MARKER, APP_INSTALL_URL,
   APP_NAME,
   APP_VERSION,
   IS_EXPLORER,
@@ -18,6 +18,9 @@ import {
   IS_MY_WALLET_BRAND,
   LANG_LIST,
   MW_CARDS_WEBSITE,
+  NO_APP_INSTALL_PROMO,
+  NO_HELP_CENTER,
+  NO_NFT,
   NO_PORTFOLIO,
   PROXY_HOSTS,
   SHOULD_SHOW_ALL_ASSETS_AND_ACTIVITY,
@@ -38,6 +41,7 @@ import { getDoesUsePinPad } from '../../util/biometrics';
 import buildClassName from '../../util/buildClassName';
 import { calculateFullBalance } from '../../util/calculateFullBalance';
 import captureEscKeyListener from '../../util/captureEscKeyListener';
+import { getChainConfig } from '../../util/chain';
 import { toBig, toDecimal } from '../../util/decimals';
 import { formatCurrency, getShortCurrencySymbol } from '../../util/formatNumber';
 import isViewAccount from '../../util/isViewAccount';
@@ -130,7 +134,6 @@ type StateProps = {
   isNftBuyingDisabled?: boolean;
   isViewMode: boolean;
   accountType?: AccountType;
-  isMultichain: boolean;
   accountChains?: Partial<Record<ApiChain, AccountChain>>;
   stakingStates?: ApiStakingState[];
   currencyRates: GlobalState['currencyRates'];
@@ -138,6 +141,7 @@ type StateProps = {
 
 const AMOUNT_OF_CLICKS_FOR_DEVELOPERS_MODE = 5;
 const SUPPORT_ACCOUNTS_COUNT_DEFAULT = 1;
+const IS_DEVELOPER_OPTIONS_ENABLED = APP_ENV !== 'production' && !IS_EXPLORER;
 
 function Settings({
   settings: {
@@ -164,7 +168,6 @@ function Settings({
   isNftBuyingDisabled,
   isViewMode,
   accountType,
-  isMultichain,
   accountChains,
   stakingStates,
   currencyRates,
@@ -204,6 +207,10 @@ function Settings({
     if (NO_PORTFOLIO || !tokens) return false;
     return calculateFullBalance(tokens, stakingStates, currencyRates[baseCurrency]).primaryValue !== '0';
   }, [tokens, stakingStates, currencyRates, baseCurrency]);
+
+  const canManageSubwallets = accountType === 'mnemonic'
+    && (Object.keys(accountChains ?? {}) as ApiChain[])
+      .some((chain) => getChainConfig(chain).isSubwalletsSupported);
 
   const wallets = useMemo(() => {
     return versions
@@ -373,6 +380,8 @@ function Settings({
   });
 
   const handleMultipleClick = () => {
+    if (!IS_DEVELOPER_OPTIONS_ENABLED) return;
+
     if (clicksAmount + 1 >= AMOUNT_OF_CLICKS_FOR_DEVELOPERS_MODE) {
       openDeveloperModal();
     } else {
@@ -452,7 +461,7 @@ function Settings({
               </div>
             </div>
           )}
-          {!IS_FEATURE_LIMITED && IS_WEB && (
+          {!NO_APP_INSTALL_PROMO && !IS_FEATURE_LIMITED && IS_WEB && (
             <div className={styles.block}>
               <div className={buildClassName(styles.item, styles.itemMenu)} onClick={handleClickInstallApp}>
                 <img className={styles.menuIcon} src={installAppImg} alt={lang('Install App')} />
@@ -536,13 +545,15 @@ function Settings({
                 <img className={styles.menuIcon} src={assetsActivityImg} alt={lang('Assets & Activity')} />
                 <div className={styles.itemContent}>
                   <span className={styles.itemTitle}>{lang('Assets & Activity')}</span>
-                  <span className={styles.itemSubtitle}>{lang('Base Currency, Token Order, Hidden NFTs')}</span>
+                  <span className={styles.itemSubtitle}>
+                    {lang(NO_NFT ? 'Base Currency' : 'Base Currency, Token Order, Hidden NFTs')}
+                  </span>
                 </div>
 
                 <i className={buildClassName(styles.iconChevronRight, 'icon-chevron-right')} aria-hidden />
               </div>
             )}
-            {accountType === 'mnemonic' && isMultichain && (
+            {canManageSubwallets && (
               <div className={buildClassName(styles.item, styles.itemMenu)} onClick={handleOpenWalletVersion}>
                 <img className={styles.menuIcon} src={walletVersionImg} alt={lang('Subwallets')} />
                 <div className={styles.itemContent}>
@@ -626,17 +637,19 @@ function Settings({
                     </div>
                   </a>
                 )}
-                <a
-                  href={getHelpCenterUrl(langCode, 'home')}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={buildClassName(styles.item, styles.itemMenu)}
-                >
-                  <img className={styles.menuIcon} src={helpcenterImg} alt={lang('Help Center')} />
-                  <span className={styles.itemTitle}>{lang('Help Center')}</span>
+                {!NO_HELP_CENTER && (
+                  <a
+                    href={getHelpCenterUrl(langCode, 'home')}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={buildClassName(styles.item, styles.itemMenu)}
+                  >
+                    <img className={styles.menuIcon} src={helpcenterImg} alt={lang('Help Center')} />
+                    <span className={styles.itemTitle}>{lang('Help Center')}</span>
 
-                  <i className={buildClassName(styles.iconChevronRight, 'icon-chevron-right')} aria-hidden />
-                </a>
+                    <i className={buildClassName(styles.iconChevronRight, 'icon-chevron-right')} aria-hidden />
+                  </a>
+                )}
                 {IS_MY_WALLET_BRAND && (
                   <a
                     href={getTelegramTipsChannelUrl(langCode)}
@@ -677,7 +690,7 @@ function Settings({
                     <i className={buildClassName(styles.iconChevronRight, 'icon-chevron-right')} aria-hidden />
                   </a>
                 )}
-                {IS_EXTENSION && (
+                {!NO_APP_INSTALL_PROMO && IS_EXTENSION && (
                   <div className={buildClassName(styles.item, styles.itemMenu)} onClick={handleClickInstallApp}>
                     <img className={styles.menuIcon} src={installAppImg} alt={lang('Install App')} />
                     <span className={styles.itemTitle}>{lang('Install App')}</span>
@@ -719,7 +732,10 @@ function Settings({
             </div>
           )}
 
-          <div className={styles.version} onClick={IS_EXPLORER ? undefined : handleMultipleClick}>
+          <div
+            className={styles.version}
+            onClick={IS_DEVELOPER_OPTIONS_ENABLED ? handleMultipleClick : undefined}
+          >
             {APP_NAME} {APP_VERSION} {APP_ENV_MARKER}
           </div>
         </div>
@@ -882,7 +898,7 @@ function Settings({
       >
         {renderContent}
       </Transition>
-      {!IS_EXPLORER && (
+      {IS_DEVELOPER_OPTIONS_ENABLED && (
         <SettingsDeveloperOptions
           isOpen={isDeveloperModalOpen}
           isTestnet={isTestnet}
@@ -923,7 +939,6 @@ export default memo(withGlobal<OwnProps>((global): StateProps => {
     arePushNotificationsAvailable: global.pushNotifications.isAvailable,
     isViewMode: selectIsCurrentAccountViewMode(global),
     accountType: account?.type,
-    isMultichain: Object.keys(account?.byChain ?? {}).length > 1,
     accountChains: account?.byChain,
     stakingStates: currentAccountId ? selectAccountStakingStates(global, currentAccountId) : undefined,
     currencyRates: global.currencyRates,

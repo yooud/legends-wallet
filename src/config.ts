@@ -4,6 +4,7 @@ import type {
   ApiBaseCurrency,
   ApiChain,
   ApiLiquidStakingState,
+  ApiNetwork,
   ApiNftMarketplace,
   ApiNominatorsStakingState,
   ApiSwapAsset,
@@ -14,6 +15,7 @@ import type { TOKEN_CARD_COLORS } from './components/main/helpers/cardColors';
 import type { AutolockValueType, LangCode, LangItem } from './global/types';
 
 export const APP_ENV = process.env.APP_ENV || 'production';
+export const DEFAULT_NETWORK: ApiNetwork = process.env.DEFAULT_NETWORK === 'testnet' ? 'testnet' : 'mainnet';
 
 export const IS_CORE_WALLET = process.env.IS_CORE_WALLET === '1';
 export const IS_GRAM_WALLET = process.env.IS_GRAM_WALLET === '1';
@@ -28,6 +30,12 @@ export const IS_MY_WALLET_BRAND = false;
 // ramps, multi-account, Ledger, BIP39 or locale choice. Gram Wallet Web keeps Core identity (storage key, jsbridge,
 // domain) but ships the full feature set, so feature gates must check this axis, never IS_CORE_WALLET.
 export const IS_FEATURE_LIMITED = IS_TON_BRAND;
+export const NO_AGENT_AND_EXPLORE = IS_LEGENDS_WALLET;
+export const NO_APP_INSTALL_PROMO = IS_LEGENDS_WALLET;
+export const NO_HELP_CENTER = IS_LEGENDS_WALLET;
+export const NO_NFT = IS_LEGENDS_WALLET;
+export const NO_ACCOUNT_CONFIG = IS_LEGENDS_WALLET || process.env.NO_ACCOUNT_CONFIG === '1';
+export const NO_REFERRER = IS_LEGENDS_WALLET || process.env.NO_REFERRER === '1';
 export const APP_NAME = process.env.APP_NAME
   || (IS_GRAM_WALLET ? 'Gram Wallet' : IS_TON_BRAND ? 'TON Wallet' : 'Legends Wallet');
 export const APP_VERSION = process.env.APP_VERSION!;
@@ -61,8 +69,12 @@ export const IS_HEADLESS = process.env.IS_HEADLESS === '1';
 
 export const ELECTRON_HOST_URL = 'https://dumb-host';
 export const INACTIVE_MARKER = '[Inactive]';
-export const PRODUCTION_URL = IS_CORE_WALLET ? 'https://wallet.ton.org' : 'https://wallet.legends.energy';
-export const BETA_URL = IS_CORE_WALLET ? 'https://beta.wallet.ton.org' : 'https://wallet-beta.legends.energy';
+export const PRODUCTION_URL = IS_CORE_WALLET
+  ? 'https://wallet.ton.org'
+  : IS_LEGENDS_WALLET ? 'https://wallet.legends.energy' : 'https://web.mywallet.io';
+export const BETA_URL = IS_CORE_WALLET
+  ? 'https://beta.wallet.ton.org'
+  : IS_LEGENDS_WALLET ? 'https://wallet-beta.legends.energy' : 'https://beta.mywallet.io';
 // Beta desktop auto-update feed base. This is BOTH the staging gate poll base and the value baked
 // into app-update.yml by the generic electron-builder provider - the two must agree.
 export const BETA_UPDATE_URL = 'https://s3.mywallet.io/public/desktop-beta';
@@ -75,10 +87,14 @@ export const LEGACY_APP_HOSTS: string[] = [];
 // the wallet context (addresses included) and open it in the in-app iframe browser - where the site renders blank
 // under `X-Frame-Options: Deny`. `utm_source` attributes the migrated traffic.
 export const NEW_APP_URL = `${PRODUCTION_URL}?utm_source=legacy_web`;
-export const APP_INSTALL_URL = IS_GRAM_WALLET ? 'https://get.gramwallet.io/' : PRODUCTION_URL;
+export const APP_INSTALL_URL = IS_GRAM_WALLET
+  ? 'https://get.gramwallet.io/'
+  : IS_LEGENDS_WALLET ? PRODUCTION_URL : 'https://get.mywallet.io/';
 export const APP_REPO_URL = 'https://github.com/yooud/legends-wallet';
 export const SELF_UNIVERSAL_HOST_URL = PRODUCTION_URL;
-export const APP_WEBSITE_URL = IS_GRAM_WALLET ? 'https://gramwallet.io' : 'https://legends.energy';
+export const APP_WEBSITE_URL = IS_GRAM_WALLET
+  ? 'https://gramwallet.io'
+  : IS_LEGENDS_WALLET ? 'https://legends.energy' : 'https://mywallet.io';
 export const APP_ICON_URL = IS_GRAM_WALLET
   ? 'https://gramwallet.io/icon-512x512.png'
   : `${PRODUCTION_URL}/logo.svg`;
@@ -145,7 +161,7 @@ export const GLOBAL_STATE_CACHE_KEY = IS_CORE_WALLET
   ? 'tonwallet-global-state'
   : IS_EXPLORER
     ? 'explorer-global-state'
-    : 'legends-wallet-global-state';
+    : IS_LEGENDS_WALLET ? 'legends-wallet-global-state' : 'mytonwallet-global-state';
 
 export const ANIMATION_LEVEL_MIN = 0;
 export const ANIMATION_LEVEL_MED = 1;
@@ -166,8 +182,9 @@ export const TONCENTER_TESTNET_KEY = process.env.TONCENTER_TESTNET_KEY;
 export const ELECTRON_TONCENTER_TESTNET_KEY = process.env.ELECTRON_TONCENTER_TESTNET_KEY;
 export const TONAPIIO_TESTNET_URL = process.env.TONAPIIO_TESTNET_URL || 'https://tonapiio-testnet.mytonwallet.org';
 
-export const BRILLIANT_API_BASE_URL = process.env.BRILLIANT_API_BASE_URL || 'https://api.mywallet.io';
-export const PROXY_API_BASE_URL = process.env.PROXY_API_BASE_URL || 'https://api.mywallet.io/proxy';
+export const BRILLIANT_API_BASE_URL = process.env.BRILLIANT_API_BASE_URL
+  || (IS_LEGENDS_WALLET ? 'https://wallet-api.legends.energy' : 'https://api.mywallet.io');
+export const PROXY_API_BASE_URL = process.env.PROXY_API_BASE_URL || `${BRILLIANT_API_BASE_URL}/proxy`;
 export const IPFS_GATEWAY_BASE_URL = 'https://ipfs.io/ipfs/';
 export const SSE_BRIDGE_URL = 'https://tonconnectbridge.mytonwallet.org/bridge/';
 
@@ -190,8 +207,10 @@ export const WALLET_CONNECT_PAY_FRAME_ORIGINS = [
 export const WALLET_CONNECT_PROJECT_ID = process.env.WALLET_CONNECT_PROJECT_ID || '';
 export const WALLET_CONNECT_PAY_APP_ID = process.env.WALLET_CONNECT_PAY_APP_ID || '';
 
-export const TRON_MAINNET_API_URL = process.env.TRON_MAINNET_API_URL || 'https://tronapi.mytonwallet.org';
-export const TRON_TESTNET_API_URL = process.env.TRON_TESTNET_API_URL || 'https://api.shasta.trongrid.io';
+export const TRON_MAINNET_API_URL = process.env.TRON_MAINNET_API_URL
+  || (IS_LEGENDS_WALLET ? 'https://node.legends.energy' : 'https://tronapi.mytonwallet.org');
+export const TRON_TESTNET_API_URL = process.env.TRON_TESTNET_API_URL
+  || (IS_LEGENDS_WALLET ? `${BRILLIANT_API_BASE_URL}/testnet` : 'https://api.shasta.trongrid.io');
 
 export const SOLANA_MAINNET_RPC_URL = process.env.SOLANA_MAINNET_RPC_URL || 'https://solanaapi.mytonwallet.org';
 export const SOLANA_MAINNET_API_KEY = process.env.SOLANA_MAINNET_API_KEY;
@@ -227,16 +246,20 @@ export const NFT_MARKETPLACE_TITLES: Record<ApiNftMarketplace, string> = {
 export const MW_STATIC_BASE_URL = 'https://static.mytonwallet.org';
 export const MW_CARDS_BASE_URL = `${MW_STATIC_BASE_URL}/cards/v2/cards/`;
 export const MW_CARDS_MINT_BASE_URL = `${MW_STATIC_BASE_URL}/mint-cards/`;
-// Every outbound link the app puts in front of a user follows its brand. The blog and the help center stay on the
-// My Wallet domain for all brands, since that is the only place they are published (Air links them the same way).
-export const APP_PROMO_URL = IS_GRAM_WALLET ? 'https://gramwallet.io/' : 'https://legends.energy/';
-export const APP_WEBSITE_HOST = IS_GRAM_WALLET ? 'gramwallet.io' : 'legends.energy';
+// Every outbound link the app puts in front of a user follows its brand. The blog stays on the My Wallet domain for
+// all brands where it is visible, since that is the only place it is published (Air links it the same way).
+export const APP_PROMO_URL = IS_GRAM_WALLET
+  ? 'https://gramwallet.io/'
+  : IS_LEGENDS_WALLET ? 'https://legends.energy/' : 'https://mywallet.io/';
+export const APP_WEBSITE_HOST = IS_GRAM_WALLET
+  ? 'gramwallet.io'
+  : IS_LEGENDS_WALLET ? 'legends.energy' : 'mywallet.io';
 export const APP_TERMS_OF_USE_URL = IS_GRAM_WALLET
   ? 'https://gramwallet.io/terms-of-use/'
-  : 'https://legends.energy/terms-of-use';
+  : IS_LEGENDS_WALLET ? 'https://legends.energy/terms-of-use' : 'https://mywallet.io/terms-of-use';
 export const APP_PRIVACY_POLICY_URL = IS_GRAM_WALLET
   ? 'https://gramwallet.io/privacy-policy/'
-  : 'https://legends.energy/privacy-policy';
+  : IS_LEGENDS_WALLET ? 'https://legends.energy/privacy-policy' : 'https://mywallet.io/privacy-policy';
 export const MY_WALLET_BLOG: Partial<Record<LangCode, string>> = {
   en: 'https://mywallet.io/en/blog/',
   ru: 'https://mywallet.io/ru/blog/',
@@ -340,7 +363,10 @@ export const IS_STAKING_DISABLED = IS_FEATURE_LIMITED;
 // Blacklist-style feature flags (default unset = feature ON). Each is substituted at build time by
 // `EnvironmentPlugin`, so it both drives Webpack dead-code elimination (drops code + npm deps) and is
 // readable at runtime to silence behaviour/network for anything still bundled.
-export const IS_TRON_ONLY = process.env.IS_TRON_ONLY !== '0';
+export const IS_TRON_ONLY = process.env.IS_TRON_ONLY === undefined
+  ? IS_LEGENDS_WALLET
+  : process.env.IS_TRON_ONLY === '1';
+export const NO_PRICE_CHART = IS_LEGENDS_WALLET || process.env.NO_PRICE_CHART === '1';
 export const NO_TON = IS_TRON_ONLY || process.env.NO_TON === '1';
 export const NO_TRON = process.env.NO_TRON === '1';
 export const NO_SOLANA = IS_TRON_ONLY || process.env.NO_SOLANA === '1';
@@ -551,8 +577,8 @@ export const TRC20_USDT_MAINNET = {
 
 export const TRC20_USDT_TESTNET = {
   ...TRC20_USDT_MAINNET,
-  slug: 'tron-tg3xxyexbk',
-  tokenAddress: 'TG3XXyExBkPp9nzdajDZsozEu4BkaSJozs',
+  slug: 'tron-txyzopyrdj',
+  tokenAddress: 'TXYZopYRdj2D9XRtbG411XZZ3kM5VkAeBf',
 };
 
 export const TON_USDT_MAINNET = {
@@ -776,7 +802,7 @@ export const INIT_SWAP_ASSETS: Record<'in' | 'out', ApiSwapAsset> = {
 export const DEFAULT_SWAP_FIRST_TOKEN_SLUG = TONCOIN.slug;
 export const DEFAULT_SWAP_SECOND_TOKEN_SLUG = TON_USDT_MAINNET.slug;
 export const DEFAULT_SWAP_AMOUNT = '10';
-export const DEFAULT_TRANSFER_TOKEN_SLUG = TONCOIN.slug;
+export const DEFAULT_TRANSFER_TOKEN_SLUG = IS_TRON_ONLY ? TRX.slug : TONCOIN.slug;
 
 export const SWAP_DEX_LABELS: Record<ApiSwapDexLabel, string> = {
   dedust: 'DeDust',
@@ -801,7 +827,7 @@ export const PORTRAIT_MIN_ASSETS_TAB_VIEW = 6;
 export const DEFAULT_PRICE_CURRENCY = 'USD';
 export const CURRENCIES: Record<
   ApiBaseCurrency,
-  // Get the fallback rates at https://api.mywallet.io/currency-rates
+  // Fallbacks are used until the Legends wallet backend returns current rates.
   { name: string; decimals: number; shortSymbol?: string; shortSymbolPosition?: 'start' | 'end'; fallbackRate: string }
 > = {
   USD: {

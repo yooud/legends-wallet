@@ -12,7 +12,14 @@ import type {
   OnApiUpdate,
 } from '../types';
 
-import { IS_FEATURE_LIMITED, IS_STAKING_DISABLED, NO_MFA, NO_STAKING, NO_SWAP } from '../../config';
+import {
+  IS_FEATURE_LIMITED,
+  IS_STAKING_DISABLED,
+  NO_ACCOUNT_CONFIG,
+  NO_MFA,
+  NO_STAKING,
+  NO_SWAP,
+} from '../../config';
 import { parseAccountId } from '../../util/account';
 import { areDeepEqual } from '../../util/areDeepEqual';
 import { getIsSupportedChain } from '../../util/chain';
@@ -288,7 +295,7 @@ export async function setActivePollingAccount(
     const account = await fetchStoredAccount(accountId);
 
     const stopPollingFns = [
-      !IS_FEATURE_LIMITED ? setupAccountConfigPolling(accountId, account).stop : undefined,
+      !IS_FEATURE_LIMITED && !NO_ACCOUNT_CONFIG ? setupAccountConfigPolling(accountId, account).stop : undefined,
       !NO_MFA && doesAccountHaveChain(account, 'ton') ? setupMfaPolling(accountId).stop : undefined,
 
       ...(Object.keys(chains) as (keyof typeof chains)[]).map((chain) => {

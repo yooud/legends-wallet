@@ -2,7 +2,7 @@ import { useRef, useState } from '../../../lib/teact/teact';
 
 import type { ApiBaseCurrency, ApiTokenWithPrice } from '../../../api/types';
 
-import { CURRENCIES } from '../../../config';
+import { CURRENCIES, DEFAULT_PRICE_CURRENCY } from '../../../config';
 import { Big } from '../../../lib/big.js';
 import { fromDecimal, toDecimal } from '../../../util/decimals';
 import { vibrate } from '../../../util/haptics';
@@ -42,7 +42,11 @@ export interface AmountInputStateOutput {
  */
 export function useAmountInputState(input: AmountInputStateInput): AmountInputStateOutput {
   const { baseCurrency, onAmountChange, isAmountReadonly } = input;
-  const { isBaseCurrency, switchCurrency, ...output } = useCurrencySwitch(input);
+  const effectiveBaseCurrency = CURRENCIES[baseCurrency] ? baseCurrency : DEFAULT_PRICE_CURRENCY;
+  const { isBaseCurrency, switchCurrency, ...output } = useCurrencySwitch({
+    ...input,
+    baseCurrency: effectiveBaseCurrency,
+  });
 
   const onMaxAmountClick = useLastCallback((maxAmount?: bigint) => {
     if (maxAmount === undefined) {
@@ -66,7 +70,7 @@ export function useAmountInputState(input: AmountInputStateInput): AmountInputSt
   return {
     ...output,
     isBaseCurrency,
-    baseCurrency,
+    baseCurrency: effectiveBaseCurrency,
     onMaxAmountClick,
     onAlternativeAmountClick,
   };

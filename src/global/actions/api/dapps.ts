@@ -2,7 +2,7 @@ import type { TonConnectEventName } from '../../../api/dappProtocols/adapters/to
 import type { GlobalState } from '../../types';
 import { DappConnectState, SignDataState, TransferState } from '../../types';
 
-import { ANIMATION_END_DELAY } from '../../../config';
+import { ANIMATION_END_DELAY, NO_AGENT_AND_EXPLORE } from '../../../config';
 import { areDeepEqual } from '../../../util/areDeepEqual';
 import { getDoesUsePinPad } from '../../../util/biometrics';
 import { getDappConnectionUniqueId } from '../../../util/getDappConnectionUniqueId';
@@ -469,6 +469,8 @@ addActionHandler('apiUpdateDappCloseLoading', (global, actions, { connectionType
 });
 
 addActionHandler('loadExploreSites', async (global, _, { isLandscape, langCode = USER_AGENT_LANG_CODE }) => {
+  if (NO_AGENT_AND_EXPLORE) return;
+
   const exploreData = await callApi('loadExploreSites', { isLandscape, langCode });
   global = getGlobal();
   if (areDeepEqual(exploreData, global.exploreData)) {

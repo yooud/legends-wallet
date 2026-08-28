@@ -4,7 +4,7 @@ import { getActions, withGlobal } from '../../../../global';
 import type { Theme } from '../../../../global/types';
 import { ContentTab } from '../../../../global/types';
 
-import { IS_FEATURE_LIMITED } from '../../../../config';
+import { IS_FEATURE_LIMITED, NO_AGENT_AND_EXPLORE } from '../../../../config';
 import { selectCurrentAccountSettings } from '../../../../global/selectors';
 import { ACCENT_COLORS } from '../../../../util/accentColor/constants';
 import buildClassName from '../../../../util/buildClassName';
@@ -64,7 +64,7 @@ function LandscapeNavBar({
         accentColor={accentColor}
         onClick={handleWalletClick}
       />
-      {!IS_FEATURE_LIMITED && (
+      {!IS_FEATURE_LIMITED && !NO_AGENT_AND_EXPLORE && (
         <>
           <NavButton
             isActive={isAgentOpen}

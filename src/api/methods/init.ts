@@ -1,6 +1,6 @@
 import type { ApiInitArgs, OnApiUpdate } from '../types';
 
-import { NO_MFA, NO_STAKING, NO_SWAP } from '../../config';
+import { NO_MFA, NO_REFERRER, NO_STAKING, NO_SWAP } from '../../config';
 import { initWindowConnector } from '../../util/windowProvider/connector';
 import * as ton from '../chains/ton';
 import { fetchBackendReferrer } from '../common/backend';
@@ -54,7 +54,9 @@ export default async function init(onUpdate: OnApiUpdate, args: ApiInitArgs) {
     onDappsChanged: protocolManager.resetupRemoteConnection.bind(protocolManager),
   });
 
-  void saveReferrer(args, runtimeStorage);
+  if (!NO_REFERRER) {
+    void saveReferrer(args, runtimeStorage);
+  }
 }
 
 export function destroy() {

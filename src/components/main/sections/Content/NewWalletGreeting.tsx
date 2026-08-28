@@ -1,6 +1,6 @@
 import React, { memo } from '../../../../lib/teact/teact';
 
-import { ANIMATED_STICKER_BIG_SIZE_PX, ANIMATED_STICKER_SMALL_SIZE_PX } from '../../../../config';
+import { ANIMATED_STICKER_BIG_SIZE_PX, ANIMATED_STICKER_SMALL_SIZE_PX, NO_NFT } from '../../../../config';
 import buildClassName from '../../../../util/buildClassName';
 import { ANIMATED_STICKERS_PATHS } from '../../../ui/helpers/animatedAssets';
 
@@ -33,9 +33,11 @@ function NewWalletGreeting({ isActive, mode }: Props) {
         <p className={styles.header}>
           {lang('You have just created a new wallet')}
         </p>
-        <p className={styles.description}>
-          {lang('Send, receive, and trade tokens and collectibles.')}
-        </p>
+        {!NO_NFT && (
+          <p className={styles.description}>
+            {lang('Send, receive, and trade tokens and collectibles.')}
+          </p>
+        )}
       </div>
     </div>
   );

@@ -1,21 +1,19 @@
 import React, { memo } from '../../lib/teact/teact';
 
 import { ANIMATED_STICKER_BIG_SIZE_PX } from '../config';
+import { ANIMATED_STICKERS_PATHS } from '../../components/ui/helpers/animatedAssets';
 
 import AnimatedIconWithPreview from '../../components/ui/AnimatedIconWithPreview';
 
 import styles from './InitialPage.module.scss';
-
-import duckStairsUp from '../../assets/lottie/duck_stairs_up.tgs';
-import duckStairsUpPreview from '../../assets/lottiePreview/duck_stairs_up.png';
 
 function InitialPage() {
   return (
     <div className={styles.container}>
       <AnimatedIconWithPreview
         play
-        tgsUrl={duckStairsUp}
-        previewUrl={duckStairsUpPreview}
+        tgsUrl={ANIMATED_STICKERS_PATHS.forge}
+        previewUrl={ANIMATED_STICKERS_PATHS.forgePreview}
         size={ANIMATED_STICKER_BIG_SIZE_PX}
         className={styles.sticker}
         noLoop={false}

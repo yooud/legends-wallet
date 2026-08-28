@@ -23,7 +23,7 @@ interface ExtendedWatchedWallet {
 }
 
 /**
- * Connects to the MW backend to passively listen to updates
+ * Connects to the Legends wallet backend to passively listen to updates.
  */
 class BackendSocket extends AbstractWebsocketClient<
   ApiClientSocketMessage,
@@ -120,7 +120,7 @@ class BackendSocket extends AbstractWebsocketClient<
 
   /** Collects the addresses (grouped by chain) from the current watchers */
   #getWatchedAddresses(events: ApiSocketEventType[]) {
-    const addresses: { chain: ApiChain; address: string }[] = [];
+    const addresses = new Map<string, { chain: ApiChain; address: string }>();
 
     for (const watcher of this.walletWatchers) {
       for (const wallet of watcher.wallets) {
@@ -128,14 +128,14 @@ class BackendSocket extends AbstractWebsocketClient<
           continue;
         }
 
-        addresses.push({
+        addresses.set(`${wallet.chain}:${wallet.address}`, {
           chain: wallet.chain,
           address: wallet.address,
         });
       }
     }
 
-    return addresses;
+    return [...addresses.values()];
   }
 }
 

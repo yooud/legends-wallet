@@ -166,6 +166,7 @@ export default function createConfig(
 
       new EnvironmentPlugin({
         APP_ENV: 'production',
+        BRILLIANT_API_BASE_URL: 'https://wallet-api.legends.energy',
         IS_HEADLESS: '',
       }),
       new NormalModuleReplacementPlugin(

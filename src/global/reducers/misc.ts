@@ -11,7 +11,7 @@ import type {
 } from '../types';
 import { AuthState } from '../types';
 
-import { POPULAR_WALLET_VERSIONS, TONCOIN } from '../../config';
+import { POPULAR_WALLET_VERSIONS } from '../../config';
 import { generateAccountTitle } from '../../util/account';
 import { getDefaultEnabledSlugs } from '../../util/chain';
 import { getIsDefaultChainDisplayConfiguration } from '../../util/chainDisplay';
@@ -259,8 +259,10 @@ export function updateTokens(
 ): GlobalState {
   const existingTokens = global.tokenInfo?.bySlug;
 
-  // If the backend does not work, then we won't delete the old prices
-  if (!partial[TONCOIN.slug].priceUsd) {
+  // If the backend does not provide any prices, then we won't delete the old prices.
+  // Do not use a chain-specific token as a health sentinel: a single-chain backend may omit it intentionally.
+  const hasFreshPrices = Object.values(partial).some(({ priceUsd }) => Boolean(priceUsd));
+  if (!hasFreshPrices) {
     partial = Object.values(partial).reduce((result, token) => {
       const existingToken = existingTokens?.[token.slug];
 

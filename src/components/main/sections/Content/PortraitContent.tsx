@@ -4,6 +4,7 @@ import { withGlobal } from '../../../../global';
 import type { ApiNft, ApiNftCollection, ApiStakingState } from '../../../../api/types';
 import { type Account, ContentTab } from '../../../../global/types';
 
+import { NO_NFT } from '../../../../config';
 import { requestMutation } from '../../../../lib/fasterdom/fasterdom';
 import {
   selectAccountStakingStates,
@@ -74,7 +75,7 @@ function PortraitContent({
   byChain,
   tokensCount,
   nfts,
-  currentCollection,
+  currentCollection: storedCurrentCollection,
   selectedNfts,
   blacklistedNftAddresses,
   whitelistedNftAddresses,
@@ -95,7 +96,8 @@ function PortraitContent({
   const tabsRef = useRef<HTMLDivElement>();
   const transitionRef = useRef<HTMLDivElement>();
 
-  const hasNftSelection = Boolean(selectedNfts?.length);
+  const currentCollection = NO_NFT ? undefined : storedCurrentCollection;
+  const hasNftSelection = !NO_NFT && Boolean(selectedNfts?.length);
 
   const {
     tabs,
@@ -117,7 +119,7 @@ function PortraitContent({
     collectionTabs,
     activeContentTab,
     activityReturnContentTab,
-    currentCollection,
+    currentCollection: storedCurrentCollection,
     currentTokenSlug,
     states,
     hasVesting,
@@ -279,7 +281,7 @@ function PortraitContent({
         </div>
       </div>
       <HideNftModal
-        isOpen={Boolean(selectedNftsToHide?.addresses.length)}
+        isOpen={!NO_NFT && Boolean(selectedNftsToHide?.addresses.length)}
         selectedNftsToHide={selectedNftsToHide}
       />
     </>

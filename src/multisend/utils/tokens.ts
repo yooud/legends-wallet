@@ -5,6 +5,8 @@ import { safeExecAsync } from '../../util/safeExec';
 import { pause } from '../../util/schedulers';
 import { buildTokenTransferBody, commentToBytes, packBytesAsSnakeCell } from './tonCore';
 
+const BACKEND_API_URL = process.env.BRILLIANT_API_BASE_URL || 'https://wallet-api.legends.energy';
+
 // Remote API token interface
 interface RemoteToken {
   chain: 'ton' | 'tron';
@@ -29,7 +31,7 @@ export function fetchKnownTokens(): Promise<RemoteToken[]> {
 
 async function fetchTokensFromApi(): Promise<RemoteToken[]> {
   try {
-    const response = await fetch('https://api.mywallet.io/assets');
+    const response = await fetch(`${BACKEND_API_URL}/assets`);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }

@@ -4,7 +4,7 @@
 //     outbound links and which brand-specific products (cards, MYCOIN vesting, the tips channel) exist at all
 //   - feature axis, driven by IS_FEATURE_LIMITED: only the legacy TON Wallet build is trimmed down
 // The combo build (both flags) must inherit Core identity/storage while wearing the Gram brand AND shipping the
-// full feature set, and the three clean flavors (default / core / gram) must keep resolving exactly as before.
+// full feature set. The default profile is the Legends TRON-only fork; Core and Gram retain their upstream endpoints.
 // Config reads the flags from process.env at module-eval time, so every flavor gets a clean env + an isolated
 // re-import.
 
@@ -13,7 +13,15 @@ type Flavor = 'default' | 'core' | 'gram' | 'combo';
 const FLAVORS: Flavor[] = ['default', 'core', 'gram', 'combo'];
 
 // Only these env vars feed the constants under test; reset them all, then set the profile's subset.
-const AXIS_FLAGS = ['IS_CORE_WALLET', 'IS_GRAM_WALLET', 'IS_EXPLORER', 'APP_NAME'] as const;
+const AXIS_FLAGS = [
+  'IS_CORE_WALLET',
+  'IS_GRAM_WALLET',
+  'IS_EXPLORER',
+  'IS_TRON_ONLY',
+  'APP_NAME',
+  'BRILLIANT_API_BASE_URL',
+  'TRON_MAINNET_API_URL',
+] as const;
 
 const FLAVOR_ENV: Record<Flavor, Partial<Record<'IS_CORE_WALLET' | 'IS_GRAM_WALLET', '1'>>> = {
   default: {},
@@ -70,20 +78,23 @@ async function withFlavor(
 // Identity/storage + brand + feature constants.
 const CONFIG_EXPECTATIONS: Record<Flavor, Record<string, string | boolean | number[]>> = {
   default: {
-    APP_NAME: 'My Wallet',
+    APP_NAME: 'Legends Wallet',
     IS_TON_BRAND: false,
-    IS_MY_WALLET_BRAND: true,
+    IS_MY_WALLET_BRAND: false,
+    IS_LEGENDS_WALLET: true,
     IS_FEATURE_LIMITED: false,
-    GLOBAL_STATE_CACHE_KEY: 'mytonwallet-global-state',
+    GLOBAL_STATE_CACHE_KEY: 'legends-wallet-global-state',
     ACTIVE_TAB_STORAGE_KEY: 'mtw-active-tab',
     TONCONNECT_WALLET_JSBRIDGE_KEY: 'mytonwallet',
-    PRODUCTION_URL: 'https://web.mywallet.io',
-    BETA_URL: 'https://beta.mywallet.io',
-    APP_INSTALL_URL: 'https://get.mywallet.io/',
-    APP_WEBSITE_URL: 'https://mywallet.io',
-    APP_PROMO_URL: 'https://mywallet.io/',
-    APP_TERMS_OF_USE_URL: 'https://mywallet.io/terms-of-use',
-    APP_PRIVACY_POLICY_URL: 'https://mywallet.io/privacy-policy',
+    PRODUCTION_URL: 'https://wallet.legends.energy',
+    BETA_URL: 'https://wallet-beta.legends.energy',
+    APP_INSTALL_URL: 'https://wallet.legends.energy',
+    APP_WEBSITE_URL: 'https://legends.energy',
+    APP_PROMO_URL: 'https://legends.energy/',
+    APP_TERMS_OF_USE_URL: 'https://legends.energy/terms-of-use',
+    APP_PRIVACY_POLICY_URL: 'https://legends.energy/privacy-policy',
+    BRILLIANT_API_BASE_URL: 'https://wallet-api.legends.energy',
+    TRON_MAINNET_API_URL: 'https://node.legends.energy',
     SHOULD_GENERATE_TON_MNEMONIC: false,
     MNEMONIC_COUNTS: [12, 24],
     IS_STAKING_DISABLED: false,
@@ -95,6 +106,7 @@ const CONFIG_EXPECTATIONS: Record<Flavor, Record<string, string | boolean | numb
     APP_NAME: 'TON Wallet',
     IS_TON_BRAND: true,
     IS_MY_WALLET_BRAND: false,
+    IS_LEGENDS_WALLET: false,
     IS_FEATURE_LIMITED: true,
     GLOBAL_STATE_CACHE_KEY: 'tonwallet-global-state',
     ACTIVE_TAB_STORAGE_KEY: 'tw-active-tab',
@@ -106,6 +118,8 @@ const CONFIG_EXPECTATIONS: Record<Flavor, Record<string, string | boolean | numb
     APP_PROMO_URL: 'https://mywallet.io/',
     APP_TERMS_OF_USE_URL: 'https://mywallet.io/terms-of-use',
     APP_PRIVACY_POLICY_URL: 'https://mywallet.io/privacy-policy',
+    BRILLIANT_API_BASE_URL: 'https://api.mywallet.io',
+    TRON_MAINNET_API_URL: 'https://tronapi.mytonwallet.org',
     SHOULD_GENERATE_TON_MNEMONIC: true,
     MNEMONIC_COUNTS: [24, 12],
     IS_STAKING_DISABLED: true,
@@ -116,6 +130,7 @@ const CONFIG_EXPECTATIONS: Record<Flavor, Record<string, string | boolean | numb
     APP_NAME: 'Gram Wallet',
     IS_TON_BRAND: false,
     IS_MY_WALLET_BRAND: false,
+    IS_LEGENDS_WALLET: false,
     IS_FEATURE_LIMITED: false,
     GLOBAL_STATE_CACHE_KEY: 'mytonwallet-global-state',
     ACTIVE_TAB_STORAGE_KEY: 'mtw-active-tab',
@@ -127,6 +142,8 @@ const CONFIG_EXPECTATIONS: Record<Flavor, Record<string, string | boolean | numb
     APP_PROMO_URL: 'https://gramwallet.io/',
     APP_TERMS_OF_USE_URL: 'https://gramwallet.io/terms-of-use/',
     APP_PRIVACY_POLICY_URL: 'https://gramwallet.io/privacy-policy/',
+    BRILLIANT_API_BASE_URL: 'https://api.mywallet.io',
+    TRON_MAINNET_API_URL: 'https://tronapi.mytonwallet.org',
     SHOULD_GENERATE_TON_MNEMONIC: false,
     MNEMONIC_COUNTS: [12, 24],
     IS_STAKING_DISABLED: false,
@@ -138,6 +155,7 @@ const CONFIG_EXPECTATIONS: Record<Flavor, Record<string, string | boolean | numb
     APP_NAME: 'Gram Wallet',
     IS_TON_BRAND: false,
     IS_MY_WALLET_BRAND: false,
+    IS_LEGENDS_WALLET: false,
     IS_FEATURE_LIMITED: false,
     GLOBAL_STATE_CACHE_KEY: 'tonwallet-global-state',
     ACTIVE_TAB_STORAGE_KEY: 'tw-active-tab',
@@ -149,6 +167,8 @@ const CONFIG_EXPECTATIONS: Record<Flavor, Record<string, string | boolean | numb
     APP_PROMO_URL: 'https://gramwallet.io/',
     APP_TERMS_OF_USE_URL: 'https://gramwallet.io/terms-of-use/',
     APP_PRIVACY_POLICY_URL: 'https://gramwallet.io/privacy-policy/',
+    BRILLIANT_API_BASE_URL: 'https://api.mywallet.io',
+    TRON_MAINNET_API_URL: 'https://tronapi.mytonwallet.org',
     SHOULD_GENERATE_TON_MNEMONIC: false,
     MNEMONIC_COUNTS: [12, 24],
     IS_STAKING_DISABLED: false,
@@ -194,6 +214,7 @@ describe.each(FLAVORS)('build flavor: %s', (flavor) => {
         APP_NAME: config.APP_NAME,
         IS_TON_BRAND: config.IS_TON_BRAND,
         IS_MY_WALLET_BRAND: config.IS_MY_WALLET_BRAND,
+        IS_LEGENDS_WALLET: config.IS_LEGENDS_WALLET,
         IS_FEATURE_LIMITED: config.IS_FEATURE_LIMITED,
         GLOBAL_STATE_CACHE_KEY: config.GLOBAL_STATE_CACHE_KEY,
         ACTIVE_TAB_STORAGE_KEY: config.ACTIVE_TAB_STORAGE_KEY,
@@ -205,6 +226,8 @@ describe.each(FLAVORS)('build flavor: %s', (flavor) => {
         APP_PROMO_URL: config.APP_PROMO_URL,
         APP_TERMS_OF_USE_URL: config.APP_TERMS_OF_USE_URL,
         APP_PRIVACY_POLICY_URL: config.APP_PRIVACY_POLICY_URL,
+        BRILLIANT_API_BASE_URL: config.BRILLIANT_API_BASE_URL,
+        TRON_MAINNET_API_URL: config.TRON_MAINNET_API_URL,
         SHOULD_GENERATE_TON_MNEMONIC: config.SHOULD_GENERATE_TON_MNEMONIC,
         MNEMONIC_COUNTS: config.MNEMONIC_COUNTS,
         IS_STAKING_DISABLED: config.IS_STAKING_DISABLED,
@@ -247,9 +270,9 @@ describe('getDefaultEnabledSlugs resolves per identity axis', () => {
     expect([...chainsByFlavor.combo!]).toEqual(['ton']);
   });
 
-  it('default and gram keep the multichain defaults', () => {
-    expect(chainsByFlavor.default).toEqual(chainsByFlavor.gram);
-    expect(chainsByFlavor.default!.size).toBeGreaterThan(1);
+  it('Legends defaults to TRON while Gram keeps multichain defaults', () => {
+    expect([...chainsByFlavor.default!]).toEqual(['tron']);
+    expect(chainsByFlavor.gram!.size).toBeGreaterThan(1);
   });
 });
 
@@ -289,7 +312,12 @@ describe('brand axis is exclusive', () => {
   it('each flavor resolves to exactly one brand', async () => {
     for (const flavor of FLAVORS) {
       await withFlavor(flavor, (config) => {
-        const brands = [config.IS_GRAM_WALLET, config.IS_TON_BRAND, config.IS_MY_WALLET_BRAND];
+        const brands = [
+          config.IS_GRAM_WALLET,
+          config.IS_TON_BRAND,
+          config.IS_MY_WALLET_BRAND,
+          config.IS_LEGENDS_WALLET,
+        ];
         expect(brands.filter(Boolean)).toHaveLength(1);
       });
     }
