@@ -26,6 +26,7 @@ addActionHandler('startTransfer', (global, actions, payload) => {
     state: TransferState.Initial,
     error: undefined,
     ...(shouldClearFee ? { explainedFee: undefined, diesel: undefined } : {}),
+    sponsorship: undefined,
     ...rest,
     tokenSlug,
     isOfframp,
@@ -63,6 +64,7 @@ addActionHandler('changeTransferToken', (global, actions, { tokenSlug, withReset
     tokenSlug,
     explainedFee: undefined,
     diesel: undefined,
+    sponsorship: undefined,
     nfts: undefined,
   }));
 });
@@ -74,11 +76,11 @@ addActionHandler('setTransferScreen', (global, actions, payload) => {
 });
 
 addActionHandler('setTransferAmount', (global, actions, { amount }) => {
-  return updateCurrentTransfer(global, { amount });
+  return updateCurrentTransfer(global, { amount, sponsorship: undefined });
 });
 
 addActionHandler('setTransferToAddress', (global, actions, { toAddress }) => {
-  return setCurrentTransferAddress(global, toAddress);
+  return updateCurrentTransfer(setCurrentTransferAddress(global, toAddress), { sponsorship: undefined });
 });
 
 addActionHandler('setTransferComment', (global, actions, { comment }) => {

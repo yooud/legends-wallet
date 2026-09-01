@@ -1,4 +1,7 @@
-import { TRC20_USDT_MAINNET, TRC20_USDT_TESTNET, TRX } from '../config';
+import {
+  TRC20_BTT_TESTNET, TRC20_USDT_MAINNET, TRC20_USDT_TESTNET, TRX,
+} from '../config';
+import { isWalletSponsoredToken } from '../api/chains/tron/constants';
 import {
   CHAIN_DISPLAY_ORDER,
   CHAIN_ORDER,
@@ -21,10 +24,19 @@ describe('Legends Wallet TRON-only configuration', () => {
 
   it('enables TRX and the matching USDT TRC-20 token by default', () => {
     expect([...getDefaultEnabledSlugs('mainnet')]).toEqual([TRX.slug, TRC20_USDT_MAINNET.slug]);
-    expect([...getDefaultEnabledSlugs('testnet')]).toEqual([TRX.slug, TRC20_USDT_TESTNET.slug]);
+    expect([...getDefaultEnabledSlugs('testnet')]).toEqual([
+      TRX.slug,
+      TRC20_USDT_TESTNET.slug,
+      TRC20_BTT_TESTNET.slug,
+    ]);
   });
 
   it('does not seed tokens from disabled chains', () => {
     expect(new Set(Object.values(getTokenInfo()).map(({ chain }) => chain))).toEqual(new Set(['tron']));
+  });
+
+  it('sponsors BTT on testnet only', () => {
+    expect(isWalletSponsoredToken('testnet', TRC20_BTT_TESTNET.tokenAddress)).toBe(true);
+    expect(isWalletSponsoredToken('mainnet', TRC20_BTT_TESTNET.tokenAddress)).toBe(false);
   });
 });

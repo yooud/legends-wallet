@@ -38,6 +38,7 @@ import useTransactionDetails from '../../../../hooks/useTransactionDetails';
 
 import TransactionAmount from '../../../common/TransactionAmount';
 import TransactionFee from '../../../common/TransactionFee';
+import WalletSponsorshipFee from '../../../common/WalletSponsorshipFee';
 import NftInfo from '../../../transfer/NftInfo';
 import AnimatedIconWithPreview from '../../../ui/AnimatedIconWithPreview';
 import Button from '../../../ui/Button';
@@ -218,6 +219,19 @@ function TransactionInfo({
   }
 
   function renderFee() {
+    const walletSponsorship = transaction?.extra?.walletSponsorship;
+    if (walletSponsorship && token) {
+      return (
+        <WalletSponsorshipFee
+          serviceFee={walletSponsorship.serviceFee}
+          onchainFee={walletSponsorship.onchainFee}
+          token={token}
+          label={lang('$wallet_sponsorship_paid_fee')}
+          className={styles.feeField}
+        />
+      );
+    }
+
     if (!(fee || shouldLoadDetails) || !nativeToken) {
       return undefined;
     }

@@ -116,6 +116,7 @@ export async function fetchWithRetry(url: string | URL, init?: RequestInit, opti
 
   let message = 'Unknown error.';
   let statusCode: number | undefined;
+  let errorCode: string | undefined;
   let settled = false;
 
   const cacheNegativeVerdictIfEligible = () => {
@@ -139,15 +140,19 @@ export async function fetchWithRetry(url: string | URL, init?: RequestInit, opti
         // prior attempt would otherwise mislead shouldSkipRetryFn and the breaker verdict
         // into treating a host-health failure as a 4xx success.
         statusCode = undefined;
+        errorCode = undefined;
         const response = await fetchWithTimeout(url, init, timeout);
         statusCode = response.status;
 
         if (statusCode >= 400) {
-          const { error } = await response.json().catch(() => ({}));
-          const requestError = new Error(error ?? `HTTP Error ${statusCode}`) as Error & {
+          const payload = await response.json().catch(() => undefined);
+          const responseError = getResponseError(payload, statusCode);
+          const requestError = new Error(responseError.message) as Error & {
             retryAfterMs?: number;
+            apiCode?: string;
           };
           requestError.retryAfterMs = getRetryAfterMs(response.headers) ?? providerRetryPolicy?.fallbackRetryAfterMs;
+          requestError.apiCode = responseError.code;
           throw requestError;
         }
 
@@ -159,6 +164,7 @@ export async function fetchWithRetry(url: string | URL, init?: RequestInit, opti
         const retryAfterMs = typeof err === 'string'
           ? undefined
           : (err as Error & { retryAfterMs?: number }).retryAfterMs;
+        errorCode = typeof err === 'string' ? undefined : (err as Error & { apiCode?: string }).apiCode;
 
         const shouldSkipRetry = shouldSkipRetryFn(message, statusCode);
 
@@ -173,7 +179,11 @@ export async function fetchWithRetry(url: string | URL, init?: RequestInit, opti
           }
           cacheNegativeVerdictIfEligible();
           settled = true;
-          throw new ApiServerError(buildFetchErrorMessage(method, urlString, message, i, statusCode), statusCode);
+          throw new ApiServerError(
+            buildFetchErrorMessage(method, urlString, message, i, statusCode),
+            statusCode,
+            errorCode,
+          );
         }
 
         if (i < retries) {
@@ -191,10 +201,40 @@ export async function fetchWithRetry(url: string | URL, init?: RequestInit, opti
     }
     cacheNegativeVerdictIfEligible();
     settled = true;
-    throw new ApiServerError(buildFetchErrorMessage(method, urlString, message, retries, statusCode), statusCode);
+    throw new ApiServerError(
+      buildFetchErrorMessage(method, urlString, message, retries, statusCode),
+      statusCode,
+      errorCode,
+    );
   } finally {
     if (!settled) slot.cancelled();
   }
+}
+
+function getResponseError(payload: unknown, statusCode: number): { message: string; code?: string } {
+  if (!payload || typeof payload !== 'object') {
+    return { message: `HTTP Error ${statusCode}` };
+  }
+
+  const { error, errors, code } = payload as {
+    error?: unknown;
+    errors?: { msg?: unknown }[];
+    code?: unknown;
+  };
+  if (typeof error === 'string') {
+    return { message: error, code: typeof code === 'string' ? code : undefined };
+  }
+  if (error && typeof error === 'object') {
+    const { message, code: nestedCode } = error as { message?: unknown; code?: unknown };
+    if (typeof message === 'string') {
+      return { message, code: typeof nestedCode === 'string' ? nestedCode : undefined };
+    }
+  }
+  const firstError = Array.isArray(errors) ? errors[0]?.msg : undefined;
+  return {
+    message: typeof firstError === 'string' ? firstError : `HTTP Error ${statusCode}`,
+    code: typeof code === 'string' ? code : undefined,
+  };
 }
 
 function buildFetchErrorMessage(
@@ -228,13 +268,9 @@ export async function fetchWithTimeout(url: string | URL, init?: RequestInit, ti
 
 export async function handleFetchErrors(response: Response, ignoreHttpCodes?: number[]) {
   if (!response.ok && (!ignoreHttpCodes?.includes(response.status))) {
-    // eslint-disable-next-line prefer-const
-    let { error, errors } = await response.json().catch(() => undefined);
-    if (!error && errors && errors.length) {
-      error = errors[0]?.msg;
-    }
-
-    throw new ApiServerError(error ?? `HTTP Error ${response.status}`, response.status);
+    const payload = await response.json().catch(() => undefined);
+    const { message, code } = getResponseError(payload, response.status);
+    throw new ApiServerError(message, response.status, code);
   }
   return response;
 }

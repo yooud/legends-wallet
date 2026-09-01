@@ -276,6 +276,24 @@ describe('getDefaultEnabledSlugs resolves per identity axis', () => {
   });
 });
 
+describe('chain defaults remain scoped to the Legends flavor', () => {
+  it('uses TRON and Nile only in Legends', async () => {
+    await withFlavor('default', (config) => {
+      expect(config.DEFAULT_CHAIN).toBe('tron');
+      expect(config.PRIORITY_TOKENS.map(({ slug }) => slug)).toEqual([config.TRX.slug]);
+      expect(config.TRC20_USDT_TESTNET.tokenAddress).toBe('TXYZopYRdj2D9XRtbG411XZZ3kM5VkAeBf');
+    });
+  });
+
+  it.each(['core', 'gram', 'combo'] as const)('preserves upstream defaults for %s', async (flavor) => {
+    await withFlavor(flavor, (config) => {
+      expect(config.DEFAULT_CHAIN).toBe('ton');
+      expect(config.PRIORITY_TOKENS).toHaveLength(12);
+      expect(config.TRC20_USDT_TESTNET.tokenAddress).toBe('TG3XXyExBkPp9nzdajDZsozEu4BkaSJozs');
+    });
+  });
+});
+
 describe('TON_DNS_ZONES resolves per feature axis', () => {
   // Suffix signatures per flavor: each zone -> its suffixes array, joined for stable comparison.
   const signatureByFlavor: Partial<Record<Flavor, string[]>> = {};

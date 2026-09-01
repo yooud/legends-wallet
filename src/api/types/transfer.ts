@@ -30,6 +30,14 @@ interface ApiTransactionCommonOptions {
   tokenAddress?: string;
 }
 
+/** Display-safe sponsorship data. Chain-specific signing payloads stay inside the chain SDK. */
+export interface ApiTransferSponsorship {
+  id: string;
+  expiresAt: string;
+  serviceFee: bigint;
+  onchainFee: bigint;
+}
+
 export interface ApiCheckTransactionDraftOptions extends ApiTransactionCommonOptions {
   allowGasless?: boolean;
 }
@@ -56,6 +64,7 @@ export interface ApiSubmitGasfullTransferOptions extends ApiTransactionCommonOpt
   /** To cap the fee in TRON transfers */
   fee?: bigint;
   noFeeCheck?: boolean;
+  sponsorshipId?: string;
 }
 
 export interface ApiSubmitGaslessTransferOptions extends ApiSubmitGasfullTransferOptions {
@@ -84,6 +93,7 @@ export interface ApiCheckTransactionDraftResult {
    * Filled by chain-specific `checkTransactionDraft` implementations.
    */
   explainedFee?: ExplainedTransferFee;
+  sponsorship?: ApiTransferSponsorship;
 }
 
 /**

@@ -16,6 +16,11 @@ import { updateActivityMetadata } from '../../common/helpers';
 import { buildTokenSlug, getTokenBySlug } from '../../common/tokens';
 import { SEC } from '../../constants';
 import { NETWORK_CONFIG } from './constants';
+import {
+  getCachedWalletSponsorshipActivityLinks,
+  reconcileWalletSponsorshipActivities,
+  refreshWalletSponsorshipActivityLinks,
+} from './sponsorship';
 
 export async function fetchActivitySlice({
   accountId,
@@ -58,6 +63,8 @@ export async function getTokenActivitySlice(
 ): Promise<{ activities: ApiActivity[]; hasMore: boolean }> {
   let activities: ApiActivity[];
   let rawCount: number;
+  refreshWalletSponsorshipActivityLinks(network, address);
+  const sponsorshipLinks = getCachedWalletSponsorshipActivityLinks(network, address);
 
   if (slug === TRX.slug) {
     const rawTransactions = await getTrxTransactions(network, address, {
@@ -67,8 +74,11 @@ export async function getTokenActivitySlice(
       search_internal: false, // The parsing is not supported and not needed currently
     });
     rawCount = rawTransactions.length;
-    activities = rawTransactions
-      .map((rawTx) => parseRawTrxTransaction(address, rawTx))
+    activities = reconcileWalletSponsorshipActivities(
+      slug,
+      rawTransactions.map((rawTx) => parseRawTrxTransaction(address, rawTx)),
+      sponsorshipLinks,
+    )
       .filter((activity) => !activity.shouldHide);
   } else {
     const { tokenAddress } = getTokenBySlug(slug) || {};
@@ -79,7 +89,11 @@ export async function getTokenActivitySlice(
       limit,
     });
     rawCount = rawTransactions.length;
-    activities = rawTransactions.map((rawTx) => parseRawTrc20Transaction(address, rawTx));
+    activities = reconcileWalletSponsorshipActivities(
+      slug,
+      rawTransactions.map((rawTx) => parseRawTrc20Transaction(address, rawTx)),
+      sponsorshipLinks,
+    );
   }
 
   // `hasMore` is derived from the raw API response length (before `shouldHide` filtering),

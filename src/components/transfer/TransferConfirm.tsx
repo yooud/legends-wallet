@@ -28,6 +28,7 @@ import useHistoryBack from '../../hooks/useHistoryBack';
 import useLang from '../../hooks/useLang';
 import useLastCallback from '../../hooks/useLastCallback';
 
+import WalletSponsorshipFee from '../common/WalletSponsorshipFee';
 import AmountWithFeeTextField from '../ui/AmountWithFeeTextField';
 import AnimatedIconWithPreview from '../ui/AnimatedIconWithPreview';
 import Button from '../ui/Button';
@@ -76,6 +77,7 @@ function TransferConfirm({
     isOfframp,
     isNftBurn,
     explainedFee,
+    sponsorship,
   },
   token,
   currentAccountId,
@@ -149,7 +151,7 @@ function TransferConfirm({
         label={lang('Amount')}
         amount={toDecimal(amount ?? 0n, token?.decimals)}
         symbol={token?.symbol ?? ''}
-        feeText={feeText}
+        feeText={sponsorship ? undefined : feeText}
         fractionDigits={token?.decimals}
       />
     );
@@ -199,6 +201,21 @@ function TransferConfirm({
           {comment}
         </div>
       </>
+    );
+  }
+
+  function renderWalletSponsorshipComparison() {
+    if (!sponsorship || !token) {
+      return undefined;
+    }
+
+    return (
+      <WalletSponsorshipFee
+        serviceFee={sponsorship.serviceFee}
+        onchainFee={sponsorship.onchainFee}
+        token={token}
+        shouldShowOnchainFee
+      />
     );
   }
 
@@ -262,6 +279,7 @@ function TransferConfirm({
           </>
         )}
         {renderAmountWithFee()}
+        {renderWalletSponsorshipComparison()}
         {renderComment()}
 
         {nfts && (isBurning || (isNotcoinBurning && nfts?.length > 1)) && (

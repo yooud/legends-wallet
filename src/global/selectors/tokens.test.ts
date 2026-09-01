@@ -5,9 +5,11 @@ import {
   ETH,
   ETH_USDT_MAINNET,
   TONCOIN,
+  TRC20_BTT_TESTNET,
+  TRX,
 } from '../../config';
 import { INITIAL_STATE } from '../initialState';
-import { selectTokenInfoUserTokens } from './tokens';
+import { selectAccountTokensMemoizedFor, selectTokenInfoUserTokens } from './tokens';
 
 const ACCOUNT_ID = 'mainnet-0';
 
@@ -80,5 +82,44 @@ describe('selectTokenInfoUserTokens', () => {
       ...global,
       isBackupWalletModalOpen: true,
     })).toBe(selectTokenInfoUserTokens(global));
+  });
+});
+
+describe('selectAccountTokensMemoizedFor', () => {
+  it('keeps a default testnet asset visible until the user explicitly hides it', () => {
+    const balances = {
+      [TRX.slug]: 10_000_000n,
+      [TRC20_BTT_TESTNET.slug]: 0n,
+    };
+    const tokenInfo = {
+      bySlug: {
+        [TRX.slug]: { ...TRX, priceUsd: 0.3, percentChange24h: 0 },
+        [TRC20_BTT_TESTNET.slug]: { ...TRC20_BTT_TESTNET, priceUsd: 0, percentChange24h: 0 },
+      },
+    };
+    const selector = selectAccountTokensMemoizedFor('testnet-0');
+    const visible = selector(
+      balances,
+      tokenInfo,
+      {},
+      false,
+      INITIAL_STATE.settings.baseCurrency,
+      INITIAL_STATE.currencyRates,
+      true,
+    );
+    const hidden = selector(
+      balances,
+      tokenInfo,
+      { alwaysHiddenSlugs: [TRC20_BTT_TESTNET.slug] },
+      false,
+      INITIAL_STATE.settings.baseCurrency,
+      INITIAL_STATE.currencyRates,
+      true,
+    );
+
+    const visibleBtt = visible.find(({ slug }) => slug === TRC20_BTT_TESTNET.slug);
+    expect(visibleBtt).toBeDefined();
+    expect(visibleBtt?.isDisabled).not.toBe(true);
+    expect(hidden.find(({ slug }) => slug === TRC20_BTT_TESTNET.slug)?.isDisabled).toBe(true);
   });
 });

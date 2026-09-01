@@ -2,7 +2,7 @@ import { getActions } from '../../../../../global';
 
 import type { DropdownItem } from '../../../../ui/Dropdown';
 
-import { MULTISEND_DAPP_URL } from '../../../../../config';
+import { IS_TRON_ONLY, MULTISEND_DAPP_URL } from '../../../../../config';
 import { vibrate } from '../../../../../util/haptics';
 import { getTranslation } from '../../../../../util/langProvider';
 import { openUrl } from '../../../../../util/openUrl';
@@ -14,11 +14,11 @@ export const SEND_CONTEXT_MENU_ITEMS: DropdownItem<MenuHandler>[] = [{
   name: 'Send',
   fontIcon: 'menu-send',
   value: 'send',
-}, {
+}, ...(IS_TRON_ONLY ? [] : [{
   name: 'Multisend',
   fontIcon: 'menu-multisend',
-  value: 'multisend',
-}, {
+  value: 'multisend' as const,
+}]), {
   name: 'Sell',
   fontIcon: 'menu-sell',
   value: 'sell',

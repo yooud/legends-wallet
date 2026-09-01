@@ -23,6 +23,7 @@ import type {
 } from '../types';
 import { ApiCommonError } from '../types';
 
+import { IS_LEGENDS_WALLET } from '../../config';
 import { parseAccountId } from '../../util/account';
 import { getChainConfig, getChainsByStandard, getOrderedAccountChains, getSupportedChains } from '../../util/chain';
 import isMnemonicPrivateKey from '../../util/isMnemonicPrivateKey';
@@ -101,12 +102,14 @@ export function initAuth(_onUpdate: OnApiUpdate) {
   onUpdate = _onUpdate;
 }
 
-export function generateMnemonic(_isBip39: boolean) {
-  return generateBip39Mnemonic();
+export function generateMnemonic(isBip39: boolean) {
+  if (IS_LEGENDS_WALLET || isBip39) return generateBip39Mnemonic();
+  return ton.generateMnemonic();
 }
 
-export function validateMnemonic(mnemonic: string[]) {
-  return Promise.resolve(validateBip39Mnemonic(mnemonic));
+export async function validateMnemonic(mnemonic: string[]) {
+  if (validateBip39Mnemonic(mnemonic)) return true;
+  return IS_LEGENDS_WALLET ? false : await ton.validateMnemonic(mnemonic);
 }
 
 export async function importMnemonic(
@@ -114,16 +117,34 @@ export async function importMnemonic(
   mnemonic: string[],
   shouldSkipDiscovery?: boolean,
 ) {
-  if (!validateBip39Mnemonic(mnemonic)) {
+  const isBip39Mnemonic = validateBip39Mnemonic(mnemonic);
+  const isTonMnemonic = !IS_LEGENDS_WALLET && await ton.validateMnemonic(mnemonic);
+
+  if (!isBip39Mnemonic && !isTonMnemonic) {
     throw new Error('Invalid mnemonic');
   }
 
   try {
-    // Phase 1: derive every network's wallets without touching storage. The TON history probe can throw on an
-    // unreachable node, so deriving up front means such a failure aborts before anything is persisted; a partial
-    // write would otherwise leave a ghost account that a retry duplicates.
+    // Derive every network before writing, so a discovery failure cannot leave a partial account behind.
     const derivedByNetwork = await Promise.all(networks.map(async (network) => {
-      const accounts = await buildBip39Accounts(network, mnemonic, shouldSkipDiscovery);
+      let accounts: (ApiAccountWithMnemonic & { derivedFromIndex?: number })[];
+      let tonWallet: ApiTonWallet & { lastTxId?: string } | undefined;
+      let shouldForceTonMnemonic = false;
+
+      if (!shouldSkipDiscovery && isBip39Mnemonic && isTonMnemonic) {
+        tonWallet = await ton.getWalletFromMnemonic(network, mnemonic, false);
+        shouldForceTonMnemonic = Boolean(tonWallet.lastTxId);
+      }
+
+      if (isBip39Mnemonic && !shouldForceTonMnemonic) {
+        accounts = await buildBip39Accounts(network, mnemonic, shouldSkipDiscovery);
+      } else {
+        tonWallet ||= await ton.getWalletFromMnemonic(network, mnemonic);
+        accounts = [{
+          type: 'ton',
+          byChain: { ton: tonWallet },
+        }];
+      }
 
       // We need to preserve accountId in account object for return
       const sortedAccounts: (ApiAccountWithMnemonic & { id?: string; derivedFromIndex?: number })[]

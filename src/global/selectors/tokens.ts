@@ -8,6 +8,7 @@ import type {
 import type { Account, AccountSettings, AccountState, GlobalState, UserToken } from '../types';
 
 import {
+  IS_LEGENDS_WALLET,
   MYCOIN_MAINNET,
   MYCOIN_TESTNET,
   PRICELESS_TOKEN_HASHES,
@@ -61,6 +62,7 @@ export const selectAccountTokensMemoizedFor = withCache((accountId: string) => m
 ) => {
   const { network } = parseAccountId(accountId);
   const shouldShowOnlyDefaultTokens = !hasActivities && getAreAllBalancesNearZero(balancesBySlug, tokenInfo);
+  const defaultEnabledSlugs = getDefaultEnabledSlugs(network);
   const pinnedSlugs = accountSettings.pinnedSlugs ?? [];
 
   const tokens = Object
@@ -80,8 +82,11 @@ export const selectAccountTokensMemoizedFor = withCache((accountId: string) => m
 
       const isEnabled = accountSettings.alwaysShownSlugs?.includes(slug)
         || (shouldShowOnlyDefaultTokens
-          ? getDefaultEnabledSlugs(network).has(slug)
-          : (hasCost || isPricelessTokenWithBalance || (!areTokensWithNoCostHidden && balance > 0n)));
+          ? defaultEnabledSlugs.has(slug)
+          : (IS_LEGENDS_WALLET && defaultEnabledSlugs.has(slug))
+            || hasCost
+            || isPricelessTokenWithBalance
+            || (!areTokensWithNoCostHidden && balance > 0n));
 
       const isDisabled = !isEnabled || accountSettings.alwaysHiddenSlugs?.includes(slug);
 

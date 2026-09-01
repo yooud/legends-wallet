@@ -15,7 +15,7 @@ export class ApiUserRejectsError extends ApiBaseError {
 }
 
 export class ApiServerError extends ApiBaseError {
-  constructor(message: string, public statusCode?: number) {
+  constructor(message: string, public statusCode?: number, public code?: string) {
     super(message, ApiCommonError.ServerError);
   }
 }

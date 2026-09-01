@@ -3,6 +3,7 @@ import type { ApiTransactionActivity } from '../../types';
 import { TRX } from '../../../config';
 import { makeMockSwapActivity, makeMockTransactionActivity } from '../../../../tests/mocks';
 import { mergeActivities, parseRawTrxTransaction } from './activities';
+import { reconcileWalletSponsorshipActivities } from './sponsorship';
 
 describe('mergeActivities', () => {
   it('merges and sorts activities', () => {
@@ -111,5 +112,47 @@ describe('parseRawTrxTransaction', () => {
     const testTx = require('./testData/smartContractCall.json');
     const result = parseRawTrxTransaction(testAddress, testTx);
     expect(result.shouldHide).toBe(false);
+  });
+});
+
+describe('reconcileWalletSponsorshipActivities', () => {
+  const links = [{
+    quote_id: 'quote-1',
+    main_txid: 'main-tx',
+    payment_txid: 'payment-tx',
+    charge_sun: 3_200_000,
+    service_fee_sun: 3_300_000,
+    onchain_fee_sun: 13_300_000,
+  }];
+
+  it('hides the separate TRX service payment', () => {
+    const [activity] = reconcileWalletSponsorshipActivities(
+      TRX.slug,
+      [makeMockTransactionActivity({ id: 'payment-tx' })],
+      links,
+    );
+    expect(activity.shouldHide).toBe(true);
+  });
+
+  it('attaches the service payment to the original token transfer', () => {
+    const [activity] = reconcileWalletSponsorshipActivities(
+      'tron:token',
+      [makeMockTransactionActivity({ id: 'main-tx', fee: 0n })],
+      links,
+    );
+    expect(activity).toMatchObject({
+      id: 'main-tx',
+      fee: 3_300_000n,
+      extra: {
+        walletSponsorship: {
+          serviceFee: 3_300_000n,
+          onchainFee: 13_300_000n,
+        },
+        reconciliation: {
+          operationId: 'wallet-sponsorship:quote-1',
+          hiddenSourceActionIds: ['payment-tx'],
+        },
+      },
+    });
   });
 });

@@ -6,6 +6,16 @@ import { replaceActivityId } from '../helpers/misc';
 import { INITIAL_STATE } from '../initialState';
 import { selectCurrentTransferMaxAmount, selectTokenMatchingCurrentTransferAddressSlow } from '../selectors';
 
+export type TransferFeeDraft = {
+  tokenSlug: string;
+  toAddress: string;
+  amount?: bigint;
+  comment?: string;
+  shouldEncrypt?: boolean;
+  binPayload?: string;
+  stateInit?: string;
+};
+
 export function updateCurrentTransferByCheckResult(global: GlobalState, result: ApiCheckTransactionDraftResult) {
   const nextGlobal = updateCurrentTransfer(global, {
     toAddressName: result.addressName,
@@ -16,6 +26,7 @@ export function updateCurrentTransferByCheckResult(global: GlobalState, result: 
       'isToAddressNew',
       'resolvedAddress',
       'explainedFee',
+      'sponsorship',
     ]),
   });
   return preserveMaxTransferAmount(global, nextGlobal);
@@ -29,6 +40,20 @@ export function updateCurrentTransfer(global: GlobalState, update: Partial<Globa
       ...update,
     },
   };
+}
+
+export function isSameTransferFeeDraft(
+  current: GlobalState['currentTransfer'],
+  draft: TransferFeeDraft,
+) {
+  return !current.nfts?.length
+    && current.tokenSlug === draft.tokenSlug
+    && current.toAddress === draft.toAddress
+    && current.amount === draft.amount
+    && normalizeOptionalString(current.comment) === normalizeOptionalString(draft.comment)
+    && Boolean(current.shouldEncrypt) === Boolean(draft.shouldEncrypt)
+    && normalizeOptionalString(current.binPayload) === normalizeOptionalString(draft.binPayload)
+    && normalizeOptionalString(current.stateInit) === normalizeOptionalString(draft.stateInit);
 }
 
 export function clearCurrentTransfer(global: GlobalState) {
@@ -80,4 +105,8 @@ export function replaceCurrentTransferId(global: GlobalState, replaceMap: Record
   return updateCurrentTransfer(global, {
     txId: replaceActivityId(global.currentTransfer.txId, replaceMap),
   });
+}
+
+function normalizeOptionalString(value: string | undefined) {
+  return value || undefined;
 }

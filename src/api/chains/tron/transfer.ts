@@ -1,4 +1,4 @@
-// Importing from `tronweb/lib/commonjs/types` breaks eslint (eslint doesn't like any of import placement options)
+// Importing from `tronweb/lib/commonjs/types` breaks eslint (eslint doesn't like any import placement option).
 // eslint-disable-next-line simple-import-sort/imports
 import type { TronWeb } from 'tronweb';
 import { DIESEL_NOT_AVAILABLE } from '../../common/other';
@@ -21,10 +21,18 @@ import { getTokenByAddress } from '../../common/tokens';
 import { fetchPrivateKeyString } from './auth';
 import { getChainParameters, getTronClient } from './util/tronweb';
 import { fetchStoredChainAccount, fetchStoredWallet } from '../../common/accounts';
-import { handleServerError } from '../../errors';
+import { ApiServerError, handleServerError } from '../../errors';
 import { getTrc20Balance, getWalletBalance } from './wallet';
 import { hexToString } from '../../../util/stringFormat';
-import { ONE_TRX, TRON_GAS } from './constants';
+import {
+  isWalletSponsoredToken, ONE_TRX, TRON_GAS,
+} from './constants';
+import {
+  getWalletSponsorshipDisplayError,
+  requestWalletSponsorshipQuote,
+  submitWalletSponsoredTransfer,
+} from './sponsorship';
+import { formatTrc20Uint256 } from './util/tokens';
 
 const SIGNATURE_SIZE = 65;
 
@@ -58,16 +66,38 @@ export async function checkTransactionDraft(
     ]);
 
     let fee: bigint;
+    let realFee: bigint;
 
     if (tokenAddress) {
-      fee = await estimateTrc20TransferFee(tronWeb, {
-        network,
-        toAddress,
-        tokenAddress,
-        amount,
-        energyUnitFee,
-        fromAddress: address,
-      });
+      if (isWalletSponsoredToken(network, tokenAddress) && amount !== undefined) {
+        const { transaction } = await buildTrc20Transfer(tronWeb, {
+          toAddress,
+          tokenAddress,
+          amount,
+          feeLimit: TRON_GAS.transferTrc20Estimated,
+          fromAddress: address,
+        });
+        const sponsorship = await requestWalletSponsorshipQuote(tronWeb, {
+          network,
+          ownerAddress: address,
+          toAddress,
+          tokenAddress,
+          amount,
+        }, transaction);
+        result.sponsorship = sponsorship;
+        fee = sponsorship.onchainFee;
+        realFee = sponsorship.serviceFee;
+      } else {
+        fee = await estimateTrc20TransferFee(tronWeb, {
+          network,
+          toAddress,
+          tokenAddress,
+          amount,
+          energyUnitFee,
+          fromAddress: address,
+        });
+        realFee = fee;
+      }
     } else {
       // This call throws "Error: Invalid amount provided" when the amount is 0.
       // It doesn't throw when the amount is > than the balance.
@@ -83,6 +113,7 @@ export async function checkTransactionDraft(
       if (account.balance === undefined) {
         fee += ONE_TRX + 100n * BigInt(bandwidthUnitFee);
       }
+      realFee = fee;
     }
 
     const tokenSlug = tokenAddress
@@ -91,11 +122,11 @@ export async function checkTransactionDraft(
 
     result.explainedFee = explainApiTransferFee({
       fee,
-      realFee: fee,
+      realFee,
       tokenSlug,
     });
 
-    const trxAmount = tokenAddress ? fee : (amount ?? 0n) + fee;
+    const trxAmount = tokenAddress ? realFee : (amount ?? 0n) + realFee;
     const isEnoughTrx = trxBalance >= trxAmount;
 
     if (!isEnoughTrx) {
@@ -107,6 +138,10 @@ export async function checkTransactionDraft(
     return result;
   } catch (err) {
     logDebugError('tron:checkTransactionDraft', err);
+    if (err instanceof ApiServerError) {
+      const sponsorshipError = getWalletSponsorshipDisplayError(err);
+      if (sponsorshipError) return { ...result, error: sponsorshipError };
+    }
     return {
       ...handleServerError(err),
       ...result,
@@ -151,6 +186,19 @@ export async function submitGasfullTransfer(
     if (!privateKey) return { error: ApiCommonError.InvalidPassword };
 
     if (tokenAddress) {
+      if (isWalletSponsoredToken(network, tokenAddress)) {
+        if (!options.sponsorshipId) {
+          return { error: ApiTransactionError.UnsuccesfulTransfer };
+        }
+        return submitWalletSponsoredTransfer(tronWeb, privateKey, options.sponsorshipId, {
+          network,
+          ownerAddress: address,
+          toAddress,
+          tokenAddress,
+          amount,
+        });
+      }
+
       const { transaction } = await buildTrc20Transfer(tronWeb, {
         toAddress, tokenAddress, amount, feeLimit: fee, fromAddress: address,
       });
@@ -178,6 +226,11 @@ export async function submitGasfullTransfer(
     }
   } catch (err: any) {
     logDebugError('submitTransfer', err);
+    if (err instanceof ApiServerError) {
+      return {
+        error: getWalletSponsorshipDisplayError(err) ?? ApiCommonError.ServerError,
+      };
+    }
     return { error: ApiTransactionError.UnsuccesfulTransfer };
   }
 }
@@ -217,7 +270,7 @@ async function estimateTrc20TransferFee(tronWeb: TronWeb, options: {
     {},
     [
       { type: 'address', value: toAddress },
-      { type: 'uint256', value: Number(amount) },
+      { type: 'uint256', value: formatTrc20Uint256(amount) },
     ],
     fromAddress,
   );
@@ -242,7 +295,7 @@ async function buildTrc20Transfer(tronWeb: TronWeb, options: {
     { feeLimit: Number(feeLimit) },
     [
       { type: 'address', value: toAddress },
-      { type: 'uint256', value: Number(amount) },
+      { type: 'uint256', value: formatTrc20Uint256(amount) },
     ],
     fromAddress,
   );

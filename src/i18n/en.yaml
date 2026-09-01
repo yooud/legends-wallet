@@ -202,6 +202,13 @@ $send_token_symbol: Send %1$s
 Is it all ok?: Is it all ok?
 Receiving Address: Receiving Address
 Fee: Fee
+$wallet_sponsorship_fee: Legends Energy fee
+$wallet_sponsorship_paid_fee: Fee paid to Legends Energy
+$wallet_sponsorship_onchain_fee: On-chain estimate
+$wallet_sponsorship_saved: Savings
+$wallet_sponsorship_help: Legends Energy supplies Energy and Bandwidth before the token transfer is broadcast. You pay the displayed service fee in TRX. The on-chain estimate is what TRON would charge without the service; savings are the positive difference.
+$wallet_sponsorship_quote_changed: Network resource conditions changed. Go back and review the updated fee before confirming again.
+$wallet_sponsorship_unavailable: Legends Energy fee service is temporarily unavailable. Please try again later.
 Edit: Edit
 Confirm: Confirm
 Data Signed: Data Signed

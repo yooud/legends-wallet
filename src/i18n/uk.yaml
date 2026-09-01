@@ -212,6 +212,13 @@ $send_token_symbol: Надіслати %1$s
 Is it all ok?: Все вірно?
 Receiving Address: Адреса одержувача
 Fee: Комісія
+$wallet_sponsorship_fee: Комісія Legends Energy
+$wallet_sponsorship_paid_fee: Комісія на користь Legends Energy
+$wallet_sponsorship_onchain_fee: Оцінка ончейн
+$wallet_sponsorship_saved: Економія
+$wallet_sponsorship_help: Legends Energy надає Energy і Bandwidth до відправлення токена в мережу. Ви сплачуєте вказану сервісну комісію в TRX. Оцінка ончейн показує комісію TRON без сервісу, а економія — додатну різницю.
+$wallet_sponsorship_quote_changed: Умови ресурсів мережі змінилися. Поверніться назад і перевірте оновлену комісію перед повторним підтвердженням.
+$wallet_sponsorship_unavailable: Сервіс комісії Legends Energy тимчасово недоступний. Спробуйте ще раз пізніше.
 Edit: Виправити
 Confirm: Підтвердити
 Data Signed: Дані підписано

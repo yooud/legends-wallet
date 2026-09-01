@@ -179,4 +179,20 @@ describe('fetchWithRetry breaker classification', () => {
     // 400 is terminal (one attempt per call) and healthy - every call reaches upstream.
     expect(fetchMock).toHaveBeenCalledTimes(BREAKER_FAILURE_THRESHOLD + 1);
   });
+
+  it('preserves a nested API error message', async () => {
+    fetchMock.mockResolvedValue(mockResponse(400, {
+      ok: false,
+      error: {
+        code: 'validation_error',
+        message: 'resource conditions changed; request a new quote',
+      },
+    }));
+
+    await expect(fetchWithRetry(VENDOR_URL)).rejects.toMatchObject({
+      message: expect.stringContaining('resource conditions changed; request a new quote'),
+      statusCode: 400,
+      code: 'validation_error',
+    });
+  });
 });

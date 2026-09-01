@@ -6,6 +6,7 @@ import { AppState, AuthState, BiometricsState } from '../../types';
 import {
   IS_EXPLORER,
   IS_FEATURE_LIMITED,
+  IS_LEGENDS_WALLET,
   MNEMONIC_CHECK_COUNT,
   MNEMONIC_COUNT,
   SHOULD_CLEANUP_LEGACY_AUTH,
@@ -415,7 +416,7 @@ addActionHandler('createAccount', async (global, actions) => {
   const isPrivateKeyBased = isMnemonicPrivateKey(mnemonic);
   const accounts = isPrivateKeyBased
     // TODO: Create a separate screen for private key importing, where users will choose the chain
-    ? await callApi('importPrivateKey', 'tron', networks, mnemonic[0])
+    ? await callApi('importPrivateKey', IS_LEGENDS_WALLET ? 'tron' : 'ton', networks, mnemonic[0])
     : await callApi('importMnemonic', networks, mnemonic, !isImporting);
 
   global = getGlobal();

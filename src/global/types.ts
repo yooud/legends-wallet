@@ -49,6 +49,7 @@ import type {
   ApiTokenDetails,
   ApiTokenType,
   ApiTokenWithPrice,
+  ApiTransferSponsorship,
   ApiUpdate,
   ApiUpdateDappCloseLoading,
   ApiUpdateDappConnect,
@@ -830,6 +831,7 @@ export type GlobalState = {
      * Every time this field value changes, the `amount` value should be actualized using `preserveMaxTransferAmount`.
      */
     explainedFee?: ExplainedTransferFee;
+    sponsorship?: ApiTransferSponsorship;
     mfaRequestHash?: string;
   };
 

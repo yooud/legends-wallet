@@ -40,17 +40,19 @@ export async function getWalletAssets(
   address: string,
   sendUpdateTokens: NoneToVoidFunction,
 ): Promise<ApiBalanceBySlug> {
-  const { usdtAddress } = NETWORK_CONFIG[network];
-  const usdtSlug = buildTokenSlug('tron', usdtAddress);
+  const { tokenAddresses } = NETWORK_CONFIG[network];
 
-  const [trxBalance, usdtBalance] = await Promise.all([
+  const [trxBalance, tokenBalances] = await Promise.all([
     getWalletBalance(network, address),
-    getTrc20Balance(network, usdtAddress, address),
+    Promise.all(tokenAddresses.map(async (tokenAddress) => ({
+      slug: buildTokenSlug('tron', tokenAddress),
+      balance: await getTrc20Balance(network, tokenAddress, address),
+    }))),
   ]);
 
   return {
     [TRX.slug]: trxBalance,
-    [usdtSlug]: usdtBalance,
+    ...Object.fromEntries(tokenBalances.map(({ slug, balance }) => [slug, balance])),
   };
 }
 

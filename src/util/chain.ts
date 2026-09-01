@@ -18,6 +18,7 @@ import {
   HYPERLIQUID_USDC_MAINNET,
   IS_CORE_WALLET,
   IS_GRAM_WALLET,
+  IS_LEGENDS_WALLET,
   MONAD,
   MYCOIN_MAINNET,
   MYCOIN_TESTNET,
@@ -35,6 +36,7 @@ import {
   TON_USDT_MAINNET,
   TON_USDT_TESTNET,
   TONCOIN,
+  TRC20_BTT_TESTNET,
   TRC20_USDT_MAINNET,
   TRC20_USDT_TESTNET,
   TRX,
@@ -353,14 +355,17 @@ const CHAIN_CONFIG: Record<ApiChain, ChainConfig> = {
       testnet: TRC20_USDT_TESTNET.slug,
     },
     defaultEnabledSlugs: {
-      mainnet: [TRX.slug, TRC20_USDT_MAINNET.slug],
-      testnet: [TRX.slug, TRC20_USDT_TESTNET.slug],
+      mainnet: IS_LEGENDS_WALLET ? [TRX.slug, TRC20_USDT_MAINNET.slug] : [TRX.slug],
+      testnet: IS_LEGENDS_WALLET
+        ? [TRX.slug, TRC20_USDT_TESTNET.slug, TRC20_BTT_TESTNET.slug]
+        : [TRX.slug],
     },
     crosschainSwapSlugs: [TRX.slug, TRC20_USDT_MAINNET.slug],
     tokenInfo: [
       TRX,
       TRC20_USDT_MAINNET,
       TRC20_USDT_TESTNET,
+      ...(IS_LEGENDS_WALLET ? [TRC20_BTT_TESTNET] : []),
     ],
     explorers: [
       {

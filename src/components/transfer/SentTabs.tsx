@@ -4,7 +4,7 @@ import { getActions, withGlobal } from '../../global';
 import type { DropdownItem } from '../ui/Dropdown';
 import type { TabWithProperties } from '../ui/TabList';
 
-import { MULTISEND_DAPP_URL } from '../../config';
+import { IS_TRON_ONLY, MULTISEND_DAPP_URL } from '../../config';
 import { selectIsOffRampAllowed } from '../../global/selectors';
 import buildClassName from '../../util/buildClassName';
 import { vibrate } from '../../util/haptics';
@@ -68,8 +68,8 @@ function SentTabs({ className, isOffRampAllowed }: OwnProps & StateProps) {
         className: styles.tab,
         menuClassName: styles.menuWrapper,
         menuPositionX: 'left',
-        menuItems: [multisendMenuItem],
-        onMenuItemClick: handleMultisendOpen,
+        menuItems: IS_TRON_ONLY ? undefined : [multisendMenuItem],
+        onMenuItemClick: IS_TRON_ONLY ? undefined : handleMultisendOpen,
       },
       isOffRampAllowed ? {
         id: TabContent.Sell,

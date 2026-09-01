@@ -25,6 +25,7 @@ import { addActionHandler, getGlobal, setGlobal } from '../../index';
 import {
   clearCurrentTransfer,
   clearIsPinAccepted,
+  isSameTransferFeeDraft,
   preserveMaxTransferAmount,
   updateAccountState,
   updateCurrentTransfer,
@@ -41,6 +42,8 @@ import {
   selectToken,
 } from '../../selectors';
 import { switchAccount } from './auth';
+
+let latestTransferFeeRequestId = 0;
 
 addActionHandler('switchTransferAccount', async (global, actions, { accountId }) => {
   if (accountId === selectCurrentAccountId(global)) {
@@ -160,6 +163,7 @@ addActionHandler('submitTransferInitial', async (global, actions, payload) => {
 });
 
 addActionHandler('fetchTransferFee', async (global, actions, payload) => {
+  const requestId = ++latestTransferFeeRequestId;
   global = updateCurrentTransfer(global, { isLoading: true, error: undefined });
   setGlobal(global);
 
@@ -181,7 +185,11 @@ addActionHandler('fetchTransferFee', async (global, actions, payload) => {
   });
 
   global = getGlobal();
-  if (hasCurrentTokenChanged(global, tokenSlug)) {
+  if (requestId !== latestTransferFeeRequestId) {
+    return;
+  }
+  if (selectCurrentAccountId(global) !== accountId || !isSameTransferFeeDraft(global.currentTransfer, payload)) {
+    setGlobal(updateCurrentTransfer(global, { isLoading: false }));
     return;
   }
 
@@ -215,6 +223,7 @@ addActionHandler('fetchTransferFee', async (global, actions, payload) => {
 });
 
 addActionHandler('fetchNftFee', async (global, actions, payload) => {
+  const requestId = ++latestTransferFeeRequestId;
   const { toAddress, nfts, comment } = payload;
 
   global = updateCurrentTransfer(global, { isLoading: true, error: undefined });
@@ -231,8 +240,12 @@ addActionHandler('fetchNftFee', async (global, actions, payload) => {
 
   global = getGlobal();
 
+  if (requestId !== latestTransferFeeRequestId) {
+    return;
+  }
   if (!global.currentTransfer.nfts?.length) {
     // For cases when the user switches the token transfer mode before the result arrives
+    setGlobal(updateCurrentTransfer(global, { isLoading: false }));
     return;
   }
 
@@ -279,6 +292,7 @@ addActionHandler('submitTransfer', withEnclaveSessionRelease(async (global, acti
     stateInit,
     isGaslessWithStars,
     isNftBurn,
+    sponsorship,
   } = global.currentTransfer;
 
   if (!prepareTransfer(TransferState.ConfirmHardware, updateCurrentTransfer)) {
@@ -349,6 +363,7 @@ addActionHandler('submitTransfer', withEnclaveSessionRelease(async (global, acti
       isGaslessWithStars,
       noFeeCheck: true,
       gaslessTransaction: diesel?.transaction,
+      sponsorshipId: sponsorship?.id,
     };
 
     result = await callApi('submitTransfer', chain, options);

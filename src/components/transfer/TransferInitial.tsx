@@ -2,7 +2,9 @@ import type { TeactNode } from '../../lib/teact/teact';
 import React, { memo, useCallback, useEffect, useMemo, useRef } from '../../lib/teact/teact';
 import { getActions, withGlobal } from '../../global';
 
-import type { ApiBaseCurrency, ApiFetchEstimateDieselResult, ApiNft } from '../../api/types';
+import type {
+  ApiBaseCurrency, ApiFetchEstimateDieselResult, ApiNft, ApiTransferSponsorship,
+} from '../../api/types';
 import type { SavedAddress, UserToken } from '../../global/types';
 import type { LangFn } from '../../hooks/useLang';
 import type { ExplainedTransferFee } from '../../util/fee/transferFee';
@@ -85,6 +87,7 @@ interface StateProps {
   isAllowSuspiciousActions: boolean;
   isTransferReadonly?: boolean;
   explainedFee?: ExplainedTransferFee;
+  sponsorship?: ApiTransferSponsorship;
   accountId?: string;
   accountTitle?: string;
   hasMultipleAccounts?: boolean;
@@ -124,6 +127,7 @@ function TransferInitial({
   isAllowSuspiciousActions,
   isTransferReadonly,
   explainedFee,
+  sponsorship,
   accountId,
   accountTitle,
   hasMultipleAccounts,
@@ -194,12 +198,16 @@ function TransferInitial({
     };
   }, [explainedFee]);
 
+  const balanceCheckFee = sponsorship
+    ? safeExplainedFee.realFee?.terms
+    : safeExplainedFee.fullFee?.terms;
+
   // Note: this constant has 3 distinct meaningful values
   const isEnoughBalance = isBalanceSufficientForTransfer({
     tokenBalance: balance,
     nativeTokenBalance,
     transferAmount: isNftTransfer ? 0n : amount,
-    fullFee: safeExplainedFee.fullFee?.terms,
+    fullFee: balanceCheckFee,
     canTransferFullBalance: safeExplainedFee.canTransferFullBalance,
   });
 
@@ -457,7 +465,9 @@ function TransferInitial({
     let precision: FeePrecision = 'exact';
 
     if (!isAmountMissing) {
-      const actualFee = hasInsufficientFeeError ? safeExplainedFee.fullFee : safeExplainedFee.realFee;
+      const actualFee = hasInsufficientFeeError && !sponsorship
+        ? safeExplainedFee.fullFee
+        : safeExplainedFee.realFee;
       if (actualFee) {
         ({ terms, precision } = actualFee);
       }
@@ -654,6 +664,7 @@ export default memo(
         scamWarningType,
         isTransferReadonly,
         explainedFee,
+        sponsorship,
       } = global.currentTransfer;
 
       const isLedger = selectIsHardwareAccount(global);
@@ -692,6 +703,7 @@ export default memo(
         isAllowSuspiciousActions: selectIsAllowSuspiciousActions(global, currentAccountId),
         isTransferReadonly,
         explainedFee,
+        sponsorship,
         accountId: currentAccountId,
         accountTitle: currentAccount?.title,
         hasMultipleAccounts: selectHasMultipleAccounts(global),

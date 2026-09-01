@@ -4,6 +4,7 @@ import type { ApiNetwork, ApiNftMarketplace, ApiTransaction } from './misc';
 export type ApiActivityReconciliationReason =
   | 'raw'
   | 'local-intent'
+  | 'wallet-sponsorship'
   | 'cex-swap'
   | 'ton-aggregated-swap'
   | 'ton-partial-failure-deaggregated';
@@ -45,6 +46,10 @@ type BaseActivity = {
     };
     /** SDK-owned source/projection metadata for activity reconciliation. Optional for backwards compatibility. */
     reconciliation?: ApiActivityReconciliationMetadata;
+    walletSponsorship?: {
+      serviceFee: bigint;
+      onchainFee: bigint;
+    };
     // TODO Move other extra fields here (externalMsgHash, ...)
   };
 };

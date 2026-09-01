@@ -294,7 +294,7 @@ export const PROXY_HOSTS = process.env.PROXY_HOSTS;
 export const TINY_TRANSFER_MAX_COST = 0.01;
 
 export const IMAGE_CACHE_NAME = IS_EXPLORER ? 'explorer-image' : 'legends-wallet-image';
-export const LANG_CACHE_NAME = 'legends-wallet-lang-1';
+export const LANG_CACHE_NAME = 'legends-wallet-lang-3';
 
 export const LANG_LIST: LangItem[] = [{
   langCode: 'en',
@@ -577,9 +577,24 @@ export const TRC20_USDT_MAINNET = {
 
 export const TRC20_USDT_TESTNET = {
   ...TRC20_USDT_MAINNET,
-  slug: 'tron-txyzopyrdj',
-  tokenAddress: 'TXYZopYRdj2D9XRtbG411XZZ3kM5VkAeBf',
+  ...(IS_LEGENDS_WALLET ? {
+    slug: 'tron-txyzopyrdj',
+    tokenAddress: 'TXYZopYRdj2D9XRtbG411XZZ3kM5VkAeBf',
+  } : {
+    slug: 'tron-tg3xxyexbk',
+    tokenAddress: 'TG3XXyExBkPp9nzdajDZsozEu4BkaSJozs',
+  }),
 };
+
+export const TRC20_BTT_TESTNET = {
+  name: 'BitTorrent',
+  symbol: 'BTT',
+  decimals: 18,
+  chain: 'tron',
+  slug: 'tron-tnuokl1ni8',
+  tokenAddress: 'TNuoKL1ni8aoshfFL1ASca1Gou9RXwAzfn',
+  label: 'TRC-20',
+} as const;
 
 export const TON_USDT_MAINNET = {
   name: 'Tether USD',
@@ -785,7 +800,20 @@ export const ALL_STAKING_POOLS = [
 
 // Native tokens in the UI display order (see CHAIN_DISPLAY_ORDER). Drives the empty-wallet token order.
 export const PRIORITY_TOKENS = [
-  TRX,
+  ...(IS_LEGENDS_WALLET ? [TRX] : [
+    ETH,
+    SOLANA,
+    HYPERLIQUID,
+    TONCOIN,
+    TRX,
+    BNB,
+    BASE,
+    ROBINHOOD,
+    MONAD,
+    ARBITRUM,
+    POLYGON,
+    AVALANCHE,
+  ]),
 ] as ApiToken[];
 
 export const INIT_SWAP_ASSETS: Record<'in' | 'out', ApiSwapAsset> = {
@@ -1081,7 +1109,7 @@ export const UNKNOWN_TOKEN = {
   decimals: 9,
 } as const;
 
-export const DEFAULT_CHAIN: ApiChain = 'tron';
+export const DEFAULT_CHAIN: ApiChain = IS_LEGENDS_WALLET ? 'tron' : 'ton';
 
 export const MFA_BOT_URL = process.env.MFA_BOT_URL || 'https://t.me/tgmfabot/auth';
 export const MFA_API_BASE_URL = process.env.MFA_API_BASE_URL || 'https://mfa-server.mytonwallet.org';

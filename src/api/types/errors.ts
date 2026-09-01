@@ -21,6 +21,8 @@ export enum ApiTransactionDraftError {
   InvalidAddressFormat = 'InvalidAddressFormat',
   InactiveContract = 'InactiveContract',
   MfaNftBatchLimit = 'MfaNftBatchLimit',
+  WalletSponsorshipQuoteChanged = '$wallet_sponsorship_quote_changed',
+  WalletSponsorshipUnavailable = '$wallet_sponsorship_unavailable',
 }
 
 export enum ApiTransactionError {

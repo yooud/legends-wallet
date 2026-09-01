@@ -1,0 +1,73 @@
+.root {
+  width: 100%;
+  margin: 0 0 1.25rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--border-radius-buttons);
+
+  font-size: 0.875rem;
+
+  background-color: var(--color-background-first);
+}
+
+.feeRow,
+.feeDetails {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: space-between;
+
+  min-width: 0;
+}
+
+.feeLabel {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+
+  min-width: 0;
+
+  color: var(--color-gray-2);
+}
+
+.helpIcon {
+  flex-shrink: 0;
+  color: var(--color-gray-2);
+}
+
+.feeAmount {
+  flex-shrink: 0;
+
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.25rem;
+  color: var(--color-text);
+}
+
+.feeDetails {
+  flex-wrap: wrap;
+  row-gap: 0;
+
+  margin-top: 0.125rem;
+
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+.onchainFee,
+.savings {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.onchainFee {
+  color: var(--color-gray-2);
+  text-align: end;
+}
+
+.savings {
+  color: var(--color-transaction-amount-green-text);
+
+  &_none {
+    color: var(--color-gray-2);
+  }
+}
