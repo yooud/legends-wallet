@@ -38,6 +38,11 @@
   padding-inline-end: 0;
 }
 
+.prepaidWrapper {
+  // Prepaid owns the vertical scrollbar, so the outer layout must not reserve its gutter twice.
+  width: 100%;
+}
+
 .settingsWrapper {
   display: flex;
   flex-direction: column;

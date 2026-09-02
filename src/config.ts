@@ -211,6 +211,12 @@ export const TRON_MAINNET_API_URL = process.env.TRON_MAINNET_API_URL
   || (IS_LEGENDS_WALLET ? 'https://node.legends.energy' : 'https://tronapi.mytonwallet.org');
 export const TRON_TESTNET_API_URL = process.env.TRON_TESTNET_API_URL
   || (IS_LEGENDS_WALLET ? `${BRILLIANT_API_BASE_URL}/testnet` : 'https://api.shasta.trongrid.io');
+export const TRON_MAINNET_HISTORY_API_URL = process.env.TRON_MAINNET_HISTORY_API_URL
+  || (IS_LEGENDS_WALLET ? 'https://api.trongrid.io' : TRON_MAINNET_API_URL);
+export const TRON_MAINNET_HISTORY_API_KEY = process.env.TRON_MAINNET_HISTORY_API_KEY || '';
+export const TRON_TESTNET_HISTORY_API_URL = process.env.TRON_TESTNET_HISTORY_API_URL
+  || (IS_LEGENDS_WALLET ? 'https://nile.trongrid.io' : TRON_TESTNET_API_URL);
+export const TRON_TESTNET_HISTORY_API_KEY = process.env.TRON_TESTNET_HISTORY_API_KEY || '';
 
 export const SOLANA_MAINNET_RPC_URL = process.env.SOLANA_MAINNET_RPC_URL || 'https://solanaapi.mytonwallet.org';
 export const SOLANA_MAINNET_API_KEY = process.env.SOLANA_MAINNET_API_KEY;
@@ -294,7 +300,7 @@ export const PROXY_HOSTS = process.env.PROXY_HOSTS;
 export const TINY_TRANSFER_MAX_COST = 0.01;
 
 export const IMAGE_CACHE_NAME = IS_EXPLORER ? 'explorer-image' : 'legends-wallet-image';
-export const LANG_CACHE_NAME = 'legends-wallet-lang-3';
+export const LANG_CACHE_NAME = 'legends-wallet-lang-4';
 
 export const LANG_LIST: LangItem[] = [{
   langCode: 'en',

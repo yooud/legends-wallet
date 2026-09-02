@@ -1148,6 +1148,10 @@ No view wallets yet: No view wallets yet
 View wallets can receive assets, but you cannot use them to send or sign transactions.: View wallets can receive assets, but you cannot use them to send or sign transactions.
 Add the first one to track balances and activity for any address.: Add the first one to track balances and activity for any address.
 Customize Wallet: Customize Wallet
+Card Background: Card Background
+"Select a wallet background:": "Select a wallet background:"
+This background will be displayed on the home screen and in the wallets list.: This background will be displayed on the home screen and in the wallets list.
+Choose the background used for this wallet.: Choose the background used for this wallet.
 "Select the card stored in this wallet:": "Select the card stored in this wallet:"
 This card will be installed for this wallet and will be displayed on the home screen and in the wallets list.: This card will be installed for this wallet and will be displayed on the home screen and in the wallets list.
 Get More Cards: Get More Cards
@@ -1776,3 +1780,46 @@ $token_info_no_description: No description available
 $swap_cex_aml_kyc_policy_with_provider: "%provider% AML/KYC"
 Hide Unverified NFTs: Hide Unverified NFTs
 Unverified: Unverified
+Prepaid: Fee Balance
+Available balance: Available balance
+Top Up: Top Up
+Linked Wallets: Linked Wallets
+Select Wallet: Select Wallet
+Link Wallet: Link Wallet
+Fee Coverage: Fee Coverage
+Prepaid Balance: Prepaid Balance
+Bot Balance: Bot Balance
+Connect Account: Connect Account
+Disconnect Account: Disconnect Account
+Connect with Telegram: Connect with Telegram
+Connect with API Key: Connect with API Key
+API Key: API Key
+or: or
+Prepaid balance or direct TRX payment: Prepaid balance or direct TRX payment
+Automatic: Automatic
+Prepaid only: Prepaid only
+Pay with TRX: Pay with TRX
+Prepaid balance is insufficient: Prepaid balance is insufficient
+$prepaid_unavailable: Prepaid fee coverage is temporarily unavailable.
+$prepaid_link_help: Both wallets sign a local proof. No transaction is broadcast and keys never leave this device.
+$prepaid_topup_help: Deposit a supported asset in one transfer. Resources are supplied automatically and their service cost is deducted from the credited balance.
+$prepaid_settings_help: Choose how resource coverage is paid for this wallet.
+$prepaid_auto_help: Use prepaid balance when available, otherwise pay the service fee in TRX.
+$prepaid_only_help: Use only your prepaid balance. A top-up is required when it is insufficient.
+$prepaid_direct_help: Pay each Legends Energy service fee directly from this wallet.
+$prepaid_minimum: Minimum top-up is %amount% USDT
+$prepaid_minimum_value: Minimum top-up value is %amount% USDT
+$prepaid_invalid_amount: Enter a valid amount
+$prepaid_reserved: "%amount% TRX reserved"
+$bot_balance_help: Connect this wallet to a bot project and use the same balance for fee coverage. Wallet operations remain separate from bot operations.
+$bot_balance_connect_help: Connect with a project API key or use your Telegram Mini App session. The wallet will sign a local proof; no transaction is broadcast.
+$bot_balance_project_help: Choose which bot project balance will be used to cover this wallet's fees.
+$bot_balance_disconnect_warning: Disconnecting stops this wallet from using the project balance for fee coverage. The funds will remain in the bot project balance and stay available in the bot.
+$prepaid_history_topup: Fee balance top-up
+$prepaid_history_topup_resources: Resources for fee balance top-up
+$prepaid_history_fee_coverage: Transaction fee coverage
+$prepaid_history_refund: Fee balance refund
+$prepaid_history_adjustment: Fee balance adjustment
+$prepaid_history_balance_received: Balance received from linked wallet
+$prepaid_history_balance_moved: Balance moved to linked wallet
+$prepaid_history_bot_transfer: Balance moved to connected bot project

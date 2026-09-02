@@ -59,7 +59,9 @@ import {
   TONCENTER_MAINNET_URL,
   TONCENTER_TESTNET_URL,
   TRON_MAINNET_API_URL,
+  TRON_MAINNET_HISTORY_API_URL,
   TRON_TESTNET_API_URL,
+  TRON_TESTNET_HISTORY_API_URL,
   WALLET_CONNECT_BRIDGE_PATTERNS,
   WALLET_CONNECT_PAY_CONNECT_ORIGINS,
   WALLET_CONNECT_PAY_FRAME_ORIGINS,
@@ -117,7 +119,9 @@ const cspConnectSrcHosts = Array.from(new Set([
   TONAPIIO_MAINNET_URL,
   TONAPIIO_TESTNET_URL,
   TRON_MAINNET_API_URL,
+  TRON_MAINNET_HISTORY_API_URL,
   TRON_TESTNET_API_URL,
+  TRON_TESTNET_HISTORY_API_URL,
   SOLANA_MAINNET_RPC_URL,
   SOLANA_MAINNET_RPC_URL.replace(/^http(s?):/, 'ws$1:'),
   SOLANA_TESTNET_RPC_URL,
@@ -167,10 +171,11 @@ const CSP = `
 
 // Kept out of `CSP` because that string is also served via a `<meta>` tag and the extension manifest,
 // where `frame-ancestors` is invalid. It only works as an HTTP header, so it is appended in `_headers`.
-// `X-Frame-Options` stays in `_headers` as a fail-closed fallback should this directive ever be dropped.
-// Empty for the Telegram build, which is itself framed by web.telegram.org and whose framing policy
-// `_headers_telegram` owns; any directive here would override that file's `X-Frame-Options`.
-const cspFrameAncestors = IS_TELEGRAM_APP ? '' : `${[
+// Telegram Web needs to frame its build, while every other build remains fail-closed by default.
+const cspFrameAncestors = IS_TELEGRAM_APP ? `${[
+  'frame-ancestors https://web.telegram.org',
+  'https://*.telegram.org',
+].join(' ')};` : `${[
   'frame-ancestors \'self\'',
   'https://stand.ton-connect.io', // The TON Connect conformance stand embeds the wallet in an iframe.
   ...(APP_ENV === 'production' ? [] : ['http://localhost:*', 'http://127.0.0.1:*']),
@@ -495,6 +500,8 @@ export default function createConfig(
         TONAPIIO_TESTNET_URL: '',
         BRILLIANT_API_BASE_URL: '',
         TRON_MAINNET_API_URL: '',
+        TRON_MAINNET_HISTORY_API_KEY: '',
+        TRON_MAINNET_HISTORY_API_URL: '',
         SOLANA_MAINNET_RPC_URL: '',
         SOLANA_TESTNET_RPC_URL: '',
         SOLANA_MAINNET_API_URL: '',
@@ -504,6 +511,8 @@ export default function createConfig(
         EVM_MAINNET_RPC_URL: '',
         EVM_TESTNET_RPC_URL: '',
         TRON_TESTNET_API_URL: '',
+        TRON_TESTNET_HISTORY_API_KEY: '',
+        TRON_TESTNET_HISTORY_API_URL: '',
         PROXY_HOSTS: '',
         STAKING_POOLS: '',
         LIQUID_POOL: '',

@@ -31,15 +31,17 @@ interface StateProps {
   areSettingsOpen?: boolean;
   isAgentOpen?: boolean;
   isExploreOpen?: boolean;
+  isPrepaidOpen?: boolean;
   accentColorIndex?: number;
 }
 
-type IconKey = 'iconWallet' | 'iconAgent' | 'iconExplore' | 'iconSettings';
+type IconKey = 'iconWallet' | 'iconAgent' | 'iconExplore' | 'iconSettings' | 'iconEarn';
 
 interface TabConfig {
   index: number;
   label: string;
   iconKey: IconKey;
+  activeIconKey: IconKey | 'iconWalletSolid' | 'iconAgentSolid' | 'iconExploreSolid' | 'iconSettingsSolid';
   onClick: NoneToVoidFunction;
 }
 
@@ -49,16 +51,18 @@ const ANIMATED_STICKER_SPEED = 2;
 const TAB_WALLET = 0;
 const TAB_AGENT = 1;
 const TAB_EXPLORE = 2;
-const TAB_SETTINGS_FULL = 3;
+const TAB_PREPAID_FULL = 3;
+const TAB_SETTINGS_WITH_PREPAID_FULL = 4;
 
 const IS_REDUCED_NAV = IS_FEATURE_LIMITED || NO_AGENT_AND_EXPLORE;
-const TAB_COUNT = IS_REDUCED_NAV ? 2 : 4;
-const SETTINGS_INDEX = IS_REDUCED_NAV ? 1 : TAB_SETTINGS_FULL;
+const TAB_COUNT = IS_REDUCED_NAV ? 3 : 5;
+const PREPAID_INDEX = IS_REDUCED_NAV ? 1 : TAB_PREPAID_FULL;
+const SETTINGS_INDEX = IS_REDUCED_NAV ? 2 : TAB_SETTINGS_WITH_PREPAID_FULL;
 
 function BottomBar({
-  theme, areSettingsOpen, isAgentOpen, isExploreOpen, accentColorIndex,
+  theme, areSettingsOpen, isAgentOpen, isExploreOpen, isPrepaidOpen, accentColorIndex,
 }: StateProps) {
-  const { switchToWallet, switchToAgent, switchToExplore, switchToSettings } = getActions();
+  const { switchToWallet, switchToAgent, switchToExplore, switchToSettings, switchToPrepaid } = getActions();
 
   const lang = useLang();
   const [isHidden, setIsHidden] = useState(getIsBottomBarHidden());
@@ -72,18 +76,64 @@ function BottomBar({
     });
   });
 
-  const activeIndex = getActiveIndex({ isAgentOpen, isExploreOpen, areSettingsOpen });
+  const activeIndex = getActiveIndex({ isAgentOpen, isExploreOpen, areSettingsOpen, isPrepaidOpen });
 
   const tabs: TabConfig[] = IS_REDUCED_NAV
     ? [
-      { index: TAB_WALLET, label: 'Wallet', iconKey: 'iconWallet', onClick: switchToWallet },
-      { index: SETTINGS_INDEX, label: 'Settings', iconKey: 'iconSettings', onClick: switchToSettings },
+      {
+        index: TAB_WALLET,
+        label: 'Wallet',
+        iconKey: 'iconWallet',
+        activeIconKey: 'iconWalletSolid',
+        onClick: switchToWallet,
+      },
+      {
+        index: PREPAID_INDEX,
+        label: 'Prepaid',
+        iconKey: 'iconEarn',
+        activeIconKey: 'iconEarn',
+        onClick: switchToPrepaid,
+      },
+      {
+        index: SETTINGS_INDEX,
+        label: 'Settings',
+        iconKey: 'iconSettings',
+        activeIconKey: 'iconSettingsSolid',
+        onClick: switchToSettings,
+      },
     ]
     : [
-      { index: TAB_WALLET, label: 'Wallet', iconKey: 'iconWallet', onClick: switchToWallet },
-      { index: TAB_AGENT, label: 'Agent', iconKey: 'iconAgent', onClick: switchToAgent },
-      { index: TAB_EXPLORE, label: 'Explore', iconKey: 'iconExplore', onClick: switchToExplore },
-      { index: SETTINGS_INDEX, label: 'Settings', iconKey: 'iconSettings', onClick: switchToSettings },
+      {
+        index: TAB_WALLET,
+        label: 'Wallet',
+        iconKey: 'iconWallet',
+        activeIconKey: 'iconWalletSolid',
+        onClick: switchToWallet,
+      },
+      {
+        index: TAB_AGENT, label: 'Agent', iconKey: 'iconAgent', activeIconKey: 'iconAgentSolid', onClick: switchToAgent,
+      },
+      {
+        index: TAB_EXPLORE,
+        label: 'Explore',
+        iconKey: 'iconExplore',
+        activeIconKey: 'iconExploreSolid',
+        onClick: switchToExplore,
+      },
+      {
+        index: PREPAID_INDEX,
+        label: 'Prepaid',
+        iconKey: 'iconEarn',
+        activeIconKey: 'iconEarn',
+        onClick: switchToPrepaid,
+      },
+      {
+        index: SETTINGS_INDEX,
+        label: 'Settings',
+        iconKey: 'iconSettings',
+        activeIconKey: 'iconSettingsSolid',
+        onClick: switchToSettings,
+      },
     ];
 
   const switchToTabByIndex = useLastCallback((index: number) => {
@@ -118,9 +168,9 @@ function BottomBar({
         {...pointerHandlers}
       >
         <Pill isDragging={isDragging} squeeze={squeeze} />
-        {tabs.map(({ index, label, iconKey, onClick }) => {
+        {tabs.map(({ index, label, iconKey, activeIconKey, onClick }) => {
           const isActive = renderedActiveIndex === index;
-          const variant = isActive ? `${iconKey}Solid` as const : iconKey;
+          const variant = isActive ? activeIconKey : iconKey;
 
           return (
             <TabButton
@@ -140,13 +190,14 @@ function BottomBar({
 }
 
 export default memo(withGlobal((global): StateProps => {
-  const { areSettingsOpen, isAgentOpen, isExploreOpen } = global;
+  const { areSettingsOpen, isAgentOpen, isExploreOpen, isPrepaidOpen } = global;
 
   return {
     theme: global.settings.theme,
     areSettingsOpen,
     isAgentOpen,
     isExploreOpen,
+    isPrepaidOpen,
     accentColorIndex: selectCurrentAccountSettings(global)?.accentColorIndex,
   };
 })(BottomBar));
@@ -180,7 +231,7 @@ const TabButton = memo(({
         speed={ANIMATED_STICKER_SPEED}
         nonInteractive
         forceOnHeavyAnimation
-        className={styles.icon}
+        className={buildClassName(styles.icon, !isActive && styles.iconInactive)}
         color={accentColor}
         tgsUrl={tgsUrl}
         previewUrl={previewUrl}
@@ -192,15 +243,17 @@ const TabButton = memo(({
 });
 
 function getActiveIndex({
-  isAgentOpen, isExploreOpen, areSettingsOpen,
-}: Pick<StateProps, 'isAgentOpen' | 'isExploreOpen' | 'areSettingsOpen'>) {
+  isAgentOpen, isExploreOpen, areSettingsOpen, isPrepaidOpen,
+}: Pick<StateProps, 'isAgentOpen' | 'isExploreOpen' | 'areSettingsOpen' | 'isPrepaidOpen'>) {
   if (IS_REDUCED_NAV) {
+    if (isPrepaidOpen) return PREPAID_INDEX;
     return areSettingsOpen ? SETTINGS_INDEX : TAB_WALLET;
   }
 
   if (isAgentOpen) return TAB_AGENT;
   if (isExploreOpen) return TAB_EXPLORE;
-  if (areSettingsOpen) return TAB_SETTINGS_FULL;
+  if (isPrepaidOpen) return PREPAID_INDEX;
+  if (areSettingsOpen) return SETTINGS_INDEX;
 
   return TAB_WALLET;
 }

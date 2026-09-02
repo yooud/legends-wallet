@@ -2,7 +2,7 @@ import type { TeactNode } from '../../lib/teact/teact';
 import React from '../../lib/teact/teact';
 
 import type { ApiChain, ApiNft } from '../../api/types';
-import type { Account, AccountType } from '../../global/types';
+import type { Account, AccountType, CardBackgroundId } from '../../global/types';
 import type { AccountBalance } from '../../hooks/useAccountsBalances';
 
 import buildClassName from '../../util/buildClassName';
@@ -31,6 +31,7 @@ export interface AccountRowInnerProps {
   isRecoveryRequired?: true;
   balanceData?: AccountBalance;
   cardBackgroundNft?: ApiNft;
+  cardBackgroundId?: CardBackgroundId;
   isSensitiveDataHidden?: true;
   suffixIcon?: TeactNode;
   avatarClassName?: string;
@@ -51,6 +52,7 @@ function AccountRowInner({
   isRecoveryRequired,
   balanceData,
   cardBackgroundNft,
+  cardBackgroundId,
   isSensitiveDataHidden,
   suffixIcon,
   avatarClassName,
@@ -75,8 +77,12 @@ function AccountRowInner({
       <div className={styles.info}>
         <div className={styles.titleRow}>
           <span className={styles.title}>{title}</span>
-          {cardBackgroundNft && (
-            <CustomCardPreview nft={cardBackgroundNft} className={styles.nftIndicator} />
+          {(cardBackgroundNft || cardBackgroundId) && (
+            <CustomCardPreview
+              nft={cardBackgroundNft}
+              cardBackgroundId={cardBackgroundId}
+              className={styles.nftIndicator}
+            />
           )}
           {isRecoveryRequired && (
             <IconWithTooltip

@@ -2,9 +2,11 @@ import React, { memo, useMemo, useState } from '../../lib/teact/teact';
 import { getActions, withGlobal } from '../../global';
 
 import type { ApiBaseCurrency, ApiCurrencyRates, ApiNft } from '../../api/types';
-import type { Account, Theme, UserToken } from '../../global/types';
+import type {
+  Account, CardBackgroundId, Theme, UserToken,
+} from '../../global/types';
 
-import { MW_CARDS_COLLECTION, MW_CARDS_WEBSITE } from '../../config';
+import { IS_LEGENDS_WALLET, MW_CARDS_COLLECTION, MW_CARDS_WEBSITE } from '../../config';
 import {
   selectAccount,
   selectAccountSettings,
@@ -15,6 +17,10 @@ import {
 import buildClassName from '../../util/buildClassName';
 import { openUrl } from '../../util/openUrl';
 import { DEFAULT_CARD_ADDRESS } from './constants';
+import {
+  DEFAULT_CARD_BACKGROUND_ID,
+  LEGENDS_CARD_BACKGROUNDS,
+} from './legendsCardBackgrounds';
 
 import useEffectWithPrevDeps from '../../hooks/useEffectWithPrevDeps';
 import useLang from '../../hooks/useLang';
@@ -43,6 +49,7 @@ interface StateProps {
   nfts?: Record<string, ApiNft>;
   orderedNftAddresses?: string[];
   currentCardNft?: ApiNft;
+  cardBackgroundId?: CardBackgroundId;
   accentColorIndex?: number;
   tokens?: UserToken[];
   baseCurrency?: ApiBaseCurrency;
@@ -62,6 +69,7 @@ function CustomizeWalletModal({
   nfts,
   orderedNftAddresses,
   currentCardNft,
+  cardBackgroundId,
   accentColorIndex,
   tokens,
   baseCurrency,
@@ -76,6 +84,7 @@ function CustomizeWalletModal({
     openCustomizeWalletModal,
     closeCustomizeWalletModal,
     setCardBackgroundNft,
+    setCardBackgroundId,
     clearCardBackgroundNft,
     openMintCardModal,
     fetchNftsFromCollection,
@@ -91,12 +100,12 @@ function CustomizeWalletModal({
   } = useScrolledState();
 
   useEffectWithPrevDeps(([prevIsOpen]) => {
-    if (isOpen && accountId) {
+    if (!IS_LEGENDS_WALLET && isOpen && accountId) {
       fetchNftsFromCollection({ collection: { chain: 'ton', address: MW_CARDS_COLLECTION } });
     }
 
     return () => {
-      if (prevIsOpen && !isOpen) {
+      if (!IS_LEGENDS_WALLET && prevIsOpen && !isOpen) {
         clearNftCollectionLoading({ collection: { chain: 'ton', address: MW_CARDS_COLLECTION } });
       }
     };
@@ -104,14 +113,16 @@ function CustomizeWalletModal({
 
   useEffectWithPrevDeps(([prevIsOpen]) => {
     if (isOpen && accountId) {
-      setSelectedCardAddress(currentCardNft?.address ?? DEFAULT_CARD_ADDRESS); // Update selected card address to the current card when switching wallets
+      setSelectedCardAddress(IS_LEGENDS_WALLET
+        ? cardBackgroundId ?? DEFAULT_CARD_BACKGROUND_ID
+        : currentCardNft?.address ?? DEFAULT_CARD_ADDRESS);
     }
     return () => {
       if (prevIsOpen && !isOpen) {
         setSelectedCardAddress(DEFAULT_CARD_ADDRESS);
       }
     };
-  }, [isOpen, accountId, currentCardNft?.address]);
+  }, [isOpen, accountId, currentCardNft?.address, cardBackgroundId]);
 
   const { availableCardNfts, cardsByAddress, cardsAddresses } = useMemo(() => {
     if (!nfts || !orderedNftAddresses || areCardsLoading) {
@@ -147,9 +158,24 @@ function CustomizeWalletModal({
   }, [selectedCardAddress, nfts]);
 
   const previewCard = selectedCardAddress === DEFAULT_CARD_ADDRESS ? undefined : (selectedCard || currentCardNft);
+  const selectedBackgroundIndex = Math.max(0, LEGENDS_CARD_BACKGROUNDS.findIndex(
+    ({ id }) => id === selectedCardAddress,
+  ));
+  const previousBackgroundId = LEGENDS_CARD_BACKGROUNDS[
+    (selectedBackgroundIndex - 1 + LEGENDS_CARD_BACKGROUNDS.length) % LEGENDS_CARD_BACKGROUNDS.length
+  ].id;
+  const selectedBackgroundId = LEGENDS_CARD_BACKGROUNDS[selectedBackgroundIndex].id;
+  const nextBackgroundId = LEGENDS_CARD_BACKGROUNDS[
+    (selectedBackgroundIndex + 1) % LEGENDS_CARD_BACKGROUNDS.length
+  ].id;
 
   const handleCardSelect = useLastCallback((address: string) => {
     setSelectedCardAddress(address);
+    if (IS_LEGENDS_WALLET) {
+      const background = LEGENDS_CARD_BACKGROUNDS.find(({ id }) => id === address);
+      if (background) setCardBackgroundId({ backgroundId: background.id });
+      return;
+    }
     if (address === DEFAULT_CARD_ADDRESS) {
       clearCardBackgroundNft();
     } else {
@@ -159,6 +185,27 @@ function CustomizeWalletModal({
       }
     }
   });
+
+  function renderLegendsBackgroundSelector() {
+    return (
+      <div className={styles.section}>
+        <div className={styles.sectionSelectCard}>
+          <h3 className={styles.sectionTitle}>{lang('Select a wallet background:')}</h3>
+          <CardGrid
+            backgrounds={LEGENDS_CARD_BACKGROUNDS}
+            selectedAddress={selectedCardAddress}
+            onCardSelect={handleCardSelect}
+            tokens={tokens}
+            baseCurrency={baseCurrency}
+            currencyRates={currencyRates}
+          />
+        </div>
+        <p className={styles.helperTextOutside}>
+          {lang('This background will be displayed on the home screen and in the wallets list.')}
+        </p>
+      </div>
+    );
+  }
 
   const handleGetMoreCards = useLastCallback(() => {
     // Reset `returnTo` to avoid opening the previous modal above the browser
@@ -184,7 +231,7 @@ function CustomizeWalletModal({
             </h3>
 
             <CardGrid
-              cards={availableCardNfts!}
+              cards={availableCardNfts}
               selectedAddress={selectedCardAddress}
               onCardSelect={handleCardSelect}
               tokens={tokens}
@@ -245,9 +292,11 @@ function CustomizeWalletModal({
     EmptyState,
   }
 
-  const renderingKey = isLoading
-    ? RenderingKey.Loading
-    : hasCards ? RenderingKey.CardsSelector : RenderingKey.EmptyState;
+  const renderingKey = IS_LEGENDS_WALLET
+    ? RenderingKey.CardsSelector
+    : isLoading
+      ? RenderingKey.Loading
+      : hasCards ? RenderingKey.CardsSelector : RenderingKey.EmptyState;
 
   return (
     <Modal
@@ -258,7 +307,7 @@ function CustomizeWalletModal({
     >
       <ModalHeader
         className={styles.modalHeader}
-        title={lang('Customize Wallet')}
+        title={lang(IS_LEGENDS_WALLET ? 'Card Background' : 'Customize Wallet')}
         withNotch={isScrolled}
         onBackButtonClick={returnTo ? closeCustomizeWalletModal : undefined}
         onClose={returnTo ? undefined : closeCustomizeWalletModal}
@@ -274,6 +323,7 @@ function CustomizeWalletModal({
             tokens={tokens}
             baseCurrency={baseCurrency}
             currencyRates={currencyRates}
+            cardBackgroundId={IS_LEGENDS_WALLET ? previousBackgroundId : undefined}
             variant="left"
           />
 
@@ -283,6 +333,7 @@ function CustomizeWalletModal({
             baseCurrency={baseCurrency}
             currencyRates={currencyRates}
             previewCardNft={previewCard}
+            cardBackgroundId={IS_LEGENDS_WALLET ? selectedBackgroundId : undefined}
             variant="middle"
           />
 
@@ -291,6 +342,7 @@ function CustomizeWalletModal({
             tokens={tokens}
             baseCurrency={baseCurrency}
             currencyRates={currencyRates}
+            cardBackgroundId={IS_LEGENDS_WALLET ? nextBackgroundId : undefined}
             variant="right"
           />
         </div>
@@ -302,7 +354,9 @@ function CustomizeWalletModal({
           className={styles.transition}
         >
           {renderingKey === RenderingKey.Loading && renderLoading()}
-          {renderingKey === RenderingKey.CardsSelector && renderCardsSelector()}
+          {renderingKey === RenderingKey.CardsSelector && (
+            IS_LEGENDS_WALLET ? renderLegendsBackgroundSelector() : renderCardsSelector()
+          )}
           {renderingKey === RenderingKey.EmptyState && <EmptyState onGetFirstCard={handleGetMoreCards} />}
         </Transition>
       </div>
@@ -333,6 +387,7 @@ export default memo(withGlobal<OwnProps>((global): StateProps => {
     nfts: accountState?.nfts?.byAddress,
     orderedNftAddresses: accountState?.nfts?.orderedAddresses,
     currentCardNft: accountSettings?.cardBackgroundNft,
+    cardBackgroundId: accountSettings?.cardBackgroundId,
     accentColorIndex: accountSettings?.accentColorIndex,
     tokens,
     baseCurrency: global.settings.baseCurrency,

@@ -11,6 +11,7 @@ import {
   IS_CORE_WALLET,
   IS_EXPLORER,
   IS_FEATURE_LIMITED,
+  IS_LEGENDS_WALLET,
   IS_MY_WALLET_BRAND,
 } from '../config';
 import { selectCurrentAccountId, selectCurrentAccountSettings, selectCurrentAccountState } from '../global/selectors';
@@ -65,6 +66,7 @@ import WalletRenameModal from './main/WalletRenameModal';
 import MediaViewer from './mediaViewer/MediaViewer';
 import MintCardModal from './mintCard/MintCardModal';
 import Portfolio from './portfolio/Portfolio';
+import Prepaid from './prepaid/Prepaid';
 import Settings from './settings/Settings';
 import SwapModal from './swap/SwapModal';
 import TokenInfo from './tokenInfo/TokenInfo';
@@ -88,6 +90,7 @@ interface StateProps {
   isAgentOpen?: boolean;
   isExploreOpen?: boolean;
   isPortfolioOpen?: boolean;
+  isPrepaidOpen?: boolean;
   currentTokenSlug?: string;
   isFullscreen: boolean;
   areSettingsOpen?: boolean;
@@ -97,7 +100,7 @@ interface StateProps {
 }
 
 const APP_STATES_WITH_BOTTOM_BAR = new Set([
-  AppState.Main, AppState.Agent, AppState.Settings, AppState.Explore, AppState.TokenInfo,
+  AppState.Main, AppState.Agent, AppState.Settings, AppState.Explore, AppState.Prepaid, AppState.TokenInfo,
 ]);
 const APP_UPDATE_INTERVAL = (IS_ELECTRON && !IS_LINUX) || IS_ANDROID_DIRECT
   ? 5 * MINUTE
@@ -116,6 +119,7 @@ function App({
   isAgentOpen,
   isExploreOpen,
   isPortfolioOpen,
+  isPrepaidOpen,
   currentTokenSlug,
   isFullscreen,
   areSettingsOpen,
@@ -137,7 +141,15 @@ function App({
   const [canPrerenderMain, prerenderMain] = useFlag();
 
   const renderingKey = resolveRenderingKey({
-    isInactive, areSettingsOpen, isAgentOpen, isExploreOpen, isPortfolioOpen, currentTokenSlug, isPortrait, appState,
+    isInactive,
+    areSettingsOpen,
+    isAgentOpen,
+    isExploreOpen,
+    isPortfolioOpen,
+    isPrepaidOpen,
+    currentTokenSlug,
+    isPortrait,
+    appState,
   });
   const withBottomBar = isPortrait && (!IS_EXPLORER || isAppReady) && APP_STATES_WITH_BOTTOM_BAR.has(renderingKey);
   // Screens sharing the bottom bar are sibling tabs, so they cross-fade into each other. The token
@@ -228,6 +240,8 @@ function App({
         return <Settings isActive={isActive} />;
       case AppState.Portfolio:
         return <Portfolio isActive={isActive} />;
+      case AppState.Prepaid:
+        return <Prepaid isActive={isActive} />;
       case AppState.TokenInfo:
         return <TokenInfo isActive={isActive} />;
       case AppState.Ledger:
@@ -268,12 +282,9 @@ function App({
           />
           <TransferModal />
           {!IS_FEATURE_LIMITED && <SwapModal />}
-          {/* Cards and the wallet customization built on them are a My Wallet product, absent from the Gram brand */}
-          {IS_MY_WALLET_BRAND && (
-            <>
-              <MintCardModal />
-              <CustomizeWalletModal isOpen={isCustomizeWalletModalOpen} />
-            </>
+          {IS_MY_WALLET_BRAND && <MintCardModal />}
+          {(IS_MY_WALLET_BRAND || IS_LEGENDS_WALLET) && (
+            <CustomizeWalletModal isOpen={isCustomizeWalletModalOpen} />
           )}
           <SignatureModal />
           <TransactionModal />
@@ -312,6 +323,7 @@ export default memo(withGlobal((global): StateProps => {
     isAgentOpen: global.isAgentOpen,
     isExploreOpen: global.isExploreOpen,
     isPortfolioOpen: global.isPortfolioOpen,
+    isPrepaidOpen: global.isPrepaidOpen,
     currentTokenSlug: selectCurrentAccountState(global)?.currentTokenSlug,
     areSettingsOpen: global.areSettingsOpen,
     isFullscreen: Boolean(global.isFullscreen),
@@ -322,13 +334,22 @@ export default memo(withGlobal((global): StateProps => {
 })(App));
 
 function resolveRenderingKey({
-  isInactive, areSettingsOpen, isAgentOpen, isExploreOpen, isPortfolioOpen, currentTokenSlug, isPortrait, appState,
+  isInactive,
+  areSettingsOpen,
+  isAgentOpen,
+  isExploreOpen,
+  isPortfolioOpen,
+  isPrepaidOpen,
+  currentTokenSlug,
+  isPortrait,
+  appState,
 }: {
   isInactive: boolean;
   areSettingsOpen?: boolean;
   isAgentOpen?: boolean;
   isExploreOpen?: boolean;
   isPortfolioOpen?: boolean;
+  isPrepaidOpen?: boolean;
   currentTokenSlug?: string;
   isPortrait: boolean;
   appState: AppState;
@@ -338,6 +359,7 @@ function resolveRenderingKey({
   if (isAgentOpen && isPortrait) return AppState.Agent;
   if (isExploreOpen && isPortrait) return AppState.Explore;
   if (isPortfolioOpen && isPortrait) return AppState.Portfolio;
+  if (isPrepaidOpen && isPortrait) return AppState.Prepaid;
   // In landscape the token screen lives inside the main content, next to the wallet overview
   if (currentTokenSlug && isPortrait && appState === AppState.Main) return AppState.TokenInfo;
   return appState;

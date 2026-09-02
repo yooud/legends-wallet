@@ -17,9 +17,9 @@ import { buildTokenSlug, getTokenBySlug } from '../../common/tokens';
 import { SEC } from '../../constants';
 import { NETWORK_CONFIG } from './constants';
 import {
-  getCachedWalletSponsorshipActivityLinks,
+  getCheckedWalletSponsorshipTransactionIds,
+  loadWalletSponsorshipActivityLinks,
   reconcileWalletSponsorshipActivities,
-  refreshWalletSponsorshipActivityLinks,
 } from './sponsorship';
 
 export async function fetchActivitySlice({
@@ -63,8 +63,6 @@ export async function getTokenActivitySlice(
 ): Promise<{ activities: ApiActivity[]; hasMore: boolean }> {
   let activities: ApiActivity[];
   let rawCount: number;
-  refreshWalletSponsorshipActivityLinks(network, address);
-  const sponsorshipLinks = getCachedWalletSponsorshipActivityLinks(network, address);
 
   if (slug === TRX.slug) {
     const rawTransactions = await getTrxTransactions(network, address, {
@@ -73,11 +71,17 @@ export async function getTokenActivitySlice(
       limit,
       search_internal: false, // The parsing is not supported and not needed currently
     });
+    const sponsorshipLinks = await loadWalletSponsorshipActivityLinks(
+      network,
+      address,
+      getHistoryTransactionIds(rawTransactions),
+    );
     rawCount = rawTransactions.length;
     activities = reconcileWalletSponsorshipActivities(
       slug,
       rawTransactions.map((rawTx) => parseRawTrxTransaction(address, rawTx)),
       sponsorshipLinks,
+      getCheckedWalletSponsorshipTransactionIds(network, address),
     )
       .filter((activity) => !activity.shouldHide);
   } else {
@@ -88,11 +92,17 @@ export async function getTokenActivitySlice(
       max_timestamp: toTimestamp ? toTimestamp - SEC : undefined,
       limit,
     });
+    const sponsorshipLinks = await loadWalletSponsorshipActivityLinks(
+      network,
+      address,
+      getHistoryTransactionIds(rawTransactions),
+    );
     rawCount = rawTransactions.length;
     activities = reconcileWalletSponsorshipActivities(
       slug,
       rawTransactions.map((rawTx) => parseRawTrc20Transaction(address, rawTx)),
       sponsorshipLinks,
+      getCheckedWalletSponsorshipTransactionIds(network, address),
     );
   }
 
@@ -162,10 +172,10 @@ async function getTrxTransactions(
     search_internal?: boolean;
   } = {},
 ): Promise<any[]> {
-  const baseUrl = NETWORK_CONFIG[network].apiUrl;
+  const baseUrl = NETWORK_CONFIG[network].historyApiUrl;
   const url = new URL(`${baseUrl}/v1/accounts/${address}/transactions`);
 
-  const result = await fetchJson(url.toString(), queryParams, undefined, {
+  const result = await fetchJson(url.toString(), queryParams, getHistoryRequestInit(network), {
     bucketKey: bucketKey(url, { includePathPrefix: true }),
   });
 
@@ -220,8 +230,50 @@ export function parseRawTrxTransaction(address: string, rawTx: any): ApiTransact
     fee,
     type,
     shouldHide,
-    status: 'completed',
+    extra: getWalletHistoryMetadata(rawTx),
+    status: getRawTransactionStatus(rawTx),
   });
+}
+
+export function parseRawTrc20ContractTransaction(
+  walletAddress: string,
+  rawTx: any,
+  timestamp: number,
+  status: ApiTransactionActivity['status'] = 'completed',
+): ApiTransactionActivity | undefined {
+  const contract = rawTx.raw_data?.contract?.[0];
+  if (contract?.type !== 'TriggerSmartContract') return undefined;
+
+  const parameters = contract.parameter?.value;
+  const data = String(parameters?.data || '').replace(/^0x/, '').toLowerCase();
+  const method = data.slice(0, 8) as TronContractMethodSignature;
+  let fromAddress: string;
+  let toAddress: string;
+  let value: string;
+
+  if (method === TronContractMethodSignature.Transfer && data.length >= 136) {
+    fromAddress = TronWeb.address.fromHex(parameters.owner_address);
+    toAddress = decodeTronAddress(data.slice(8, 72));
+    value = BigInt(`0x${data.slice(72, 136)}`).toString();
+  } else if (method === TronContractMethodSignature.TransferFrom && data.length >= 200) {
+    fromAddress = decodeTronAddress(data.slice(8, 72));
+    toAddress = decodeTronAddress(data.slice(72, 136));
+    value = BigInt(`0x${data.slice(136, 200)}`).toString();
+  } else {
+    return undefined;
+  }
+
+  return parseRawTrc20Transaction(walletAddress, {
+    transaction_id: rawTx.txID,
+    block_timestamp: timestamp,
+    from: fromAddress,
+    to: toAddress,
+    value,
+    token_info: {
+      address: TronWeb.address.fromHex(parameters.contract_address),
+    },
+    legends_energy: rawTx.legends_energy,
+  }, status);
 }
 
 export async function getTrc20Transactions(
@@ -240,17 +292,26 @@ export async function getTrc20Transactions(
     only_from?: boolean;
   } = {},
 ): Promise<any[]> {
-  const baseUrl = NETWORK_CONFIG[network].apiUrl;
+  const baseUrl = NETWORK_CONFIG[network].historyApiUrl;
   const url = new URL(`${baseUrl}/v1/accounts/${address}/transactions/trc20`);
 
-  const result = await fetchJson(url.toString(), queryParams, undefined, {
+  const result = await fetchJson(url.toString(), queryParams, getHistoryRequestInit(network), {
     bucketKey: bucketKey(url, { includePathPrefix: true }),
   });
 
   return result.data;
 }
 
-export function parseRawTrc20Transaction(address: string, rawTx: any): ApiTransactionActivity {
+function getHistoryRequestInit(network: ApiNetwork): RequestInit | undefined {
+  const { historyApiKey } = NETWORK_CONFIG[network];
+  return historyApiKey ? { headers: { 'TRON-PRO-API-KEY': historyApiKey } } : undefined;
+}
+
+export function parseRawTrc20Transaction(
+  address: string,
+  rawTx: any,
+  status: ApiTransactionActivity['status'] = 'completed',
+): ApiTransactionActivity {
   const {
     transaction_id: txId,
     block_timestamp: timestamp,
@@ -277,8 +338,32 @@ export function parseRawTrc20Transaction(address: string, rawTx: any): ApiTransa
     isIncoming,
     normalizedAddress,
     fee,
-    status: 'completed',
+    extra: getWalletHistoryMetadata(rawTx),
+    status,
   });
+}
+
+function getRawTransactionStatus(rawTx: any): ApiTransactionActivity['status'] {
+  const contractResult = String(rawTx?.ret?.[0]?.contractRet || '').toUpperCase();
+  return contractResult && contractResult !== 'SUCCESS' && contractResult !== 'DEFAULT'
+    ? 'failed'
+    : 'completed';
+}
+
+function getWalletHistoryMetadata(rawTransaction: any): ApiTransactionActivity['extra'] {
+  return rawTransaction?.legends_energy?.wallet_sponsorship_checked
+    ? { walletSponsorshipChecked: true }
+    : undefined;
+}
+
+function getHistoryTransactionIds(rawTransactions: any[]) {
+  return [...new Set(rawTransactions
+    .map((transaction) => String(transaction?.transaction_id || transaction?.txID || '').trim().toLowerCase())
+    .filter((txId) => txId.length === 64))];
+}
+
+function decodeTronAddress(word: string) {
+  return TronWeb.address.fromHex(`41${word.slice(-40)}`);
 }
 
 export function mergeActivities(txsBySlug: Record<string, ApiActivity[]>): ApiActivity[] {

@@ -1,7 +1,7 @@
 import React, { type ElementRef, useRef } from '../../../../lib/teact/teact';
 
 import type { ApiChain, ApiNft } from '../../../../api/types';
-import type { Account, AccountType } from '../../../../global/types';
+import type { Account, AccountType, CardBackgroundId } from '../../../../global/types';
 import type { AccountBalance } from '../../../../hooks/useAccountsBalances';
 import type { Layout } from '../../../../hooks/useMenuPosition';
 
@@ -31,6 +31,7 @@ interface OwnProps {
   title?: string;
   balanceData?: AccountBalance;
   cardBackgroundNft?: ApiNft;
+  cardBackgroundId?: CardBackgroundId;
   withContextMenu?: boolean;
   isSensitiveDataHidden?: true;
   onClick: (accountId: string) => void;
@@ -59,6 +60,7 @@ function AccountWalletItem({
   title,
   balanceData,
   cardBackgroundNft,
+  cardBackgroundId,
   withContextMenu,
   isSensitiveDataHidden,
   onClick,
@@ -171,6 +173,7 @@ function AccountWalletItem({
           isRecoveryRequired={isRecoveryRequired}
           balanceData={balanceData}
           cardBackgroundNft={cardBackgroundNft}
+          cardBackgroundId={cardBackgroundId}
           isSensitiveDataHidden={isSensitiveDataHidden}
         />
       </div>

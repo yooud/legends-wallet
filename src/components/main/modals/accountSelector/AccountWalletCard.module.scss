@@ -85,6 +85,10 @@
     }
   }
 
+  &.legendsCard {
+    background-size: 100% 100%, cover;
+  }
+
   @media (hover: hover) {
     &:hover .menuDots {
       opacity: 1;

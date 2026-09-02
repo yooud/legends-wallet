@@ -152,14 +152,15 @@ function LandscapeContent({
     },
   });
 
-  // Settings/Agent/Explore render on top of the landscape main area as full-screen overlay slides
+  // Settings/Agent/Explore/Portfolio/Prepaid render on top of the landscape main area as full-screen overlay slides
   // in `LandscapeLayout`'s outer `Transition`. While such an overlay is active we keep the inner
   // `Transition`'s key frozen (see `landscapeActiveKey` below) so the slide underneath does not
   // change during the open/close animation; once the overlay is gone the inner key updates normally.
   const isCoveredByLandscapeOverlay = activeContentTab === ContentTab.Settings
     || activeContentTab === ContentTab.Agent
     || activeContentTab === ContentTab.Explore
-    || activeContentTab === ContentTab.Portfolio;
+    || activeContentTab === ContentTab.Portfolio
+    || activeContentTab === ContentTab.Prepaid;
 
   const shouldShowLandscapeOverview = !currentCollection
     && !hasNftSelection

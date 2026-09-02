@@ -15,6 +15,7 @@ import {
   IS_EXPLORER,
   IS_EXTENSION,
   IS_FEATURE_LIMITED,
+  IS_LEGENDS_WALLET,
   IS_MY_WALLET_BRAND,
   LANG_LIST,
   MW_CARDS_WEBSITE,
@@ -80,6 +81,7 @@ import SettingsChains from './SettingsChains';
 import SettingsDapps from './SettingsDapps';
 import SettingsDeveloperOptions from './SettingsDeveloperOptions';
 import SettingsDisclaimer from './SettingsDisclaimer';
+import SettingsFeeCoverage from './SettingsFeeCoverage';
 import SettingsHeader from './SettingsHeader';
 import SettingsHiddenNfts from './SettingsHiddenNfts';
 import SettingsLanguage from './SettingsLanguage';
@@ -275,6 +277,10 @@ function Settings({
 
   function handleSecurityOpen() {
     setSettingsState({ state: SettingsState.Security });
+  }
+
+  function handleFeeCoverageOpen() {
+    setSettingsState({ state: SettingsState.FeeCoverage });
   }
 
   function handleAssetsOpen() {
@@ -515,6 +521,16 @@ function Settings({
           )}
 
           <div className={styles.block}>
+            {IS_LEGENDS_WALLET && (
+              <div className={buildClassName(styles.item, styles.itemMenu)} onClick={handleFeeCoverageOpen}>
+                <img className={styles.menuIcon} src={assetsActivityImg} alt={lang('Fee Coverage')} />
+                <div className={styles.itemContent}>
+                  <span className={styles.itemTitle}>{lang('Fee Coverage')}</span>
+                  <span className={styles.itemSubtitle}>{lang('Prepaid balance or direct TRX payment')}</span>
+                </div>
+                <i className={buildClassName(styles.iconChevronRight, 'icon-chevron-right')} aria-hidden />
+              </div>
+            )}
             <div className={buildClassName(styles.item, styles.itemMenu)} onClick={handleAppearanceOpen}>
               <img className={styles.menuIcon} src={appearanceImg} alt={lang('Appearance')} />
               <div className={styles.itemContent}>
@@ -781,6 +797,13 @@ function Settings({
             onBackClick={handleBackClick}
             onAutoUpdateEnabledToggle={handleAutoUpdateEnabledToggle}
             onSettingsClose={handleCloseSettings}
+          />
+        );
+      case SettingsState.FeeCoverage:
+        return (
+          <SettingsFeeCoverage
+            isActive={isActive && isSlideActive}
+            onBackClick={handleBackClick}
           />
         );
       case SettingsState.Dapps:

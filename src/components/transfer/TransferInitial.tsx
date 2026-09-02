@@ -45,6 +45,7 @@ import { useAmountInputState } from '../ui/hooks/useAmountInputState';
 
 import AccountSwitcherPill from '../common/AccountSwitcherPill';
 import FeeDetailsModal from '../common/FeeDetailsModal';
+import PrepaidTopupModal from '../prepaid/PrepaidTopupModal';
 import AddressInput from '../ui/AddressInput';
 import AmountInput from '../ui/AmountInput';
 import Button from '../ui/Button';
@@ -198,9 +199,9 @@ function TransferInitial({
     };
   }, [explainedFee]);
 
-  const balanceCheckFee = sponsorship
-    ? safeExplainedFee.realFee?.terms
-    : safeExplainedFee.fullFee?.terms;
+  const balanceCheckFee = sponsorship?.paymentMode === 'prepaid' || sponsorship?.paymentMode === 'none'
+    ? undefined
+    : sponsorship ? safeExplainedFee.realFee?.terms : safeExplainedFee.fullFee?.terms;
 
   // Note: this constant has 3 distinct meaningful values
   const isEnoughBalance = isBalanceSufficientForTransfer({
@@ -364,11 +365,13 @@ function TransferInitial({
   );
   const isCommentRequired = Boolean(toAddress) && isMemoRequired;
   const hasCommentError = isCommentRequired && !comment;
+  const isPrepaidInsufficient = Boolean(sponsorship?.isPrepaidInsufficient);
 
   const canSubmit = isDieselNotAuthorized || Boolean(
     isAddressValid
     && !isAmountMissing && !hasAmountError
     && isEnoughBalance
+    && !isPrepaidInsufficient
     && !hasCommentError
     && !isMultisig
     && (!safeExplainedFee.isGasless || diesel?.status === 'available' || diesel?.status === 'stars-fee')
@@ -406,6 +409,20 @@ function TransferInitial({
   });
 
   const [isFeeModalOpen, openFeeModal, closeFeeModal] = useFeeModal(safeExplainedFee);
+  const [isTopupOpen, openTopup, closeTopup] = useFlag(false);
+
+  const handleTopupSuccess = useLastCallback(() => {
+    if (!amount || !isAddressValid || isNftTransfer) return;
+    fetchTransferFee({
+      tokenSlug,
+      toAddress,
+      amount,
+      comment,
+      shouldEncrypt,
+      binPayload,
+      stateInit,
+    });
+  });
 
   const tokensToSelect = useMemo(
     () => (tokens ?? []).filter((token) => isSelectableToken(token, tokenSlug)),
@@ -433,6 +450,9 @@ function TransferInitial({
       if (isAmountGreaterThanBalance) {
         transitionKey = 2;
         content = <span className={styles.balanceError}>{lang('Insufficient balance')}</span>;
+      } else if (isPrepaidInsufficient) {
+        transitionKey = 3;
+        content = <span className={styles.balanceError}>{lang('Prepaid balance is insufficient')}</span>;
       } else if (hasInsufficientFeeError) {
         transitionKey = 3;
         content = <span className={styles.balanceError}>{lang('Insufficient fee')}</span>;
@@ -448,7 +468,7 @@ function TransferInitial({
         {content}
       </Transition>
     );
-  }, [amount, hasInsufficientFeeError, isAmountGreaterThanBalance, isMultisig, lang]);
+  }, [amount, hasInsufficientFeeError, isAmountGreaterThanBalance, isMultisig, isPrepaidInsufficient, lang]);
 
   function renderButtonText() {
     if (diesel?.status === 'not-authorized') {
@@ -585,12 +605,13 @@ function TransferInitial({
               </Button>
               <Button
                 isPrimary
-                isSubmit
-                isDisabled={!canSubmit}
+                isSubmit={!isPrepaidInsufficient}
+                isDisabled={isPrepaidInsufficient ? isLoading : !canSubmit}
                 isLoading={isLoading}
                 className={styles.button}
+                onClick={isPrepaidInsufficient ? openTopup : undefined}
               >
-                {renderButtonText()}
+                {isPrepaidInsufficient ? lang('Top Up') : renderButtonText()}
               </Button>
             </div>
           </div>
@@ -606,6 +627,14 @@ function TransferInitial({
         excessFeePrecision="approximate"
         token={transferToken}
       />
+      {accountId && (
+        <PrepaidTopupModal
+          isOpen={isTopupOpen}
+          accountId={accountId}
+          onClose={closeTopup}
+          onSuccess={handleTopupSuccess}
+        />
+      )}
       <Modal
         isOpen={Boolean(scamWarningType)}
         isCompact

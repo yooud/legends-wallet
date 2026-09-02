@@ -64,6 +64,12 @@ import styles from './Activity.module.scss';
 
 import scamImg from '../../../../assets/scam.svg';
 
+export type TransactionDisplayOverrides = {
+  title?: TeactNode;
+  subheaderStart?: TeactNode;
+  subheaderEnd?: TeactNode;
+};
+
 type OwnProps = {
   tokensBySlug: Record<string, ApiTokenWithPrice>;
   transaction: ApiTransactionActivity;
@@ -83,6 +89,7 @@ type OwnProps = {
   baseCurrency: ApiBaseCurrency;
   currencyRates: ApiCurrencyRates;
   shouldHideStakingAnnualYield?: boolean;
+  displayOverrides?: TransactionDisplayOverrides;
   onClick?: (id: string) => void;
 };
 
@@ -121,6 +128,7 @@ function Transaction({
   baseCurrency,
   currencyRates,
   shouldHideStakingAnnualYield,
+  displayOverrides,
   onClick,
 }: OwnProps) {
   const { openNftAttributesModal, addNftsToBlacklist } = getActions();
@@ -356,6 +364,10 @@ function Transaction({
   }
 
   function renderBaseCurrencyAmount() {
+    if (displayOverrides?.subheaderEnd !== undefined) {
+      return <div className={styles.baseCurrencyAmount}>{displayOverrides.subheaderEnd}</div>;
+    }
+
     if (getTransactionAmountDisplayMode(transaction) === 'hide' || !token) {
       return undefined;
     }
@@ -377,6 +389,10 @@ function Transaction({
   }
 
   function renderAddressAndDate() {
+    if (displayOverrides?.subheaderStart !== undefined) {
+      return <div className={styles.date}>{displayOverrides.subheaderStart}</div>;
+    }
+
     const children: TeactNode[] = [];
     const delimiter = `${WHOLE_PART_DELIMITER}∙${WHOLE_PART_DELIMITER}`;
 
@@ -462,7 +478,7 @@ function Transaction({
               isNoSubheaderLeft && attachmentsTakeSubheader === 'none' && styles.atMiddle,
             )}
           >
-            {getTransactionTitle(transaction, titleTense, lang)}
+            {displayOverrides?.title ?? getTransactionTitle(transaction, titleTense, lang)}
             {isScamTransaction(transaction) && <img src={scamImg} alt={lang('Scam')} className={styles.scamImage} />}
           </div>
           {renderAmount()}

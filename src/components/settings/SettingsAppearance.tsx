@@ -2,11 +2,12 @@ import React, { memo } from '../../lib/teact/teact';
 import { getActions, withGlobal } from '../../global';
 
 import type { ApiNft } from '../../api/types';
-import type { AnimationLevel, Theme } from '../../global/types';
+import type { AnimationLevel, CardBackgroundId, Theme } from '../../global/types';
 
 import {
   ANIMATION_LEVEL_MAX,
   ANIMATION_LEVEL_MIN,
+  IS_LEGENDS_WALLET,
   IS_MY_WALLET_BRAND,
 } from '../../config';
 import { selectCurrentAccountSettings } from '../../global/selectors';
@@ -14,6 +15,7 @@ import buildClassName from '../../util/buildClassName';
 import switchAnimationLevel from '../../util/switchAnimationLevel';
 import switchTheme from '../../util/switchTheme';
 import { IS_ELECTRON, IS_WINDOWS } from '../../util/windowEnvironment';
+import { DEFAULT_CARD_BACKGROUND_ID } from '../customizeWallet/legendsCardBackgrounds';
 
 import useHistoryBack from '../../hooks/useHistoryBack';
 import useLang from '../../hooks/useLang';
@@ -41,6 +43,7 @@ interface OwnProps {
 
 interface StateProps {
   cardBackgroundNft?: ApiNft;
+  cardBackgroundId?: CardBackgroundId;
   isNftBuyingDisabled: boolean;
   isSeasonalThemingDisabled?: boolean;
 }
@@ -65,6 +68,7 @@ function SettingsAppearance({
   theme,
   animationLevel,
   cardBackgroundNft,
+  cardBackgroundId,
   isTrayIconEnabled,
   isNftBuyingDisabled,
   isSeasonalThemingDisabled,
@@ -135,7 +139,11 @@ function SettingsAppearance({
     return (
       <div className={styles.palleteIcon}>
         <div className={styles.miniCard}>
-          <CustomCardPreview nft={cardBackgroundNft} className={styles.miniCardPreview} />
+          <CustomCardPreview
+            nft={cardBackgroundNft}
+            cardBackgroundId={IS_LEGENDS_WALLET ? cardBackgroundId ?? DEFAULT_CARD_BACKGROUND_ID : undefined}
+            className={styles.miniCardPreview}
+          />
         </div>
       </div>
     );
@@ -156,9 +164,9 @@ function SettingsAppearance({
           </div>
         </div>
 
-        {IS_MY_WALLET_BRAND && !isNftBuyingDisabled && (
+        {(IS_LEGENDS_WALLET || (IS_MY_WALLET_BRAND && !isNftBuyingDisabled)) && (
           <>
-            <p className={styles.blockTitle}>{lang('Palette and Card')}</p>
+            <p className={styles.blockTitle}>{lang(IS_LEGENDS_WALLET ? 'Card Background' : 'Palette and Card')}</p>
             <div className={buildClassName(styles.block, styles.settingsBlockWithDescription)}>
               <a
                 role="button"
@@ -176,7 +184,9 @@ function SettingsAppearance({
               </a>
             </div>
             <p className={styles.blockDescription}>
-              {lang('Customize the wallet\'s home screen and color accents the way you like.')}
+              {lang(IS_LEGENDS_WALLET
+                ? 'Choose the background used for this wallet.'
+                : 'Customize the wallet\'s home screen and color accents the way you like.')}
             </p>
           </>
         )}
@@ -223,6 +233,7 @@ export default memo(withGlobal<OwnProps>((global): StateProps => {
 
   return {
     cardBackgroundNft: accountSettings?.cardBackgroundNft,
+    cardBackgroundId: accountSettings?.cardBackgroundId,
     isNftBuyingDisabled: global.restrictions.isNftBuyingDisabled,
     isSeasonalThemingDisabled: global.settings.isSeasonalThemingDisabled,
   };

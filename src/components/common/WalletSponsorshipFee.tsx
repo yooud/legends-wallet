@@ -17,6 +17,8 @@ interface OwnProps {
   token: FeeToken;
   label?: string;
   shouldShowOnchainFee?: boolean;
+  prepaidBalance?: bigint;
+  onTopUp?: NoneToVoidFunction;
   className?: string;
 }
 
@@ -26,6 +28,8 @@ function WalletSponsorshipFee({
   token,
   label,
   shouldShowOnchainFee,
+  prepaidBalance,
+  onTopUp,
   className,
 }: OwnProps) {
   const lang = useLang();
@@ -65,6 +69,13 @@ function WalletSponsorshipFee({
           </div>
         )}
       </div>
+      {prepaidBalance !== undefined && (
+        <div className={styles.prepaidRow}>
+          <span>{lang('Prepaid Balance')}</span>
+          <span><Fee terms={{ native: prepaidBalance }} precision="exact" token={token} /></span>
+          {onTopUp && <button type="button" onClick={onTopUp}>{lang('Top Up')}</button>}
+        </div>
+      )}
     </div>
   );
 }

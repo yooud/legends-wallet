@@ -17,7 +17,12 @@ import {
   selectShouldMigrate,
 } from '../../global/selectors';
 import { selectAuthUsageCountRequest, selectEnclaveToken } from '../../global/selectors/enclave';
-import { getDoesUsePinPad, getIsFaceIdAvailable, getIsTouchIdAvailable } from '../../util/biometrics';
+import {
+  getDoesUsePinPad,
+  getIsBiometricAuthSupported,
+  getIsFaceIdAvailable,
+  getIsTouchIdAvailable,
+} from '../../util/biometrics';
 import buildClassName from '../../util/buildClassName';
 import captureKeyboardListeners from '../../util/captureKeyboardListeners';
 import { stopEvent } from '../../util/domEvents';
@@ -178,7 +183,7 @@ function PasswordForm({
 
   const lang = useLang();
 
-  const isBiometricAuthEnabled = isBiometricAuthEnabledProp && !noBiometrics;
+  const isBiometricAuthEnabled = isBiometricAuthEnabledProp && !noBiometrics && getIsBiometricAuthSupported();
 
   const inputRef = useRef<HTMLInputElement>();
   const [inputValue, setInputValue] = useState<string>('');
@@ -245,6 +250,12 @@ function PasswordForm({
       isAuthorizingRef.current = false;
     }
   }, [isActive]);
+
+  useEffect(() => {
+    if (error && !isLoading) {
+      isAuthorizingRef.current = false;
+    }
+  }, [error, isLoading]);
 
   const handleSubmit = useLastCallback(async (pin?: string) => {
     // Prevent double authorization (e.g., race between PIN input and biometrics)

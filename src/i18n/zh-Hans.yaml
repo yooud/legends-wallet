@@ -1748,3 +1748,6 @@ $enclave_migration_interrupted_message: |
   请不要重新安装应用，也不要清除其数据，您的钱包仍存储在本设备上。请联系 %support_link%，我们会帮您完成更新。
 Hide Unverified NFTs: 隐藏未验证的NFT
 Unverified: 未验证
+Prepaid: 手续费余额
+$bot_balance_project_help: 选择用于支付此钱包手续费的机器人项目余额。
+$bot_balance_disconnect_warning: 断开连接后，此钱包将停止使用项目余额支付手续费。资金仍会保留在机器人项目余额中，并可继续在机器人中使用。

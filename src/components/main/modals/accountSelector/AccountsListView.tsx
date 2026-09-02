@@ -106,7 +106,7 @@ function AccountsListView({
             type,
             isRecoveryRequired,
           }], index) => {
-            const { cardBackgroundNft } = settingsByAccountId?.[accountId] || {};
+            const { cardBackgroundNft, cardBackgroundId } = settingsByAccountId?.[accountId] || {};
             const isCurrentAccount = accountId === currentAccountId;
             const balanceData = balancesByAccountId[accountId];
 
@@ -137,6 +137,7 @@ function AccountsListView({
                 title={title}
                 balanceData={balanceData}
                 cardBackgroundNft={cardBackgroundNft}
+                cardBackgroundId={cardBackgroundId}
                 withContextMenu={!IS_FEATURE_LIMITED && !isReorder}
                 isSensitiveDataHidden={isSensitiveDataHidden}
                 onClick={onSwitchAccount}

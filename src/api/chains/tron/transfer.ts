@@ -126,7 +126,12 @@ export async function checkTransactionDraft(
       tokenSlug,
     });
 
-    const trxAmount = tokenAddress ? realFee : (amount ?? 0n) + realFee;
+    const sponsoredFeePaidOnchain = result.sponsorship?.paymentMode === 'direct'
+      ? realFee
+      : 0n;
+    const trxAmount = tokenAddress
+      ? (result.sponsorship ? sponsoredFeePaidOnchain : realFee)
+      : (amount ?? 0n) + realFee;
     const isEnoughTrx = trxBalance >= trxAmount;
 
     if (!isEnoughTrx) {

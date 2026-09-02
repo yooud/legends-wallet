@@ -1758,3 +1758,6 @@ $enclave_migration_interrupted_message: |
   No reinstale la aplicación ni borre sus datos: sus billeteras siguen guardadas en este dispositivo. Por favor, contacte con %support_link% y le ayudaremos a completar la actualización.
 Hide Unverified NFTs: Ocultar NFTs No Verificados
 Unverified: No Verificados
+Prepaid: Saldo de comisiones
+$bot_balance_project_help: Selecciona qué saldo de proyecto del bot se utilizará para cubrir las comisiones de esta cartera.
+$bot_balance_disconnect_warning: Al desconectar, esta cartera dejará de usar el saldo del proyecto para cubrir comisiones. Los fondos permanecerán en el saldo del proyecto del bot y seguirán disponibles en el bot.

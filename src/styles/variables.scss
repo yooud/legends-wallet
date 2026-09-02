@@ -3,9 +3,9 @@
 :root {
   // Color names comes from figma file
   --color-white: #FFF;
-  --color-default-accent: #6400BC;
-  --color-default-accent-hover: #6400BCCC;
-  --color-accent: #6400BC;
+  --color-default-accent: #2C92F0;
+  --color-default-accent-hover: #2C92F0CC;
+  --color-accent: #2C92F0;
   --color-black: #2C333E;
   --color-black-rgb: 44, 51, 62;
   --color-gray-1: #616770;
@@ -20,7 +20,7 @@
   --color-purple-2: #6875E9;
   --color-orange: #DC7C00;
   --color-yellow: #E49329;
-  --color-accent-10o: #6400BC1A;
+  --color-accent-10o: #2C92F01A;
 
   --color-background-first: #FFFFFF;
   --color-background-first-disabled: #FAFAFA;
@@ -48,8 +48,8 @@
 
   --color-accent-button-text: #FFFFFF;
   --color-accent-button-text-hover: #FFFFFF;
-  --color-accent-button-background: #6400BC;
-  --color-accent-button-background-hover: #7A1FD1;
+  --color-accent-button-background: #2C92F0;
+  --color-accent-button-background-hover: #16A5ED;
 
   --color-red-button-text: #FFFFFF;
   --color-red-button-text-hover: #FFFFFF;
@@ -297,9 +297,9 @@
 
   &.theme-dark,
   .component-theme-dark {
-    --color-default-accent: #A86BDF;
-    --color-default-accent-hover: #A86BDFCC;
-    --color-accent: #A86BDF;
+    --color-default-accent: #469CEC;
+    --color-default-accent-hover: #469CECCC;
+    --color-accent: #469CEC;
     --color-black: #F6F7F8;
     --color-black-rgb: 246, 247, 248;
     --color-gray-1: #BFC0C2;
@@ -311,7 +311,7 @@
     --color-purple-1: #95A0FE;
     --color-purple-2: #7986F7;
     --color-orange: #E49329;
-    --color-accent-10o: #A86BDF1A;
+    --color-accent-10o: #469CEC1A;
 
     --color-background-first: #1C1C1E;
     --color-background-first-disabled: #141415;
@@ -335,8 +335,8 @@
     --color-input-button-background-purple-rest: #252B40;
     --color-input-button-background-purple-hover: #292F46;
 
-    --color-accent-button-background: #8A36D1;
-    --color-accent-button-background-hover: #A04FE2;
+    --color-accent-button-background: #469CEC;
+    --color-accent-button-background-hover: #51A7F7;
 
     --color-red-button-background: #D74A4A;
     --color-red-button-background-hover: #F35B5B;

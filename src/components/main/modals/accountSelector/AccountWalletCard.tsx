@@ -1,14 +1,15 @@
 import React, { useLayoutEffect, useRef } from '../../../../lib/teact/teact';
 
 import type { ApiChain, ApiNft } from '../../../../api/types';
-import type { Account, AccountType } from '../../../../global/types';
+import type { Account, AccountType, CardBackgroundId } from '../../../../global/types';
 import type { Layout } from '../../../../hooks/useMenuPosition';
 
-import { IS_GRAM_WALLET } from '../../../../config';
+import { IS_GRAM_WALLET, IS_LEGENDS_WALLET } from '../../../../config';
 import buildClassName from '../../../../util/buildClassName';
 import buildStyle from '../../../../util/buildStyle';
 import { getOrderedAccountChains } from '../../../../util/chain';
 import { formatAccountAddresses } from '../../../../util/formatAccountAddress';
+import { getLegendsCardBackground } from '../../../customizeWallet/legendsCardBackgrounds';
 import { OPEN_CONTEXT_MENU_CLASS_NAME } from './constants';
 
 import { useCachedImage } from '../../../../hooks/useCachedImage';
@@ -43,6 +44,7 @@ interface OwnProps {
     currencySymbol: string;
   };
   cardBackgroundNft?: ApiNft;
+  cardBackgroundId?: CardBackgroundId;
   withContextMenu?: boolean;
   isSensitiveDataHidden?: true;
   onClick: (accountId: string) => void;
@@ -64,6 +66,7 @@ function AccountWalletCard({
   isRecoveryRequired,
   balanceData,
   cardBackgroundNft,
+  cardBackgroundId,
   withContextMenu,
   isSensitiveDataHidden,
   onClick,
@@ -92,6 +95,8 @@ function AccountWalletCard({
     classNames: mwCardClassNames,
   } = useCardCustomization(cardBackgroundNft);
   const { imageUrl } = useCachedImage(backgroundImageUrl);
+  const legendsCardBackground = IS_LEGENDS_WALLET ? getLegendsCardBackground(cardBackgroundId) : undefined;
+  const cardImageUrl = legendsCardBackground?.imageUrl ?? imageUrl;
   const sensitiveDataMaskSkin = getSensitiveDataMaskSkinFromCardNft(cardBackgroundNft);
 
   const handleRenameClick = useLastCallback(() => {
@@ -151,8 +156,10 @@ function AccountWalletCard({
     styles.button,
     IS_GRAM_WALLET && 'gram',
     isActive && styles.current,
-    imageUrl && styles.customCard,
+    cardImageUrl && styles.customCard,
     imageUrl && mwCardClassNames,
+    legendsCardBackground && styles.legendsCard,
+    legendsCardBackground?.hasDarkText && 'MwCard__darkText',
     isContextMenuOpen && OPEN_CONTEXT_MENU_CLASS_NAME,
   );
 
@@ -165,7 +172,7 @@ function AccountWalletCard({
       />
       <div ref={contentRef} className={styles.content}>
         <div
-          style={buildStyle(imageUrl && `--bg: url(${imageUrl})`)}
+          style={buildStyle(cardImageUrl && `--bg: url(${cardImageUrl})`)}
           className={buttonClassName}
           aria-label={lang('Switch Account')}
           role="button"

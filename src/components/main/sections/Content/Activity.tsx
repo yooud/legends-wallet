@@ -10,6 +10,7 @@ import type {
   ApiTokenWithPrice,
 } from '../../../../api/types';
 import type { Account, AppTheme, SavedAddress } from '../../../../global/types';
+import type { TransactionDisplayOverrides } from './Transaction';
 
 import Swap, { getSwapHeight } from './Swap';
 import Transaction, { getTransactionHeight } from './Transaction';
@@ -33,6 +34,7 @@ interface OwnProps {
   baseCurrency: ApiBaseCurrency;
   currencyRates: ApiCurrencyRates;
   shouldHideStakingAnnualYield?: boolean;
+  displayOverrides?: TransactionDisplayOverrides;
   onClick?: (id: string) => void;
 }
 
@@ -55,6 +57,7 @@ export default function Activity({
   baseCurrency,
   currencyRates,
   shouldHideStakingAnnualYield,
+  displayOverrides,
   onClick,
 }: OwnProps) {
   if (activity.kind === 'swap') {
@@ -97,6 +100,7 @@ export default function Activity({
         baseCurrency={baseCurrency}
         currencyRates={currencyRates}
         shouldHideStakingAnnualYield={shouldHideStakingAnnualYield}
+        displayOverrides={displayOverrides}
         onClick={onClick}
       />
     );

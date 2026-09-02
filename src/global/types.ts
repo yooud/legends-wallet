@@ -201,6 +201,7 @@ export enum AppState {
   Agent,
   Explore,
   Portfolio,
+  Prepaid,
   TokenInfo,
   Settings,
   Ledger,
@@ -443,6 +444,7 @@ export enum SettingsState {
   BackupWallet,
   Permissions,
   Chains,
+  FeeCoverage,
 }
 
 export enum MintCardState {
@@ -462,6 +464,7 @@ export enum ContentTab {
   Nft,
   Settings,
   Portfolio,
+  Prepaid,
 }
 
 export enum MediaType {
@@ -708,6 +711,7 @@ export interface AccountSettings {
   // These NFTs should be saved in the settings for immediate use after launching the application,
   // without synchronizing the wallet history or complex state caching
   cardBackgroundNft?: ApiNft;
+  cardBackgroundId?: CardBackgroundId;
   accentColorNft?: ApiNft;
   accentColorIndex?: number;
   isAllowSuspiciousActions?: boolean;
@@ -715,6 +719,16 @@ export interface AccountSettings {
   areCollectiblesHidden?: boolean;
   overviewCellSize?: OverviewCellSize;
 }
+
+export type CardBackgroundId =
+  | 'logo-purple'
+  | 'texture-light'
+  | 'bolt-purple'
+  | 'bolt-dark-teal'
+  | 'logo-light'
+  | 'bolt-dark-purple'
+  | 'logo-cyan'
+  | 'logo-black';
 
 export type OverviewCellSize = 'small' | 'medium' | 'big';
 
@@ -1141,6 +1155,7 @@ export type GlobalState = {
   agentHints?: AgentHint[];
   isExploreOpen?: boolean;
   isPortfolioOpen?: boolean;
+  isPrepaidOpen?: boolean;
   portfolioReturnTo?: 'settings';
   portfolio?: PortfolioState;
   isAppUpdateAvailable?: boolean;
@@ -1438,6 +1453,8 @@ export interface ActionPayloads {
   closeExplore: undefined;
   openPortfolio: { returnTo?: 'settings' } | undefined;
   closePortfolio: undefined;
+  openPrepaid: undefined;
+  closePrepaid: undefined;
   loadPortfolioHistory: { range?: ApiPriceHistoryPeriod } | undefined;
   loadPortfolioPnlChange: undefined;
 
@@ -1472,6 +1489,7 @@ export interface ActionPayloads {
   switchToExplore: undefined;
   switchToSettings: undefined;
   switchToPortfolio: undefined;
+  switchToPrepaid: undefined;
 
   requestConfetti: undefined;
   setIsPinAccepted: undefined;
@@ -1568,6 +1586,7 @@ export interface ActionPayloads {
   // Account Settings
   setCardBackgroundNft: { nft: ApiNft; accountId?: string };
   clearCardBackgroundNft: undefined;
+  setCardBackgroundId: { backgroundId: CardBackgroundId; accountId?: string };
   checkCardNftOwnership: { accountId: string } | undefined;
   installAccentColorFromNft: { nft: ApiNft; accountId?: string };
   clearAccentColorFromNft: undefined;

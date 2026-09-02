@@ -36,6 +36,10 @@ export interface ApiTransferSponsorship {
   expiresAt: string;
   serviceFee: bigint;
   onchainFee: bigint;
+  paymentMode: 'none' | 'direct' | 'prepaid';
+  isPrepaidInsufficient?: boolean;
+  prepaidBalance?: bigint;
+  prepaidAvailable?: bigint;
 }
 
 export interface ApiCheckTransactionDraftOptions extends ApiTransactionCommonOptions {

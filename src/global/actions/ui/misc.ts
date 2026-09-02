@@ -727,6 +727,18 @@ addActionHandler('closePortfolio', (global, actions) => {
   return nextGlobal;
 });
 
+addActionHandler('openPrepaid', (global) => {
+  return openSection(global, 'prepaid');
+});
+
+addActionHandler('closePrepaid', (global) => {
+  const nextGlobal = { ...global, isPrepaidOpen: undefined };
+  if (selectCurrentAccountState(nextGlobal)?.activeContentTab === ContentTab.Prepaid) {
+    return updateCurrentAccountState(nextGlobal, { activeContentTab: ContentTab.Overview });
+  }
+  return nextGlobal;
+});
+
 addActionHandler('openFullscreen', (global) => {
   setGlobal({ ...global, isFullscreen: true });
 
@@ -762,11 +774,11 @@ addActionHandler('switchAccountAndOpenUrl', async (global, actions, payload) => 
 
 addActionHandler('switchToWallet', (global: GlobalState, actions) => {
   const {
-    areSettingsOpen, isAgentOpen, isExploreOpen, isPortfolioOpen,
+    areSettingsOpen, isAgentOpen, isExploreOpen, isPortfolioOpen, isPrepaidOpen,
   } = global;
   const accountState = selectCurrentAccountState(global);
   const areAssetsActive = accountState?.activeContentTab === ContentTab.Assets;
-  const isWalletTabActive = !isAgentOpen && !isExploreOpen && !areSettingsOpen && !isPortfolioOpen;
+  const isWalletTabActive = !isAgentOpen && !isExploreOpen && !areSettingsOpen && !isPortfolioOpen && !isPrepaidOpen;
 
   setGlobal({ ...global, portfolioReturnTo: undefined });
 
@@ -774,6 +786,7 @@ addActionHandler('switchToWallet', (global: GlobalState, actions) => {
   actions.closeExplore(undefined, { forceOnHeavyAnimation: true });
   actions.closeSettings(undefined, { forceOnHeavyAnimation: true });
   actions.closePortfolio(undefined, { forceOnHeavyAnimation: true });
+  actions.closePrepaid(undefined, { forceOnHeavyAnimation: true });
 
   if (!areAssetsActive && isWalletTabActive) {
     actions.selectToken({ slug: undefined }, { forceOnHeavyAnimation: true });
@@ -791,6 +804,7 @@ addActionHandler('switchToAgent', (global: GlobalState, actions) => {
   actions.closeExplore(undefined, { forceOnHeavyAnimation: true });
   actions.closeSettings(undefined, { forceOnHeavyAnimation: true });
   actions.closePortfolio(undefined, { forceOnHeavyAnimation: true });
+  actions.closePrepaid(undefined, { forceOnHeavyAnimation: true });
   actions.openAgent(undefined, { forceOnHeavyAnimation: true });
   actions.setActiveContentTab({ tab: ContentTab.Agent }, { forceOnHeavyAnimation: true });
 });
@@ -807,6 +821,7 @@ addActionHandler('switchToExplore', (global: GlobalState, actions) => {
   actions.closeAgent(undefined, { forceOnHeavyAnimation: true });
   actions.closeSettings(undefined, { forceOnHeavyAnimation: true });
   actions.closePortfolio(undefined, { forceOnHeavyAnimation: true });
+  actions.closePrepaid(undefined, { forceOnHeavyAnimation: true });
   actions.openExplore(undefined, { forceOnHeavyAnimation: true });
 });
 
@@ -814,7 +829,18 @@ addActionHandler('switchToSettings', (global: GlobalState, actions) => {
   actions.closeAgent(undefined, { forceOnHeavyAnimation: true });
   actions.closeExplore(undefined, { forceOnHeavyAnimation: true });
   actions.closePortfolio(undefined, { forceOnHeavyAnimation: true });
+  actions.closePrepaid(undefined, { forceOnHeavyAnimation: true });
   actions.openSettings(undefined, { forceOnHeavyAnimation: true });
+});
+
+addActionHandler('switchToPrepaid', (global: GlobalState, actions) => {
+  if (global.isPrepaidOpen) return;
+  actions.closeAgent(undefined, { forceOnHeavyAnimation: true });
+  actions.closeExplore(undefined, { forceOnHeavyAnimation: true });
+  actions.closeSettings(undefined, { forceOnHeavyAnimation: true });
+  actions.closePortfolio(undefined, { forceOnHeavyAnimation: true });
+  actions.openPrepaid(undefined, { forceOnHeavyAnimation: true });
+  actions.setActiveContentTab({ tab: ContentTab.Prepaid }, { forceOnHeavyAnimation: true });
 });
 
 addActionHandler('switchToPortfolio', (global: GlobalState, actions) => {
@@ -825,6 +851,7 @@ addActionHandler('switchToPortfolio', (global: GlobalState, actions) => {
   actions.closeAgent(undefined, { forceOnHeavyAnimation: true });
   actions.closeExplore(undefined, { forceOnHeavyAnimation: true });
   actions.closeSettings(undefined, { forceOnHeavyAnimation: true });
+  actions.closePrepaid(undefined, { forceOnHeavyAnimation: true });
   actions.openPortfolio(undefined, { forceOnHeavyAnimation: true });
   actions.setActiveContentTab({ tab: ContentTab.Portfolio }, { forceOnHeavyAnimation: true });
 });

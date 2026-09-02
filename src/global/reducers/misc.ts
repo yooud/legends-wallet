@@ -377,7 +377,7 @@ export function updateRemoveMfa(global: GlobalState, mfaUpdate: Partial<GlobalSt
   } as GlobalState;
 }
 
-export type OpenableSection = 'settings' | 'agent' | 'explore' | 'portfolio';
+export type OpenableSection = 'settings' | 'agent' | 'explore' | 'portfolio' | 'prepaid';
 
 // Settings, Agent, Explore and Portfolio are mutually exclusive full-screen sections.
 // Opening one must close the others - otherwise their flags stack and the lower-priority
@@ -389,6 +389,7 @@ export function openSection(global: GlobalState, section: OpenableSection): Glob
     isAgentOpen: section === 'agent' || undefined,
     isExploreOpen: section === 'explore' || undefined,
     isPortfolioOpen: section === 'portfolio' || undefined,
+    isPrepaidOpen: section === 'prepaid' || undefined,
   };
 }
 

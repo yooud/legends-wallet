@@ -4,6 +4,7 @@ import React, {
 
 import type { ApiBaseCurrency, ApiCurrencyRates, ApiNft } from '../../api/types';
 import type { UserToken } from '../../global/types';
+import type { LegendsCardBackground } from './legendsCardBackgrounds';
 
 import buildClassName from '../../util/buildClassName';
 import { calculateFullBalance } from '../../util/calculateFullBalance';
@@ -21,6 +22,7 @@ import styles from './NftCardItem.module.scss';
 
 interface OwnProps {
   card?: ApiNft;
+  background?: LegendsCardBackground;
   isSelected: boolean;
   tokens?: UserToken[];
   baseCurrency?: ApiBaseCurrency;
@@ -29,7 +31,7 @@ interface OwnProps {
 }
 
 function NftCardItem({
-  card, isSelected, tokens, baseCurrency = 'USD', currencyRates, onClick,
+  card, background, isSelected, tokens, baseCurrency = 'USD', currencyRates, onClick,
 }: OwnProps) {
   const balanceRef = useRef<HTMLDivElement>();
   const [customCardClassName, setCustomCardClassName] = useState<string | undefined>(undefined);
@@ -55,7 +57,7 @@ function NftCardItem({
   }, [primaryFractionPart, primaryValue, primaryWholePart, shortBaseSymbol, updateFontScale, screenWidthDep]);
 
   const handleClick = useLastCallback(() => {
-    onClick(card?.address ?? DEFAULT_CARD_ADDRESS);
+    onClick(background?.id ?? card?.address ?? DEFAULT_CARD_ADDRESS);
   });
 
   const handleCardChange = useLastCallback((hasGradient: boolean, className?: string) => {
@@ -73,14 +75,29 @@ function NftCardItem({
       role="button"
       tabIndex={0}
     >
-      <div className={buildClassName(styles.card, customCardClassName, 'rounded-font')}>
-        <CustomCardManager
-          nft={card}
-          onCardChange={handleCardChange}
-          className={styles.customCardManager}
-          shadowClassName={styles.customCardShadow}
-        />
-        <div className={buildClassName(styles.cardContent, customCardClassName)}>
+      <div className={buildClassName(
+        styles.card,
+        customCardClassName,
+        background?.hasDarkText && 'MwCard__darkText',
+        'rounded-font',
+      )}
+      >
+        {background ? (
+          <img src={background.imageUrl} alt="" className={styles.staticBackground} draggable={false} />
+        ) : (
+          <CustomCardManager
+            nft={card}
+            onCardChange={handleCardChange}
+            className={styles.customCardManager}
+            shadowClassName={styles.customCardShadow}
+          />
+        )}
+        <div className={buildClassName(
+          styles.cardContent,
+          customCardClassName,
+          background?.hasDarkText && 'MwCard__darkText',
+        )}
+        >
           <div
             ref={balanceRef}
             className={buildClassName(styles.balance, withTextGradient && 'gradientText')}

@@ -1,9 +1,11 @@
 import type { ApiInitArgs, OnApiUpdate } from '../types';
 
-import { NO_MFA, NO_REFERRER, NO_STAKING, NO_SWAP } from '../../config';
+import { IS_LEGENDS_WALLET, NO_MFA, NO_REFERRER, NO_STAKING, NO_SWAP } from '../../config';
+import { parseAccountId } from '../../util/account';
 import { initWindowConnector } from '../../util/windowProvider/connector';
 import * as ton from '../chains/ton';
-import { fetchBackendReferrer } from '../common/backend';
+import { fetchStoredChainAccount } from '../common/accounts';
+import { callBackendPost, fetchBackendReferrer } from '../common/backend';
 import { connectUpdater, disconnectUpdater, tryMigrateStorage } from '../common/helpers';
 import { initClientId } from '../common/other';
 import { getProtocolManager, initProtocolManager } from '../dappProtocols';
@@ -41,6 +43,10 @@ export default async function init(onUpdate: OnApiUpdate, args: ApiInitArgs) {
   if (!NO_SWAP) methods.initSwap(onUpdate);
   methods.initNfts(onUpdate);
 
+  if (IS_LEGENDS_WALLET) {
+    void identifyWalletAccounts(args.accountIds);
+  }
+
   await initProtocolManager(onUpdate, environment);
 
   if (environment.isDappSupported) {
@@ -57,6 +63,18 @@ export default async function init(onUpdate: OnApiUpdate, args: ApiInitArgs) {
   if (!NO_REFERRER) {
     void saveReferrer(args, runtimeStorage);
   }
+}
+
+async function identifyWalletAccounts(accountIds: string[] | undefined) {
+  await Promise.allSettled((accountIds ?? []).map(async (accountId) => {
+    const account = await fetchStoredChainAccount(accountId, 'tron');
+    const { network } = parseAccountId(accountId);
+    await callBackendPost<{ ok: true }>(
+      `${network === 'testnet' ? '/testnet' : ''}/wallet-client/identify`,
+      { address: account.byChain.tron.address },
+      { timeout: 3_000 },
+    );
+  }));
 }
 
 export function destroy() {

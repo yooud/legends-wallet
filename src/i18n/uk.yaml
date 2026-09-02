@@ -1139,6 +1139,10 @@ No view wallets yet: Гаманців у режимі перегляду пок�
 View wallets can receive assets, but you cannot use them to send or sign transactions.: Гаманці в режимі перегляду можуть отримувати активи, але їх не можна використовувати для надсилання або підписання транзакцій.
 Додайте першу одну лінію балансів і діяльності для будь-якої адреси.: Додайте перший, щоб відстежувати баланс і активність будь-якої адреси.
 Customize Wallet: Налаштувати гаманець
+Card Background: Фон картки
+"Select a wallet background:": "Виберіть фон гаманця:"
+This background will be displayed on the home screen and in the wallets list.: Цей фон відображатиметься на головному екрані та у списку гаманців.
+Choose the background used for this wallet.: Виберіть фон картки цього гаманця.
 "Select the card stored in this wallet:": "Виберіть карту, збережену в цьому гаманці:"
 This card will be installed for this wallet and will be displayed on the home screen and in the wallets list.: Цю карту буде встановлено для гаманця й відображено на головному екрані та в списку гаманців.
 Get More Cards: Отримати більше карт
@@ -1799,3 +1803,46 @@ $enclave_migration_interrupted_message: |
   Не перевстановлюйте застосунок і не очищайте його дані: ваші гаманці досі зберігаються на цьому пристрої. Будь ласка, зв'яжіться з %support_link%, і ми допоможемо завершити оновлення.
 Hide Unverified NFTs: Приховувати неперевірені NFT
 Unverified: Неперевірені
+Prepaid: Баланс комісій
+Available balance: Доступний баланс
+Top Up: Поповнити
+Linked Wallets: Пов’язані гаманці
+Select Wallet: Виберіть гаманець
+Link Wallet: Пов’язати гаманець
+Fee Coverage: Оплата комісії
+Prepaid Balance: Баланс передплати
+Bot Balance: Баланс бота
+Connect Account: Підключити акаунт
+Disconnect Account: Відключити акаунт
+Connect with Telegram: Підключити через Telegram
+Connect with API Key: Підключити за API-ключем
+API Key: API-ключ
+or: або
+Prepaid balance or direct TRX payment: Передплата або пряма оплата в TRX
+Automatic: Автоматично
+Prepaid only: Лише передплата
+Pay with TRX: Сплачувати в TRX
+Prepaid balance is insufficient: Недостатньо коштів на балансі передплати
+$prepaid_unavailable: Оплата комісії з балансу передплати тимчасово недоступна.
+$prepaid_link_help: Обидва гаманці підписують локальне підтвердження. Транзакція не надсилається в мережу, а ключі не залишають пристрій.
+$prepaid_topup_help: Поповніть баланс одним переказом підтримуваного активу. Ресурси надаються автоматично, а їхня вартість вираховується із зарахованого балансу.
+$prepaid_settings_help: Виберіть спосіб оплати ресурсів для цього гаманця.
+$prepaid_auto_help: Використовувати баланс передплати, а якщо його недостатньо — сплачувати комісію сервісу в TRX.
+$prepaid_only_help: Використовувати лише баланс передплати. Якщо коштів недостатньо, знадобиться поповнення.
+$prepaid_direct_help: Сплачувати комісію Legends Energy безпосередньо з цього гаманця в TRX.
+$prepaid_minimum: Мінімальна сума поповнення — %amount% USDT
+$prepaid_minimum_value: Мінімальна сума поповнення — %amount% USDT
+$prepaid_invalid_amount: Вкажіть коректну суму
+$prepaid_reserved: Зарезервовано %amount% TRX
+$bot_balance_help: Підключіть гаманець до проєкту бота та використовуйте спільний баланс для оплати комісій. Операції гаманця залишаються відокремленими від операцій бота.
+$bot_balance_connect_help: Підключіться за API-ключем проєкту або через сесію Telegram Mini App. Гаманець підпише локальне підтвердження без надсилання транзакції в мережу.
+$bot_balance_project_help: Виберіть, баланс якого проєкту в боті використовуватиметься для оплати комісій цього гаманця.
+$bot_balance_disconnect_warning: Після відключення гаманець перестане використовувати баланс проєкту для оплати комісій. Кошти залишаться на балансі проєкту й будуть доступні в боті.
+$prepaid_history_topup: Поповнення балансу комісій
+$prepaid_history_topup_resources: Ресурси для поповнення балансу комісій
+$prepaid_history_fee_coverage: Покриття комісії транзакції
+$prepaid_history_refund: Повернення з балансу комісій
+$prepaid_history_adjustment: Коригування балансу комісій
+$prepaid_history_balance_received: Отримано з пов’язаного гаманця
+$prepaid_history_balance_moved: Переказано на пов’язаний гаманець
+$prepaid_history_bot_transfer: Переказано до підключеного проєкту бота

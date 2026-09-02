@@ -1753,3 +1753,6 @@ $enclave_migration_interrupted_message: |
   Uygulamayı yeniden yüklemeyin ve verilerini temizlemeyin: cüzdanlarınız hâlâ bu cihazda saklanıyor. Lütfen %support_link% ile iletişime geçin, güncellemeyi tamamlamanıza yardımcı olacağız.
 Hide Unverified NFTs: Doğrulanmamış NFT'leri Gizle
 Unverified: Doğrulanmamış
+Prepaid: Komisyon Bakiyesi
+$bot_balance_project_help: Bu cüzdanın ücretlerini karşılamak için hangi bot projesi bakiyesinin kullanılacağını seçin.
+$bot_balance_disconnect_warning: Bağlantı kesildiğinde bu cüzdan, ücretleri karşılamak için proje bakiyesini kullanmayı bırakır. Fonlar bot projesi bakiyesinde kalır ve botta kullanılmaya devam eder.

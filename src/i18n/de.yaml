@@ -1762,3 +1762,6 @@ $enclave_migration_interrupted_message: |
   Installieren Sie die App nicht neu und löschen Sie ihre Daten nicht: Ihre Wallets sind weiterhin auf diesem Gerät gespeichert. Bitte wenden Sie sich an %support_link%, wir helfen Ihnen, das Update abzuschließen.
 Hide Unverified NFTs: Ungeprüfte NFTs ausblenden
 Unverified: Ungeprüft
+Prepaid: Gebührenguthaben
+$bot_balance_project_help: Wählen Sie aus, welches Bot-Projektguthaben zur Deckung der Gebühren dieser Wallet verwendet werden soll.
+$bot_balance_disconnect_warning: Nach der Trennung verwendet diese Wallet das Projektguthaben nicht mehr zur Deckung von Gebühren. Das Guthaben verbleibt im Bot-Projekt und kann weiterhin im Bot verwendet werden.

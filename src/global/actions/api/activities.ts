@@ -1,9 +1,11 @@
 import type { ApiActivity } from '../../../api/types';
 
-import { getIsHiddenNftActivity } from '../../../util/activities';
+import { IS_LEGENDS_WALLET } from '../../../config';
+import { getIsHiddenNftActivity, parseTxId } from '../../../util/activities';
 import { mergeSortedActivities } from '../../../util/activities/order';
 import { getIsTransactionWithPoisoning } from '../../../util/poisoningHash';
 import { throttle, waitFor } from '../../../util/schedulers';
+import { getChainBySlug } from '../../../util/tokens';
 import { callApi } from '../../../api';
 import { SEC } from '../../../api/constants';
 import { getIsTinyOrScamTransaction } from '../../helpers';
@@ -13,6 +15,7 @@ import {
   selectAccount,
   selectAccountState,
   selectCurrentAccountId,
+  selectCurrentNetwork,
   selectIsHistoryEndReached,
   selectLastActivityTimestamp,
 } from '../../selectors';
@@ -107,12 +110,41 @@ async function fetchPastActivities(accountId: string, slug?: string) {
 addActionHandler('fetchActivityDetails', async (global, actions, { id }) => {
   const accountId = selectCurrentAccountId(global)!;
   const activity = selectAccountState(global, accountId)?.activities?.byId[id];
+  const shouldRefreshWalletSponsorship = Boolean(
+    IS_LEGENDS_WALLET
+    && activity?.kind === 'transaction'
+    && getChainBySlug(activity.slug) === 'tron'
+    && !activity.extra?.walletSponsorship
+    && !activity.extra?.walletSponsorshipChecked,
+  );
 
-  if (!activity?.shouldLoadDetails) {
+  if (!activity?.shouldLoadDetails && !shouldRefreshWalletSponsorship) {
     return;
   }
 
-  const newActivity = await callApi('fetchActivityDetails', accountId, activity);
+  let newActivity: ApiActivity | undefined;
+  if (shouldRefreshWalletSponsorship && activity?.kind === 'transaction') {
+    const walletAddress = selectAccount(global, accountId)?.byChain.tron?.address;
+    if (!walletAddress) return;
+
+    const refreshedActivities = await callApi('fetchTransactionById', {
+      chain: 'tron',
+      network: selectCurrentNetwork(global),
+      txHash: parseTxId(activity.id).hash,
+      walletAddress,
+    });
+    const refreshedActivity = refreshedActivities?.find(({ id: refreshedId }) => refreshedId === activity.id)
+      ?? refreshedActivities?.[0];
+    newActivity = refreshedActivity && {
+      ...refreshedActivity,
+      extra: {
+        ...refreshedActivity.extra,
+        walletSponsorshipChecked: true,
+      },
+    };
+  } else {
+    newActivity = await callApi('fetchActivityDetails', accountId, activity!);
+  }
 
   if (!newActivity) {
     return;

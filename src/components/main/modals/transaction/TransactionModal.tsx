@@ -130,7 +130,6 @@ function TransactionModal({
     id,
     isIncoming,
     slug,
-    shouldLoadDetails,
     encryptedComment,
     amount,
     comment,
@@ -218,8 +217,8 @@ function TransactionModal({
   }, [endOfStakingCycle]);
 
   useEffect(() => {
-    if (id && shouldLoadDetails) fetchActivityDetails({ id });
-  }, [id, shouldLoadDetails]);
+    if (id) fetchActivityDetails({ id });
+  }, [id]);
 
   const closePasswordSlide = useLastCallback(() => {
     closePasswordSlideBase();

@@ -28,15 +28,16 @@ interface StateProps {
   areSettingsOpen?: boolean;
   isAgentOpen?: boolean;
   isExploreOpen?: boolean;
+  isPrepaidOpen?: boolean;
   theme: Theme;
   accentColorIndex?: number;
 }
 
 function LandscapeNavBar({
-  areSettingsOpen, isAgentOpen, isExploreOpen, theme, accentColorIndex,
+  areSettingsOpen, isAgentOpen, isExploreOpen, isPrepaidOpen, theme, accentColorIndex,
 }: StateProps) {
   const {
-    switchToWallet, switchToAgent, switchToExplore, switchToSettings,
+    switchToWallet, switchToAgent, switchToExplore, switchToSettings, switchToPrepaid,
     closeNftCollection, selectToken, setActiveContentTab,
   } = getActions();
 
@@ -45,7 +46,7 @@ function LandscapeNavBar({
   const stickerPaths = ANIMATED_STICKERS_PATHS[appTheme];
   const accentColor = accentColorIndex !== undefined ? ACCENT_COLORS[appTheme][accentColorIndex] : undefined;
 
-  const isWalletActive = !areSettingsOpen && !isAgentOpen && !isExploreOpen;
+  const isWalletActive = !areSettingsOpen && !isAgentOpen && !isExploreOpen && !isPrepaidOpen;
 
   const handleWalletClick = useLastCallback(() => {
     switchToWallet();
@@ -85,6 +86,14 @@ function LandscapeNavBar({
         </>
       )}
       <NavButton
+        isActive={isPrepaidOpen}
+        label={lang('Prepaid')}
+        tgsUrl={stickerPaths.iconEarn}
+        previewUrl={stickerPaths.preview.iconEarn}
+        accentColor={accentColor}
+        onClick={switchToPrepaid}
+      />
+      <NavButton
         isActive={areSettingsOpen}
         label={lang('Settings')}
         tgsUrl={areSettingsOpen ? stickerPaths.iconSettingsSolid : stickerPaths.iconSettings}
@@ -97,12 +106,13 @@ function LandscapeNavBar({
 }
 
 export default memo(withGlobal((global): StateProps => {
-  const { areSettingsOpen, isAgentOpen, isExploreOpen } = global;
+  const { areSettingsOpen, isAgentOpen, isExploreOpen, isPrepaidOpen } = global;
 
   return {
     areSettingsOpen,
     isAgentOpen,
     isExploreOpen,
+    isPrepaidOpen,
     theme: global.settings.theme,
     accentColorIndex: selectCurrentAccountSettings(global)?.accentColorIndex,
   };
@@ -138,7 +148,7 @@ function NavButtonInternal({
         speed={ANIMATED_STICKER_SPEED}
         nonInteractive
         forceOnHeavyAnimation
-        className={styles.icon}
+        className={buildClassName(styles.icon, !isActive && styles.iconInactive)}
         color={accentColor}
         tgsUrl={tgsUrl}
         previewUrl={previewUrl}

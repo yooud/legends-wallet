@@ -56,4 +56,6 @@ export type StorageKey = 'accounts'
   | 'walletOperationIntents'
   | 'activeCexSwapReconciliationState'
   | 'knownTonAggregatorTraceIds'
-  | 'knownTonAggregatorTraceProjections';
+  | 'knownTonAggregatorTraceProjections'
+  // Legends Wallet read-only prepaid access sessions
+  | 'walletPrepaidAccessSessions';

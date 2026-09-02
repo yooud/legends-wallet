@@ -14,7 +14,7 @@ import { ApiServerError } from '../../errors';
 
 const SPONSORED_TRANSACTION_TTL_SECONDS = 600;
 const SPONSORED_BROADCAST_TIMEOUT_MS = 275_000;
-const SPONSORSHIP_LINKS_CACHE_MS = 5_000;
+const SPONSORSHIP_LINKS_CACHE_MS = 5 * 60_000;
 const SPONSORSHIP_LINKS_TIMEOUT_MS = 3_000;
 const MAX_CACHED_QUOTES = 20;
 
@@ -22,6 +22,7 @@ type SponsorshipQuoteResponse = {
   ok: true;
   sponsored: true;
   payment_required: boolean;
+  payment_mode: 'none' | 'direct' | 'prepaid';
   quote_id: string;
   expires_at: string;
   treasury_address: string;
@@ -29,6 +30,9 @@ type SponsorshipQuoteResponse = {
   onchain_fee_sun: number;
   payment_network_fee_sun: number;
   transaction: Types.Transaction;
+  prepaid_balance_sun?: number;
+  prepaid_available_sun?: number;
+  prepaid_insufficient?: boolean;
 };
 
 type SponsorshipBroadcastResponse = {
@@ -44,7 +48,7 @@ type SponsorshipBroadcastResponse = {
 export type WalletSponsorshipActivityLink = {
   quote_id: string;
   main_txid: string;
-  payment_txid: string;
+  payment_txid?: string;
   charge_sun: number | string;
   service_fee_sun?: number | string;
   onchain_fee_sun?: number | string;
@@ -53,6 +57,7 @@ export type WalletSponsorshipActivityLink = {
 type WalletSponsorshipActivityLinksResponse = {
   ok: true;
   links: WalletSponsorshipActivityLink[];
+  checked_txids?: string[];
 };
 
 export type WalletSponsorshipIntent = {
@@ -71,17 +76,19 @@ type StoredSponsorshipQuote = {
   serviceFee: bigint;
   onchainFee: bigint;
   paymentRequired: boolean;
+  isPrepaidInsufficient: boolean;
   transaction: Types.Transaction;
 };
 
 type SponsorshipLinksCacheEntry = {
   links: WalletSponsorshipActivityLink[];
+  checkedTxids: Set<string>;
   expiresAt: number;
-  request?: Promise<void>;
 };
 
 const sponsorshipQuotes = new Map<string, StoredSponsorshipQuote>();
 const sponsorshipLinksCache = new Map<string, SponsorshipLinksCacheEntry>();
+const sponsorshipExactRequests = new Map<string, Promise<void>>();
 
 export async function requestWalletSponsorshipQuote(
   tronWeb: TronWeb,
@@ -114,6 +121,7 @@ export async function requestWalletSponsorshipQuote(
     serviceFee,
     onchainFee: BigInt(result.onchain_fee_sun),
     paymentRequired: result.payment_required,
+    isPrepaidInsufficient: Boolean(result.prepaid_insufficient),
     transaction: result.transaction,
   });
 
@@ -122,6 +130,10 @@ export async function requestWalletSponsorshipQuote(
     expiresAt: result.expires_at,
     serviceFee,
     onchainFee: BigInt(result.onchain_fee_sun),
+    paymentMode: result.payment_mode,
+    isPrepaidInsufficient: Boolean(result.prepaid_insufficient),
+    prepaidBalance: result.prepaid_balance_sun !== undefined ? BigInt(result.prepaid_balance_sun) : undefined,
+    prepaidAvailable: result.prepaid_available_sun !== undefined ? BigInt(result.prepaid_available_sun) : undefined,
   };
 }
 
@@ -136,6 +148,9 @@ export async function submitWalletSponsoredTransfer(
     || !areSponsorshipIntentsEqual(sponsorship.intent, intent)) {
     sponsorshipQuotes.delete(sponsorshipId);
     return { error: ApiTransactionDraftError.WalletSponsorshipQuoteChanged };
+  }
+  if (sponsorship.isPrepaidInsufficient) {
+    return { error: 'WalletPrepaidInsufficient' };
   }
 
   const signedTransaction = await tronWeb.trx.sign(sponsorship.transaction, privateKey);
@@ -185,20 +200,20 @@ export async function submitWalletSponsoredTransfer(
   return {
     txId: result.txid,
     msgHashForCexSwap: result.txid,
-    localActivityParams: sourceActionIds.length > 1 ? {
+    localActivityParams: {
       extra: {
-        reconciliation: {
+        reconciliation: sourceActionIds.length > 1 ? {
           operationId: `wallet-sponsorship:${result.quote_id ?? sponsorshipId}`,
           sourceActionIds,
           hiddenSourceActionIds: result.payment_txid ? [result.payment_txid] : [],
           reason: 'wallet-sponsorship',
-        },
+        } : undefined,
         walletSponsorship: {
           serviceFee: sponsorship.serviceFee,
           onchainFee: sponsorship.onchainFee,
         },
       },
-    } : undefined,
+    },
   };
 }
 
@@ -220,41 +235,51 @@ export function getWalletSponsorshipDisplayError(error: ApiServerError) {
 }
 
 export function getCachedWalletSponsorshipActivityLinks(network: ApiNetwork, address: string) {
-  return sponsorshipLinksCache.get(getSponsorshipCacheKey(network, address))?.links ?? [];
+  return getValidSponsorshipCacheEntry(network, address)?.links ?? [];
 }
 
-export function refreshWalletSponsorshipActivityLinks(network: ApiNetwork, address: string) {
-  if (!IS_LEGENDS_WALLET) return;
+export function getCheckedWalletSponsorshipTransactionIds(network: ApiNetwork, address: string) {
+  return getValidSponsorshipCacheEntry(network, address)?.checkedTxids ?? new Set<string>();
+}
 
-  const cacheKey = getSponsorshipCacheKey(network, address);
-  const now = Date.now();
-  const cached = sponsorshipLinksCache.get(cacheKey);
-  if (cached?.request || (cached?.expiresAt ?? 0) > now) return;
-
-  const request = fetchJson<WalletSponsorshipActivityLinksResponse>(
-    getWalletSponsorshipUrl(network, 'activity-links'),
-    { address },
-    undefined,
-    { retries: 1, timeouts: SPONSORSHIP_LINKS_TIMEOUT_MS },
-  ).then(({ links }) => {
-    const latest = sponsorshipLinksCache.get(cacheKey);
-    sponsorshipLinksCache.set(cacheKey, {
-      links: mergeActivityLinks(latest?.links ?? [], links ?? []),
-      expiresAt: Date.now() + SPONSORSHIP_LINKS_CACHE_MS,
-    });
-  }).catch(() => {
-    const latest = sponsorshipLinksCache.get(cacheKey);
-    sponsorshipLinksCache.set(cacheKey, {
-      links: latest?.links ?? [],
-      expiresAt: Date.now() + SPONSORSHIP_LINKS_CACHE_MS,
-    });
-  });
-
-  sponsorshipLinksCache.set(cacheKey, {
-    links: cached?.links ?? [],
-    expiresAt: cached?.expiresAt ?? 0,
-    request,
-  });
+export async function loadWalletSponsorshipActivityLinks(
+  network: ApiNetwork,
+  address: string,
+  transactionIds?: string[],
+) {
+  if (!IS_LEGENDS_WALLET) return [];
+  if (transactionIds !== undefined) {
+    const cacheKey = getSponsorshipCacheKey(network, address);
+    const cached = getValidSponsorshipCacheEntry(network, address);
+    const uncheckedTxids = [...new Set(transactionIds)]
+      .filter((txid) => !cached?.checkedTxids.has(txid));
+    if (!uncheckedTxids.length) return getCachedWalletSponsorshipActivityLinks(network, address);
+    const requestKey = `${cacheKey}:${uncheckedTxids.slice().sort().join(',')}`;
+    let request = sponsorshipExactRequests.get(requestKey);
+    if (!request) {
+      request = fetchJson<WalletSponsorshipActivityLinksResponse>(
+        getWalletSponsorshipUrl(network, 'activity-links'),
+        { address, txids: uncheckedTxids.join(',') },
+        undefined,
+        { retries: 1, timeouts: SPONSORSHIP_LINKS_TIMEOUT_MS },
+      ).then(({ links, checked_txids: checkedTxids = uncheckedTxids }) => {
+        const latest = getValidSponsorshipCacheEntry(network, address);
+        sponsorshipLinksCache.set(cacheKey, {
+          links: mergeActivityLinks(latest?.links ?? [], links ?? []),
+          checkedTxids: new Set([...(latest?.checkedTxids ?? []), ...checkedTxids]),
+          expiresAt: Date.now() + SPONSORSHIP_LINKS_CACHE_MS,
+        });
+      }).catch(() => {
+        // Transaction details remain available when Wallet metadata is temporarily unavailable.
+      }).finally(() => {
+        sponsorshipExactRequests.delete(requestKey);
+      });
+      sponsorshipExactRequests.set(requestKey, request);
+    }
+    await request;
+    return getCachedWalletSponsorshipActivityLinks(network, address);
+  }
+  return getCachedWalletSponsorshipActivityLinks(network, address);
 }
 
 export function rememberWalletSponsorshipActivityLink(
@@ -263,11 +288,14 @@ export function rememberWalletSponsorshipActivityLink(
   link: WalletSponsorshipActivityLink,
 ) {
   const cacheKey = getSponsorshipCacheKey(network, address);
-  const cached = sponsorshipLinksCache.get(cacheKey);
+  const cached = getValidSponsorshipCacheEntry(network, address);
   sponsorshipLinksCache.set(cacheKey, {
     links: mergeActivityLinks([link], cached?.links ?? []),
+    checkedTxids: new Set([
+      ...(cached?.checkedTxids ?? []),
+      ...[link.main_txid, link.payment_txid].filter((txId): txId is string => Boolean(txId)),
+    ]),
     expiresAt: Date.now() + SPONSORSHIP_LINKS_CACHE_MS,
-    request: cached?.request,
   });
 }
 
@@ -275,19 +303,19 @@ export function reconcileWalletSponsorshipActivities(
   slug: string,
   activities: ApiActivity[],
   links: WalletSponsorshipActivityLink[],
+  checkedTxids: Set<string> = new Set<string>(),
 ): ApiActivity[] {
-  if (!links.length) return activities;
-  if (slug === TRX.slug) {
-    const paymentIds = new Set(links.map(({ payment_txid: paymentTxId }) => paymentTxId));
-    return activities.map((activity) => paymentIds.has(activity.id)
-      ? { ...activity, shouldHide: true }
-      : activity);
-  }
-
+  const paymentIds = new Set(links.map(({ payment_txid: paymentTxId }) => paymentTxId).filter(Boolean));
   const linksByMainId = new Map(links.map((link) => [link.main_txid, link]));
   return activities.map((activity) => {
+    if (slug === TRX.slug && paymentIds.has(activity.id)) return { ...activity, shouldHide: true };
+
     const link = linksByMainId.get(activity.id);
-    if (!link || activity.kind !== 'transaction') return activity;
+    if (!link || activity.kind !== 'transaction') {
+      return checkedTxids.has(activity.id) && activity.kind === 'transaction'
+        ? { ...activity, extra: { ...activity.extra, walletSponsorshipChecked: true } }
+        : activity;
+    }
     const serviceFee = BigInt(link.service_fee_sun ?? link.charge_sun);
     const onchainFee = BigInt(link.onchain_fee_sun ?? serviceFee);
     return {
@@ -295,6 +323,7 @@ export function reconcileWalletSponsorshipActivities(
       fee: serviceFee,
       extra: {
         ...activity.extra,
+        walletSponsorshipChecked: true,
         walletSponsorship: {
           serviceFee,
           onchainFee,
@@ -310,7 +339,7 @@ export function reconcileWalletSponsorshipActivities(
   });
 }
 
-async function ensureSponsoredTransactionTtl(tronWeb: TronWeb, transaction: Types.Transaction) {
+export async function ensureSponsoredTransactionTtl(tronWeb: TronWeb, transaction: Types.Transaction) {
   const timestamp = Number(transaction.raw_data?.timestamp || 0);
   const expiration = Number(transaction.raw_data?.expiration || 0);
   const currentLifetimeSeconds = timestamp > 0 && expiration > timestamp
@@ -330,6 +359,16 @@ function getWalletSponsorshipUrl(network: ApiNetwork, endpoint: string) {
 
 function getSponsorshipCacheKey(network: ApiNetwork, address: string) {
   return `${network}:${address}`;
+}
+
+function getValidSponsorshipCacheEntry(network: ApiNetwork, address: string) {
+  const cacheKey = getSponsorshipCacheKey(network, address);
+  const cached = sponsorshipLinksCache.get(cacheKey);
+  if (cached && cached.expiresAt <= Date.now()) {
+    sponsorshipLinksCache.delete(cacheKey);
+    return undefined;
+  }
+  return cached;
 }
 
 function areSponsorshipIntentsEqual(a: WalletSponsorshipIntent, b: WalletSponsorshipIntent) {

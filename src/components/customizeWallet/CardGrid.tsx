@@ -2,6 +2,7 @@ import React, { memo } from '../../lib/teact/teact';
 
 import type { ApiBaseCurrency, ApiCurrencyRates, ApiNft } from '../../api/types';
 import type { UserToken } from '../../global/types';
+import type { LegendsCardBackground } from './legendsCardBackgrounds';
 
 import { DEFAULT_CARD_ADDRESS } from './constants';
 
@@ -12,7 +13,8 @@ import NftCardItem from './NftCardItem';
 import styles from './CardGrid.module.scss';
 
 interface OwnProps {
-  cards: ApiNft[];
+  cards?: ApiNft[];
+  backgrounds?: readonly LegendsCardBackground[];
   selectedAddress?: string;
   onCardSelect: (address: string) => void;
   tokens?: UserToken[];
@@ -21,7 +23,7 @@ interface OwnProps {
 }
 
 function CardGrid({
-  cards, selectedAddress, onCardSelect, tokens, baseCurrency, currencyRates,
+  cards, backgrounds, selectedAddress, onCardSelect, tokens, baseCurrency, currencyRates,
 }: OwnProps) {
   const handleCardClick = useLastCallback((address: string) => {
     onCardSelect(address);
@@ -29,15 +31,28 @@ function CardGrid({
 
   return (
     <div className={styles.grid}>
-      <NftCardItem
-        key="default"
-        isSelected={selectedAddress === DEFAULT_CARD_ADDRESS}
-        tokens={tokens}
-        baseCurrency={baseCurrency}
-        currencyRates={currencyRates}
-        onClick={handleCardClick}
-      />
-      {cards.map((card) => (
+      {!backgrounds && (
+        <NftCardItem
+          key="default"
+          isSelected={selectedAddress === DEFAULT_CARD_ADDRESS}
+          tokens={tokens}
+          baseCurrency={baseCurrency}
+          currencyRates={currencyRates}
+          onClick={handleCardClick}
+        />
+      )}
+      {backgrounds?.map((background) => (
+        <NftCardItem
+          key={background.id}
+          background={background}
+          isSelected={background.id === selectedAddress}
+          tokens={tokens}
+          baseCurrency={baseCurrency}
+          currencyRates={currencyRates}
+          onClick={handleCardClick}
+        />
+      ))}
+      {cards?.map((card) => (
         <NftCardItem
           key={card.address}
           card={card}

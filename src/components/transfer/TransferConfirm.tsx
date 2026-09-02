@@ -1,4 +1,4 @@
-import React, { memo, useMemo } from '../../lib/teact/teact';
+import React, { memo, useMemo, useState } from '../../lib/teact/teact';
 import { getActions, withGlobal } from '../../global';
 
 import type { ApiToken } from '../../api/types';
@@ -29,6 +29,7 @@ import useLang from '../../hooks/useLang';
 import useLastCallback from '../../hooks/useLastCallback';
 
 import WalletSponsorshipFee from '../common/WalletSponsorshipFee';
+import PrepaidTopupModal from '../prepaid/PrepaidTopupModal';
 import AmountWithFeeTextField from '../ui/AmountWithFeeTextField';
 import AnimatedIconWithPreview from '../ui/AnimatedIconWithPreview';
 import Button from '../ui/Button';
@@ -90,6 +91,7 @@ function TransferConfirm({
   const { submitTransferConfirm } = getActions();
 
   const lang = useLang();
+  const [isTopupOpen, setIsTopupOpen] = useState(false);
 
   const isNftTransfer = Boolean(nfts?.length);
   if (isNftTransfer) {
@@ -215,6 +217,10 @@ function TransferConfirm({
         onchainFee={sponsorship.onchainFee}
         token={token}
         shouldShowOnchainFee
+        prepaidBalance={sponsorship.paymentMode === 'prepaid'
+          ? sponsorship.prepaidAvailable ?? sponsorship.prepaidBalance
+          : undefined}
+        onTopUp={sponsorship.paymentMode === 'prepaid' ? () => setIsTopupOpen(true) : undefined}
       />
     );
   }
@@ -313,6 +319,12 @@ function TransferConfirm({
           </Button>
         </div>
       </div>
+      <PrepaidTopupModal
+        isOpen={isTopupOpen}
+        accountId={currentAccountId}
+        onClose={() => setIsTopupOpen(false)}
+        onSuccess={onBack}
+      />
     </>
   );
 }

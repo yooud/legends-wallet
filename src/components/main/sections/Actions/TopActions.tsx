@@ -47,6 +47,7 @@ interface ActionButtonProps {
   tgsUrl: string;
   previewUrl: string;
   accentColor?: string;
+  isDisabled?: boolean;
   onClick: NoneToVoidFunction;
 }
 
@@ -233,7 +234,7 @@ export default memo(
 );
 
 function ActionButtonInternal({
-  label, className, tgsUrl, previewUrl, accentColor, onClick,
+  label, className, tgsUrl, previewUrl, accentColor, isDisabled, onClick,
 }: ActionButtonProps) {
   const [isAnimating, play, stop] = useFlag();
 
@@ -248,6 +249,7 @@ function ActionButtonInternal({
     <Button
       isSimple
       className={buildClassName(styles.button, className)}
+      isDisabled={isDisabled}
       onClick={handleClick}
       onMouseEnter={!IS_TOUCH_ENV ? play : undefined}
     >
@@ -268,4 +270,4 @@ function ActionButtonInternal({
   );
 }
 
-const ActionButton = memo(ActionButtonInternal);
+export const ActionButton = memo(ActionButtonInternal);

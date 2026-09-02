@@ -2,8 +2,9 @@ import type { ApiTransactionActivity } from '../../types';
 
 import { TRX } from '../../../config';
 import { makeMockSwapActivity, makeMockTransactionActivity } from '../../../../tests/mocks';
-import { mergeActivities, parseRawTrxTransaction } from './activities';
+import { mergeActivities, parseRawTrc20ContractTransaction, parseRawTrxTransaction } from './activities';
 import { reconcileWalletSponsorshipActivities } from './sponsorship';
+import { getTransactionStatus } from './transactionInfo';
 
 describe('mergeActivities', () => {
   it('merges and sorts activities', () => {
@@ -113,6 +114,64 @@ describe('parseRawTrxTransaction', () => {
     const result = parseRawTrxTransaction(testAddress, testTx);
     expect(result.shouldHide).toBe(false);
   });
+
+  it('preserves a failed on-chain execution status', () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const testTx = require('./testData/regularTrxTransfer.json');
+    const result = parseRawTrxTransaction(testAddress, {
+      ...testTx,
+      ret: [{ contractRet: 'REVERT' }],
+    });
+
+    expect(result.status).toBe('failed');
+  });
+});
+
+describe('parseRawTrc20ContractTransaction', () => {
+  it('decodes a transfer directly from the raw smart-contract call', () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const testTx = require('./testData/tokenTransferTrxTransaction.json');
+    const activity = parseRawTrc20ContractTransaction(
+      'TBgmsoKF7ZV12dkfHqvpjdui3VxxAoN4q4',
+      testTx,
+      testTx.raw_data.timestamp,
+    );
+
+    expect(activity).toMatchObject({
+      id: testTx.txID,
+      slug: 'tron-tr7nhqjekq',
+      amount: -685_000_000n,
+      status: 'completed',
+    });
+  });
+
+  it('uses the execution status supplied by transaction details', () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const testTx = require('./testData/tokenTransferTrxTransaction.json');
+    const activity = parseRawTrc20ContractTransaction(
+      'TBgmsoKF7ZV12dkfHqvpjdui3VxxAoN4q4',
+      testTx,
+      testTx.raw_data.timestamp,
+      'failed',
+    );
+
+    expect(activity?.status).toBe('failed');
+  });
+});
+
+describe('getTransactionStatus', () => {
+  it('distinguishes pending, completed, and failed transaction details', () => {
+    expect(getTransactionStatus({ ret: [{ contractRet: 'SUCCESS' }] }, {})).toBe('pending');
+    expect(getTransactionStatus({ ret: [{ contractRet: 'SUCCESS' }] }, { id: 'not-included' })).toBe('pending');
+    expect(getTransactionStatus(
+      { ret: [{ contractRet: 'SUCCESS' }] },
+      { blockNumber: 1, receipt: { result: 'SUCCESS' } },
+    )).toBe('completed');
+    expect(getTransactionStatus(
+      { ret: [{ contractRet: 'SUCCESS' }] },
+      { blockNumber: 1, result: 'FAILED', receipt: { result: 'OUT_OF_ENERGY' } },
+    )).toBe('failed');
+  });
 });
 
 describe('reconcileWalletSponsorshipActivities', () => {
@@ -151,6 +210,30 @@ describe('reconcileWalletSponsorshipActivities', () => {
         reconciliation: {
           operationId: 'wallet-sponsorship:quote-1',
           hiddenSourceActionIds: ['payment-tx'],
+        },
+      },
+    });
+  });
+
+  it('attaches prepaid top-up fees to a native TRX transfer', () => {
+    const [activity] = reconcileWalletSponsorshipActivities(
+      TRX.slug,
+      [makeMockTransactionActivity({ id: 'main-tx', fee: 268_000n })],
+      [{
+        quote_id: 'topup-1',
+        main_txid: 'main-tx',
+        charge_sun: 200_000,
+        service_fee_sun: 200_000,
+        onchain_fee_sun: 268_000,
+      }],
+    );
+
+    expect(activity).toMatchObject({
+      fee: 200_000n,
+      extra: {
+        walletSponsorship: {
+          serviceFee: 200_000n,
+          onchainFee: 268_000n,
         },
       },
     });

@@ -50,6 +50,7 @@ type BaseActivity = {
       serviceFee: bigint;
       onchainFee: bigint;
     };
+    walletSponsorshipChecked?: boolean;
     // TODO Move other extra fields here (externalMsgHash, ...)
   };
 };

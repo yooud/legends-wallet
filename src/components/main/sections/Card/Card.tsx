@@ -10,6 +10,7 @@ import type {
 import type { ApiBackendConfig } from '../../../../api/types/backend';
 import type { ApiPromotion } from '../../../../api/types/backend';
 import type {
+  CardBackgroundId,
   IAnchorPosition,
   PortfolioPnlChange,
   UserToken,
@@ -17,7 +18,7 @@ import type {
 import type { LangFn } from '../../../../hooks/useLang';
 import type { DropdownItem } from '../../../ui/Dropdown';
 
-import { IS_GRAM_WALLET, IS_MY_WALLET_BRAND } from '../../../../config';
+import { IS_GRAM_WALLET, IS_LEGENDS_WALLET, IS_MY_WALLET_BRAND } from '../../../../config';
 import {
   selectAccountStakingStates, selectCurrentAccount,
   selectCurrentAccountId,
@@ -37,6 +38,7 @@ import { toNativeDigits } from '../../../../util/nativeDigits';
 import { DEFAULT_PORTFOLIO_TIME_RANGE } from '../../../../util/portfolio/timeRange';
 import { preloadedImageUrls } from '../../../../util/preloadImage';
 import { IS_IOS, IS_SAFARI } from '../../../../util/windowEnvironment';
+import { getLegendsCardBackground } from '../../../customizeWallet/legendsCardBackgrounds';
 import getSensitiveDataMaskSkinFromCardNft from './helpers/getSensitiveDataMaskSkinFromCardNft';
 
 import { useDeviceScreen } from '../../../../hooks/useDeviceScreen';
@@ -77,6 +79,7 @@ interface StateProps {
   currencyRates: ApiCurrencyRates;
   stakingStates?: ApiStakingState[];
   cardNft?: ApiNft;
+  cardBackgroundId?: CardBackgroundId;
   isSensitiveDataHidden?: true;
   isNftBuyingDisabled: boolean;
   isViewMode: boolean;
@@ -139,6 +142,7 @@ function Card({
   isSensitiveDataHidden,
   isNftBuyingDisabled,
   cardNft,
+  cardBackgroundId,
   isViewMode,
   animationLevel,
   isSeasonalThemingDisabled,
@@ -160,6 +164,9 @@ function Card({
   const [customCardClassName, setCustomCardClassName] = useState<string | undefined>(undefined);
   const [withTextGradient, setWithTextGradient] = useState<boolean>(false);
   const hasCustomCard = Boolean(cardNft);
+  const legendsCardBackground = IS_LEGENDS_WALLET && !hasCustomCard
+    ? getLegendsCardBackground(cardBackgroundId)
+    : undefined;
 
   const { isPortrait } = useDeviceScreen();
   const { width: screenWidth } = useWindowSize();
@@ -389,9 +396,18 @@ function Card({
             styles.container,
             customCardClassName,
             IS_GRAM_WALLET && 'gram',
+            legendsCardBackground?.hasDarkText && 'MwCard__darkText',
           )
         }
       >
+        {legendsCardBackground && (
+          <img
+            src={legendsCardBackground.imageUrl}
+            alt=""
+            className={styles.legendsCardBackground}
+            draggable={false}
+          />
+        )}
         <CustomCardManager nft={cardNft} onCardChange={handleCardChange} />
         <SeasonalTheming
           animationLevel={animationLevel}
@@ -462,7 +478,7 @@ export default memo(
       const currentAccountId = selectCurrentAccountId(global)!;
       const accountState = selectCurrentAccountState(global);
       const stakingStates = selectAccountStakingStates(global, currentAccountId);
-      const { cardBackgroundNft: cardNft } = selectCurrentAccountSettings(global) || {};
+      const { cardBackgroundNft: cardNft, cardBackgroundId } = selectCurrentAccountSettings(global) || {};
 
       const { baseCurrency } = global.settings;
       // Portfolio history exists only for `mainnet` account
@@ -492,6 +508,7 @@ export default memo(
         currencyRates: global.currencyRates,
         stakingStates,
         cardNft,
+        cardBackgroundId,
         isSensitiveDataHidden: global.settings.isSensitiveDataHidden,
         isNftBuyingDisabled: global.restrictions.isNftBuyingDisabled,
         animationLevel: global.settings.animationLevel,

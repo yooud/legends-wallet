@@ -1140,6 +1140,10 @@ No view wallets yet: Кошельков в режиме просмотра по�
 View wallets can receive assets, but you cannot use them to send or sign transactions.: Кошельки в режиме просмотра могут получать активы, но их нельзя использовать для отправки или подписания транзакций.
 Add the first one to track balances and activity for any address.: Добавьте первый, чтобы отслеживать баланс и активность любого адреса.
 Customize Wallet: Настроить кошелёк
+Card Background: Фон карточки
+"Select a wallet background:": "Выберите фон кошелька:"
+This background will be displayed on the home screen and in the wallets list.: Этот фон будет отображаться на главном экране и в списке кошельков.
+Choose the background used for this wallet.: Выберите фон карточки этого кошелька.
 "Select the card stored in this wallet:": "Выберите карту, сохранённую в этом кошельке:"
 This card will be installed for this wallet and will be displayed on the home screen and in the wallets list.: Эта карта будет установлена для кошелька и отображаться на главном экране и в списке кошельков.
 Get More Cards: Получить больше карт
@@ -1792,3 +1796,46 @@ $enclave_migration_interrupted_message: |
   Не переустанавливайте приложение и не очищайте его данные: ваши кошельки по-прежнему хранятся на этом устройстве. Пожалуйста, свяжитесь с %support_link%, и мы поможем завершить обновление.
 Hide Unverified NFTs: Скрывать непроверенные NFT
 Unverified: Непроверенные
+Prepaid: Баланс комиссий
+Available balance: Доступный баланс
+Top Up: Пополнить
+Linked Wallets: Связанные кошельки
+Select Wallet: Выберите кошелёк
+Link Wallet: Связать кошелёк
+Fee Coverage: Оплата комиссии
+Prepaid Balance: Баланс предоплаты
+Bot Balance: Баланс бота
+Connect Account: Подключить аккаунт
+Disconnect Account: Отключить аккаунт
+Connect with Telegram: Подключить через Telegram
+Connect with API Key: Подключить по API-ключу
+API Key: API-ключ
+or: или
+Prepaid balance or direct TRX payment: Предоплата или прямая оплата в TRX
+Automatic: Автоматически
+Prepaid only: Только предоплата
+Pay with TRX: Оплачивать в TRX
+Prepaid balance is insufficient: Недостаточно средств на балансе предоплаты
+$prepaid_unavailable: Оплата комиссии с баланса предоплаты временно недоступна.
+$prepaid_link_help: Оба кошелька подписывают локальное подтверждение. Транзакция не отправляется в сеть, а ключи не покидают устройство.
+$prepaid_topup_help: Пополните баланс одним переводом поддерживаемого актива. Ресурсы предоставляются автоматически, а их стоимость вычитается из зачисленного баланса.
+$prepaid_settings_help: Выберите способ оплаты ресурсов для этого кошелька.
+$prepaid_auto_help: Использовать баланс предоплаты, а если его недостаточно — оплачивать комиссию сервиса в TRX.
+$prepaid_only_help: Использовать только баланс предоплаты. Если средств недостаточно, потребуется пополнение.
+$prepaid_direct_help: Оплачивать комиссию Legends Energy напрямую с этого кошелька в TRX.
+$prepaid_minimum: Минимальная сумма пополнения — %amount% USDT
+$prepaid_minimum_value: Минимальная сумма пополнения — %amount% USDT
+$prepaid_invalid_amount: Укажите корректную сумму
+$prepaid_reserved: Зарезервировано %amount% TRX
+$bot_balance_help: Подключите кошелёк к проекту бота и используйте общий баланс для оплаты комиссий. Операции кошелька остаются отделены от операций бота.
+$bot_balance_connect_help: Подключитесь по API-ключу проекта или через сессию Telegram Mini App. Кошелёк подпишет локальное подтверждение без отправки транзакции в сеть.
+$bot_balance_project_help: Выберите, баланс какого проекта в боте будет использоваться для оплаты комиссий этого кошелька.
+$bot_balance_disconnect_warning: После отключения кошелёк перестанет использовать баланс проекта для оплаты комиссий. Средства останутся на балансе проекта и будут доступны в боте.
+$prepaid_history_topup: Пополнение баланса комиссий
+$prepaid_history_topup_resources: Ресурсы для пополнения баланса комиссий
+$prepaid_history_fee_coverage: Покрытие комиссии транзакции
+$prepaid_history_refund: Возврат с баланса комиссий
+$prepaid_history_adjustment: Корректировка баланса комиссий
+$prepaid_history_balance_received: Получено со связанного кошелька
+$prepaid_history_balance_moved: Переведено на связанный кошелёк
+$prepaid_history_bot_transfer: Переведено в подключённый проект бота

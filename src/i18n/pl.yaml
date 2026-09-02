@@ -1794,3 +1794,6 @@ $enclave_migration_interrupted_message: |
   Nie instaluj aplikacji ponownie i nie czyść jej danych: Twoje portfele nadal są zapisane na tym urządzeniu. Skontaktuj się z %support_link%, a pomożemy dokończyć aktualizację.
 Hide Unverified NFTs: Ukryj niezweryfikowane NFT
 Unverified: Niezweryfikowane
+Prepaid: Saldo opłat
+$bot_balance_project_help: Wybierz saldo projektu bota, które będzie używane do pokrywania opłat tego portfela.
+$bot_balance_disconnect_warning: Po odłączeniu ten portfel przestanie używać salda projektu do pokrywania opłat. Środki pozostaną na saldzie projektu bota i nadal będą dostępne w bocie.

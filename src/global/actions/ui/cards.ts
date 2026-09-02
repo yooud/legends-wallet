@@ -39,6 +39,14 @@ addActionHandler('clearCardBackgroundNft', (global) => {
   setGlobal(global);
 });
 
+addActionHandler('setCardBackgroundId', (global, actions, { backgroundId, accountId }) => {
+  return updateAccountSettings(
+    global,
+    accountId ?? selectCurrentAccountId(global)!,
+    { cardBackgroundId: backgroundId },
+  );
+});
+
 addActionHandler('installAccentColorFromNft', async (global, actions, { nft, accountId }) => {
   const accentColorIndex = await getAccentColorIndexFromNft(nft);
 

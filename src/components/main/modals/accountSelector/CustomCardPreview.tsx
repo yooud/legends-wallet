@@ -1,8 +1,11 @@
 import React, { memo } from '../../../../lib/teact/teact';
 
 import type { ApiNft } from '../../../../api/types';
+import type { CardBackgroundId } from '../../../../global/types';
 
+import buildClassName from '../../../../util/buildClassName';
 import { getCardNftImageUrl } from '../../../../util/url';
+import { getLegendsCardBackground } from '../../../customizeWallet/legendsCardBackgrounds';
 
 import useFlag from '../../../../hooks/useFlag';
 
@@ -17,12 +20,14 @@ import cardSkeletonSilver from '../../../../assets/cards/card_skeleton_silver.sv
 
 interface OwnProps {
   nft?: ApiNft;
+  cardBackgroundId?: CardBackgroundId;
   className?: string;
 }
 
-function CustomCardPreview({ nft, className }: OwnProps) {
-  const imageUrl = nft ? getCardNftImageUrl(nft) : cardDefaultImg;
-  const skeletonUrl = getSkeletonUrl(nft);
+function CustomCardPreview({ nft, cardBackgroundId, className }: OwnProps) {
+  const cardBackground = cardBackgroundId ? getLegendsCardBackground(cardBackgroundId) : undefined;
+  const imageUrl = cardBackground?.imageUrl ?? (nft ? getCardNftImageUrl(nft) : cardDefaultImg);
+  const skeletonUrl = cardBackground ? undefined : getSkeletonUrl(nft);
 
   const [isImageLoaded, markImageLoaded] = useFlag(false);
 
@@ -36,7 +41,7 @@ function CustomCardPreview({ nft, className }: OwnProps) {
         <img
           src={imageUrl}
           alt=""
-          className={styles.image}
+          className={buildClassName(styles.image, cardBackground && styles.staticBackground)}
           onLoad={handleImageLoad}
         />
         {skeletonUrl && isImageLoaded && (

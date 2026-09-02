@@ -1739,3 +1739,6 @@ $enclave_migration_interrupted_message: |
   請不要重新安裝應用程式，也不要清除其資料，您的錢包仍儲存在本裝置上。請聯絡 %support_link%，我們會協助您完成更新。
 Hide Unverified NFTs: 隱藏未驗證的NFT
 Unverified: 未驗證
+Prepaid: 手續費餘額
+$bot_balance_project_help: 選擇要用於支付此錢包手續費的機器人專案餘額。
+$bot_balance_disconnect_warning: 中斷連線後，此錢包將停止使用專案餘額支付手續費。資金仍會保留在機器人專案餘額中，並可繼續在機器人中使用。

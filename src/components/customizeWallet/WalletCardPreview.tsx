@@ -3,12 +3,14 @@ import React, {
 } from '../../lib/teact/teact';
 
 import type { ApiBaseCurrency, ApiCurrencyRates, ApiNft } from '../../api/types';
-import type { Account, UserToken } from '../../global/types';
+import type { Account, CardBackgroundId, UserToken } from '../../global/types';
 
+import { IS_LEGENDS_WALLET } from '../../config';
 import buildClassName from '../../util/buildClassName';
 import { calculateFullBalance } from '../../util/calculateFullBalance';
 import { getShortCurrencySymbol } from '../../util/formatNumber';
 import { IS_IOS, IS_SAFARI } from '../../util/windowEnvironment';
+import { getLegendsCardBackground } from './legendsCardBackgrounds';
 
 import { useDeviceScreen } from '../../hooks/useDeviceScreen';
 import useLastCallback from '../../hooks/useLastCallback';
@@ -27,6 +29,7 @@ interface OwnProps {
   baseCurrency?: ApiBaseCurrency;
   currencyRates?: ApiCurrencyRates;
   previewCardNft?: ApiNft;
+  cardBackgroundId?: CardBackgroundId;
   variant: 'left' | 'right' | 'middle';
 }
 
@@ -36,12 +39,14 @@ function WalletCardPreview({
   baseCurrency = 'USD',
   currencyRates,
   previewCardNft,
+  cardBackgroundId,
   variant,
 }: OwnProps) {
   const amountRef = useRef<HTMLDivElement>();
   const shortBaseSymbol = getShortCurrencySymbol(baseCurrency);
   const [customCardClassName, setCustomCardClassName] = useState<string | undefined>(undefined);
   const [withTextGradient, setWithTextGradient] = useState<boolean>(false);
+  const legendsCardBackground = IS_LEGENDS_WALLET ? getLegendsCardBackground(cardBackgroundId) : undefined;
 
   const { isPortrait } = useDeviceScreen();
   const { width: screenWidth } = useWindowSize();
@@ -94,10 +99,30 @@ function WalletCardPreview({
   }
 
   return (
-    <div className={buildClassName(styles.container, customCardClassName, styles[variant])}>
-      <CustomCardManager nft={previewCardNft} onCardChange={handleCardChange} className={styles.customCardManager} />
+    <div className={buildClassName(
+      styles.container,
+      customCardClassName,
+      legendsCardBackground?.hasDarkText && 'MwCard__darkText',
+      styles[variant],
+    )}
+    >
+      {legendsCardBackground ? (
+        <img
+          src={legendsCardBackground.imageUrl}
+          alt=""
+          className={styles.staticBackground}
+          draggable={false}
+        />
+      ) : (
+        <CustomCardManager nft={previewCardNft} onCardChange={handleCardChange} className={styles.customCardManager} />
+      )}
 
-      <div className={buildClassName(styles.containerInner, customCardClassName)}>
+      <div className={buildClassName(
+        styles.containerInner,
+        customCardClassName,
+        legendsCardBackground?.hasDarkText && 'MwCard__darkText',
+      )}
+      >
         {values ? renderBalance() : (
           <div className={styles.walletName}>{accountTitle}</div>
         )}

@@ -20,7 +20,7 @@ type OwnProps = {
   placeholder?: string;
   valueOverlay?: TeactNode;
   value?: string | number;
-  inputMode?: 'numeric' | 'text' | 'search';
+  inputMode?: HTMLAttributes<HTMLInputElement>['inputMode'];
   maxLength?: number;
   isRequired?: boolean;
   isDisabled?: boolean;
