@@ -1,5 +1,5 @@
-# This file is for tma.mywallet.io hosted on Netlify
-/
+# Security and cache headers for the Telegram Mini App build.
+/*
   Content-Security-Policy: {{CSP}}
   X-Content-Type-Options: nosniff
   X-XSS-Protection: 1; mode=block

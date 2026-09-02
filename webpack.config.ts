@@ -22,6 +22,7 @@ import {
   APP_NAME,
   APP_WEBSITE_URL,
   BASE_URL,
+  BETA_URL,
   BRILLIANT_API_BASE_URL,
   EVM_MAINNET_RPC_URL,
   EVM_TESTNET_RPC_URL,
@@ -46,6 +47,7 @@ import {
   MFA_API_BASE_URL,
   MW_STATIC_BASE_URL,
   PORTFOLIO_API_URL,
+  PRODUCTION_URL,
   PROXY_API_BASE_URL,
   SOLANA_MAINNET_API_URL,
   SOLANA_MAINNET_RPC_URL,
@@ -604,17 +606,16 @@ export default function createConfig(
           },
           {
             from: IS_TELEGRAM_APP ? 'src/_headers_telegram' : 'src/_headers',
+            to: '_headers',
+            toType: 'file',
             transform: (content: Buffer) => {
               const headers = content.toString().replace('{{CSP}}', `${CSP} ${cspFrameAncestors}`.trim());
 
-              // Consolidate the retiring mytonwallet.app brand host onto mywallet.io in search. The app
-              // keeps serving on .app (installed PWAs and deeplinks pin it), so this is a canonical
-              // header rather than a redirect; the same site also answers on web(.beta).mywallet.io, which
-              // self-canonicalizes. Omitted for Gram/core: those builds are a different brand
-              // (wallet.ton.org ships to ton-blockchain/ton-wallet) and must never point at mywallet.io.
-              const canonical = (IS_GRAM_WALLET || IS_CORE_WALLET) ? undefined
-                : APP_ENV === 'staging' ? 'https://web-beta.mywallet.io/'
-                  : 'https://web.mywallet.io/';
+              const canonical = IS_LEGENDS_WALLET
+                ? `${APP_ENV === 'staging' ? BETA_URL : PRODUCTION_URL}/`
+                : (IS_GRAM_WALLET || IS_CORE_WALLET) ? undefined
+                  : APP_ENV === 'staging' ? 'https://web-beta.mywallet.io/'
+                    : 'https://web.mywallet.io/';
               return canonical
                 ? headers.replace('{{CANONICAL}}', canonical)
                 : headers.replace(/^.*\{\{CANONICAL\}\}.*\n?/m, '');
