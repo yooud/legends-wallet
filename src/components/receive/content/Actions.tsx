@@ -3,6 +3,7 @@ import { getActions, withGlobal } from '../../../global';
 
 import type { ApiChain, ApiCountryCode } from '../../../api/types';
 
+import { IS_LEGENDS_WALLET } from '../../../config';
 import { selectIsCurrentAccountViewMode, selectIsOnRampAllowed } from '../../../global/selectors';
 import buildClassName from '../../../util/buildClassName';
 import { getChainConfig } from '../../../util/chain';
@@ -52,7 +53,8 @@ function Actions({
   // Whether the chain supports the ramp at all is answered by `isOnRampDisabled`, which reads the same
   // chain config; asking it a second time here is how the two answers used to drift apart
   const canBuyWithCard = canBuyWithCardInRussia || countryCode !== 'RU';
-  const isSwapAllowed = !isViewMode && !isTestnet && !isLedger && !isSwapDisabled && !!buySwap;
+  const isSwapAllowed = !IS_LEGENDS_WALLET
+    && !isViewMode && !isTestnet && !isLedger && !isSwapDisabled && !!buySwap;
   const isOnRampAllowed = !isViewMode && !isTestnet && !isOnRampDisabled && canBuyWithCard;
   const isDepositLinkSupported = !!formatTransferUrl;
   const shouldRender = Boolean(isSwapAllowed || isOnRampAllowed || isDepositLinkSupported);
