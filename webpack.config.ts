@@ -96,7 +96,7 @@ const cspConnectSrcExtra = APP_ENV === 'development'
   ].filter(Boolean).join(' ')
   : '';
 const cspScriptSrcExtra = IS_TELEGRAM_APP ? 'https://telegram.org' : '';
-const cspFrameSrcExtra = IS_FEATURE_LIMITED ? '' : [
+const cspFrameSrcExtra = IS_LEGENDS_WALLET || IS_FEATURE_LIMITED ? '' : [
   'https://buy-sandbox.moonpay.com/',
   'https://buy.moonpay.com/',
   'https://sell.moonpay.com/',
@@ -109,7 +109,16 @@ const cspFrameSrcExtra = IS_FEATURE_LIMITED ? '' : [
   SUBPROJECT_URL_MASK,
 ].join(' ');
 
-const cspConnectSrcHosts = Array.from(new Set([
+const cspConnectSrcHosts = Array.from(new Set((IS_LEGENDS_WALLET ? [
+  BRILLIANT_API_BASE_URL,
+  BRILLIANT_API_BASE_URL.replace(/^http(s?):/, 'ws$1:'),
+  ensureTrailingSlash(PROXY_API_BASE_URL),
+  MW_STATIC_BASE_URL,
+  TRON_MAINNET_API_URL,
+  TRON_MAINNET_HISTORY_API_URL,
+  TRON_TESTNET_API_URL,
+  TRON_TESTNET_HISTORY_API_URL,
+] : [
   BRILLIANT_API_BASE_URL,
   BRILLIANT_API_BASE_URL.replace(/^http(s?):/, 'ws$1:'),
   ensureTrailingSlash(PROXY_API_BASE_URL),
@@ -142,7 +151,7 @@ const cspConnectSrcHosts = Array.from(new Set([
   MFA_API_BASE_URL,
   ensureTrailingSlash(PORTFOLIO_API_URL),
   TON_CONNECT_ANALYTICS_URL,
-])).join(' ');
+]))).join(' ');
 
 const cspImageSrcHosts = [
   MW_STATIC_BASE_URL,
