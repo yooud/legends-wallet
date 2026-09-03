@@ -6,7 +6,9 @@ import { getActions, withGlobal } from '../../global';
 import type { ApiBaseCurrency, ApiChain, ApiCurrencyRates, ApiNft, ApiStakingState } from '../../api/types';
 import { SettingsState, type UserToken } from '../../global/types';
 
-import { CURRENCIES, NO_NFT, TINY_TRANSFER_MAX_COST } from '../../config';
+import {
+  CURRENCIES, IS_LEGENDS_WALLET, NO_NFT, TINY_TRANSFER_MAX_COST,
+} from '../../config';
 import {
   selectAccountStakingStates,
   selectCurrentAccountChainDisplay,
@@ -117,6 +119,7 @@ function SettingsAssets({
 
   const currencyItems = useMemo<DropdownItem<ApiBaseCurrency>[]>(() => (
     Object.entries(CURRENCIES)
+      .filter(([currency]) => !IS_LEGENDS_WALLET || currency === 'USD' || currency === 'EUR')
       .map(([currency, { name }]) => ({ value: currency as keyof typeof CURRENCIES, name }))
   ), []);
 
