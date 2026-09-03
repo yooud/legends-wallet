@@ -21,6 +21,7 @@ mv dist "$WORK_DIR/telegram"
 mkdir -p dist/telegram
 cp -a "$WORK_DIR/web/." dist/
 cp -a "$WORK_DIR/telegram/." dist/telegram/
+rm -f dist/statoscope-build-statistics.json dist/telegram/statoscope-build-statistics.json
 
 telegram_csp=$(sed -n 's/^  Content-Security-Policy: //p' dist/telegram/_headers | head -1)
 if [ -z "$telegram_csp" ] || [ "${#telegram_csp}" -gt 1950 ]; then
