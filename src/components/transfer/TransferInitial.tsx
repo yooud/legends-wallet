@@ -11,7 +11,7 @@ import type { ExplainedTransferFee } from '../../util/fee/transferFee';
 import type { FeePrecision, FeeTerms } from '../../util/fee/types';
 import { ScamWarningType, TransferState } from '../../global/types';
 
-import { DEFAULT_PRICE_CURRENCY, UNKNOWN_TOKEN } from '../../config';
+import { DEFAULT_PRICE_CURRENCY, IS_LEGENDS_WALLET, UNKNOWN_TOKEN } from '../../config';
 import { getHelpCenterUrl } from '../../global/helpers/getHelpCenterUrl';
 import {
   selectCurrentAccount,
@@ -199,7 +199,7 @@ function TransferInitial({
     };
   }, [explainedFee]);
 
-  const balanceCheckFee = sponsorship?.paymentMode === 'prepaid' || sponsorship?.paymentMode === 'none'
+  const balanceCheckFee = isLoading || sponsorship?.paymentMode === 'prepaid' || sponsorship?.paymentMode === 'none'
     ? undefined
     : sponsorship ? safeExplainedFee.realFee?.terms : safeExplainedFee.fullFee?.terms;
 
@@ -498,7 +498,7 @@ function TransferInitial({
         terms={terms}
         token={transferToken}
         precision={precision}
-        onDetailsClick={openFeeModal}
+        onDetailsClick={IS_LEGENDS_WALLET ? undefined : openFeeModal}
       />
     );
   }
