@@ -15,6 +15,7 @@ import { fetchStoredWallet } from '../../common/accounts';
 import { updateActivityMetadata } from '../../common/helpers';
 import { buildTokenSlug, getTokenBySlug } from '../../common/tokens';
 import { SEC } from '../../constants';
+import { ApiServerError } from '../../errors';
 import { NETWORK_CONFIG } from './constants';
 import {
   getCheckedWalletSponsorshipTransactionIds,
@@ -175,9 +176,7 @@ async function getTrxTransactions(
   const baseUrl = NETWORK_CONFIG[network].historyApiUrl;
   const url = new URL(`${baseUrl}/v1/accounts/${address}/transactions`);
 
-  const result = await fetchJson(url.toString(), queryParams, getHistoryRequestInit(network), {
-    bucketKey: bucketKey(url, { includePathPrefix: true }),
-  });
+  const result = await fetchHistoryJson(network, url, queryParams);
 
   return result.data;
 }
@@ -295,9 +294,7 @@ export async function getTrc20Transactions(
   const baseUrl = NETWORK_CONFIG[network].historyApiUrl;
   const url = new URL(`${baseUrl}/v1/accounts/${address}/transactions/trc20`);
 
-  const result = await fetchJson(url.toString(), queryParams, getHistoryRequestInit(network), {
-    bucketKey: bucketKey(url, { includePathPrefix: true }),
-  });
+  const result = await fetchHistoryJson(network, url, queryParams);
 
   return result.data;
 }
@@ -305,6 +302,26 @@ export async function getTrc20Transactions(
 function getHistoryRequestInit(network: ApiNetwork): RequestInit | undefined {
   const { historyApiKey } = NETWORK_CONFIG[network];
   return historyApiKey ? { headers: { 'TRON-PRO-API-KEY': historyApiKey } } : undefined;
+}
+
+async function fetchHistoryJson(
+  network: ApiNetwork,
+  url: URL,
+  queryParams: Parameters<typeof fetchJson>[1],
+): Promise<{ data: any[] }> {
+  const requestInit = getHistoryRequestInit(network);
+  const options = { bucketKey: bucketKey(url, { includePathPrefix: true }) };
+
+  try {
+    return await fetchJson(url.toString(), queryParams, requestInit, options);
+  } catch (error) {
+    const isRejectedApiKey = requestInit
+      && error instanceof ApiServerError
+      && (error.statusCode === 401 || error.statusCode === 403);
+    if (!isRejectedApiKey) throw error;
+
+    return fetchJson(url.toString(), queryParams, undefined, options);
+  }
 }
 
 export function parseRawTrc20Transaction(

@@ -1,10 +1,60 @@
 import type { ApiTransactionActivity } from '../../types';
 
 import { TRX } from '../../../config';
+import { fetchJson } from '../../../util/fetch';
 import { makeMockSwapActivity, makeMockTransactionActivity } from '../../../../tests/mocks';
-import { mergeActivities, parseRawTrc20ContractTransaction, parseRawTrxTransaction } from './activities';
+import { ApiServerError } from '../../errors';
+import {
+  getTrc20Transactions,
+  mergeActivities,
+  parseRawTrc20ContractTransaction,
+  parseRawTrxTransaction,
+} from './activities';
+import { NETWORK_CONFIG } from './constants';
 import { reconcileWalletSponsorshipActivities } from './sponsorship';
 import { getTransactionStatus } from './transactionInfo';
+
+jest.mock('../../../util/fetch', () => ({
+  fetchJson: jest.fn(),
+}));
+
+const fetchJsonMock = jest.mocked(fetchJson);
+
+describe('TRON history requests', () => {
+  const originalHistoryApiKey = NETWORK_CONFIG.mainnet.historyApiKey;
+
+  beforeEach(() => {
+    fetchJsonMock.mockReset();
+    NETWORK_CONFIG.mainnet.historyApiKey = 'test-api-key';
+  });
+
+  afterAll(() => {
+    NETWORK_CONFIG.mainnet.historyApiKey = originalHistoryApiKey;
+  });
+
+  it('retries public history without the API key when TronGrid rejects its settings', async () => {
+    const transactions = [{ transaction_id: 'tx-1' }];
+    fetchJsonMock
+      .mockRejectedValueOnce(new ApiServerError('invalid request due to settings', 401))
+      .mockResolvedValueOnce({ data: transactions });
+
+    await expect(getTrc20Transactions('mainnet', 'TAddress', { limit: 50 }))
+      .resolves.toEqual(transactions);
+    expect(fetchJsonMock).toHaveBeenCalledTimes(2);
+    expect(fetchJsonMock.mock.calls[0][2]).toEqual({
+      headers: { 'TRON-PRO-API-KEY': 'test-api-key' },
+    });
+    expect(fetchJsonMock.mock.calls[1][2]).toBeUndefined();
+  });
+
+  it('does not bypass provider rate limits with an anonymous request', async () => {
+    const error = new ApiServerError('rate limit exceeded', 429);
+    fetchJsonMock.mockRejectedValueOnce(error);
+
+    await expect(getTrc20Transactions('mainnet', 'TAddress')).rejects.toBe(error);
+    expect(fetchJsonMock).toHaveBeenCalledTimes(1);
+  });
+});
 
 describe('mergeActivities', () => {
   it('merges and sorts activities', () => {
