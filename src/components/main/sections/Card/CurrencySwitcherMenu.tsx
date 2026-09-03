@@ -7,7 +7,7 @@ import type { IAnchorPosition, UserToken } from '../../../../global/types';
 import type { Layout } from '../../../../hooks/useMenuPosition';
 import type { DropdownItem } from '../../../ui/Dropdown';
 
-import { CURRENCIES } from '../../../../config';
+import { CURRENCIES, IS_LEGENDS_WALLET } from '../../../../config';
 import { Big } from '../../../../lib/big.js';
 import {
   selectAccountStakingStates,
@@ -68,7 +68,8 @@ function CurrencySwitcherMenu({
 
   const currencyList = useMemo<DropdownItem<ApiBaseCurrency>[]>(() => {
     const entries = Object.entries(CURRENCIES)
-      .filter(([currency]) => currency !== excludedCurrency);
+      .filter(([currency]) => currency !== excludedCurrency
+        && (!IS_LEGENDS_WALLET || currency === 'USD' || currency === 'EUR'));
 
     if (hideBalance || !tokens || !currencyRates) {
       return entries.map(([currency, { name }]) => ({ value: currency as keyof typeof CURRENCIES, name }));
