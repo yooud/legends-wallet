@@ -40,7 +40,7 @@ export async function checkTransactionDraft(
   options: ApiCheckTransactionDraftOptions,
 ): Promise<ApiCheckTransactionDraftResult> {
   const {
-    accountId, amount, toAddress, tokenAddress, payload,
+    accountId, amount, toAddress, tokenAddress, payload, prepaidAccessToken,
   } = options;
   const { network } = parseAccountId(accountId);
 
@@ -57,6 +57,10 @@ export async function checkTransactionDraft(
     }
 
     result.resolvedAddress = toAddress;
+    if (tokenAddress && amount !== undefined
+      && isWalletSponsoredToken(network, tokenAddress) && !prepaidAccessToken) {
+      return { ...result, error: ApiTransactionDraftError.WalletPrepaidAuthorizationRequired };
+    }
 
     const { address } = await fetchStoredWallet(accountId, 'tron');
     const [trxBalance, bandwidth, { energyUnitFee, bandwidthUnitFee }] = await Promise.all([
@@ -83,7 +87,7 @@ export async function checkTransactionDraft(
           toAddress,
           tokenAddress,
           amount,
-        }, transaction);
+        }, transaction, prepaidAccessToken!);
         result.sponsorship = sponsorship;
         fee = sponsorship.onchainFee;
         realFee = sponsorship.serviceFee;

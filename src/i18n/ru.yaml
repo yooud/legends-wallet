@@ -1834,6 +1834,7 @@ $bot_balance_disconnect_warning: После отключения кошелёк 
 $prepaid_history_topup: Пополнение баланса комиссий
 $prepaid_history_topup_resources: Ресурсы для пополнения баланса комиссий
 $prepaid_history_fee_coverage: Покрытие комиссии транзакции
+$prepaid_history_activation: Активация кошелька
 $prepaid_history_refund: Возврат с баланса комиссий
 $prepaid_history_adjustment: Корректировка баланса комиссий
 $prepaid_history_balance_received: Получено со связанного кошелька

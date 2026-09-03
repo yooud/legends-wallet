@@ -44,6 +44,8 @@ export interface ApiTransferSponsorship {
 
 export interface ApiCheckTransactionDraftOptions extends ApiTransactionCommonOptions {
   allowGasless?: boolean;
+  /** Internal Legends Wallet authorization used by the TRON sponsorship quote. */
+  prepaidAccessToken?: string;
 }
 
 export interface ApiSubmitTransferOptions extends ApiSubmitGasfullTransferOptions {

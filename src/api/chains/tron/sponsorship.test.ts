@@ -58,7 +58,7 @@ describe('TRON wallet sponsorship', () => {
       transaction,
     });
 
-    const sponsorship = await requestWalletSponsorshipQuote(tronWeb, intent, transaction);
+    const sponsorship = await requestWalletSponsorshipQuote(tronWeb, intent, transaction, 'access-token');
     expect(sponsorship).toEqual({
       id: 'quote-mismatch',
       expiresAt: '2099-01-01T00:00:00Z',
@@ -69,6 +69,17 @@ describe('TRON wallet sponsorship', () => {
       prepaidAvailable: undefined,
       prepaidBalance: undefined,
     });
+    expect(fetchJsonMock).toHaveBeenCalledWith(
+      `${BRILLIANT_API_BASE_URL}/wallet-sponsorship/quote`,
+      undefined,
+      expect.objectContaining({
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer access-token',
+        },
+        body: JSON.stringify({ address: intent.ownerAddress, transaction }),
+      }),
+    );
 
     await expect(submitWalletSponsoredTransfer(tronWeb, 'private-key', sponsorship.id, {
       ...intent,
@@ -115,6 +126,7 @@ describe('TRON wallet sponsorship', () => {
         expires_at: '2099-01-01T00:00:00Z',
         treasury_address: 'TTreasury',
         charge_sun: 3_000_000,
+        activation_charge_sun: 1_100_000,
         onchain_fee_sun: 10_000_000,
         payment_network_fee_sun: 0,
         prepaid_balance_sun: 8_000_000,
@@ -129,7 +141,7 @@ describe('TRON wallet sponsorship', () => {
       });
     jest.mocked(tronWeb.trx.sign).mockResolvedValueOnce(transaction as never);
 
-    const sponsorship = await requestWalletSponsorshipQuote(tronWeb, intent, transaction);
+    const sponsorship = await requestWalletSponsorshipQuote(tronWeb, intent, transaction, 'access-token');
     const result = await submitWalletSponsoredTransfer(tronWeb, 'private-key', sponsorship.id, intent);
 
     expect(result).toMatchObject({
@@ -138,7 +150,7 @@ describe('TRON wallet sponsorship', () => {
         extra: {
           reconciliation: undefined,
           walletSponsorship: {
-            serviceFee: 3_000_000n,
+            serviceFee: 4_100_000n,
             onchainFee: 10_000_000n,
           },
         },
@@ -147,7 +159,50 @@ describe('TRON wallet sponsorship', () => {
     expect(tronWeb.transactionBuilder.sendTrx).not.toHaveBeenCalled();
   });
 
-  it('does not sign a transfer when the quoted prepaid balance is insufficient', async () => {
+  it('pays activation and resources with one direct TRX transaction', async () => {
+    const payment = {
+      txID: 'payment-tx',
+      raw_data_hex: 'cafe',
+      raw_data: { timestamp: 1_000, expiration: 601_000 },
+    } as unknown as Types.Transaction;
+    fetchJsonMock
+      .mockResolvedValueOnce({
+        ok: true,
+        sponsored: true,
+        payment_required: true,
+        payment_mode: 'direct',
+        quote_id: 'quote-direct-activation',
+        expires_at: '2099-01-01T00:00:00Z',
+        treasury_address: 'TTreasury',
+        charge_sun: 200_000,
+        payment_charge_sun: 1_500_000,
+        activation_charge_sun: 1_300_000,
+        onchain_fee_sun: 0,
+        payment_network_fee_sun: 0,
+        transaction,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        result: true,
+        txid: 'main-tx',
+        quote_id: 'quote-direct-activation',
+        payment_txid: 'payment-tx',
+      });
+    jest.mocked(tronWeb.transactionBuilder.sendTrx).mockResolvedValueOnce(payment as never);
+    jest.mocked(tronWeb.trx.sign)
+      .mockResolvedValueOnce(transaction as never)
+      .mockResolvedValueOnce(payment as never);
+
+    const sponsorship = await requestWalletSponsorshipQuote(tronWeb, intent, transaction, 'access-token');
+    const result = await submitWalletSponsoredTransfer(tronWeb, 'private-key', sponsorship.id, intent);
+
+    expect(sponsorship.serviceFee).toBe(1_500_000n);
+    expect(tronWeb.transactionBuilder.sendTrx).toHaveBeenCalledTimes(1);
+    expect(tronWeb.transactionBuilder.sendTrx).toHaveBeenCalledWith('TTreasury', 1_500_000, 'TOwner');
+    expect(result).toMatchObject({ txId: 'main-tx' });
+  });
+
+  it('does not sign when an authorized quote reports insufficient prepaid funds', async () => {
     fetchJsonMock.mockResolvedValueOnce({
       ok: true,
       sponsored: true,
@@ -163,7 +218,8 @@ describe('TRON wallet sponsorship', () => {
       transaction,
     });
 
-    const sponsorship = await requestWalletSponsorshipQuote(tronWeb, intent, transaction);
+    const sponsorship = await requestWalletSponsorshipQuote(tronWeb, intent, transaction, 'access-token');
+    expect(sponsorship.isPrepaidInsufficient).toBe(true);
 
     await expect(submitWalletSponsoredTransfer(
       tronWeb, 'private-key', sponsorship.id, intent,
@@ -178,5 +234,8 @@ describe('TRON wallet sponsorship', () => {
     expect(getWalletSponsorshipDisplayError(
       new ApiServerError('changed', 409, 'resource_conditions_changed'),
     )).toBe('$wallet_sponsorship_quote_changed');
+    expect(getWalletSponsorshipDisplayError(
+      new ApiServerError('authorization required', 401, 'wallet_access_required'),
+    )).toBe('$wallet_prepaid_authorization_required');
   });
 });

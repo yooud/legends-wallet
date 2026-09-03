@@ -357,7 +357,9 @@ function TransferInitial({
 
   const isAmountGreaterThanBalance = !isNftTransfer && balance !== undefined && amount !== undefined
     && amount > balance;
+  const isFeeCoveredByBalance = sponsorship?.paymentMode === 'prepaid' || sponsorship?.paymentMode === 'none';
   const hasInsufficientFeeError = isEnoughBalance === false && !isAmountGreaterThanBalance
+    && !isFeeCoveredByBalance
     && diesel?.status !== 'not-authorized' && diesel?.status !== 'pending-previous';
   const hasAmountError = !isNftTransfer && amount !== undefined && (
     (maxAmount !== undefined && amount > maxAmount)
@@ -370,7 +372,7 @@ function TransferInitial({
   const canSubmit = isDieselNotAuthorized || Boolean(
     isAddressValid
     && !isAmountMissing && !hasAmountError
-    && isEnoughBalance
+    && (isEnoughBalance || (isFeeCoveredByBalance && !isAmountGreaterThanBalance))
     && !isPrepaidInsufficient
     && !hasCommentError
     && !isMultisig

@@ -27,8 +27,10 @@ type SponsorshipQuoteResponse = {
   expires_at: string;
   treasury_address: string;
   charge_sun: number;
+  payment_charge_sun?: number;
   onchain_fee_sun: number;
   payment_network_fee_sun: number;
+  activation_charge_sun?: number;
   transaction: Types.Transaction;
   prepaid_balance_sun?: number;
   prepaid_available_sun?: number;
@@ -73,6 +75,7 @@ type StoredSponsorshipQuote = {
   expiresAt: string;
   treasuryAddress: string;
   charge: bigint;
+  paymentCharge: bigint;
   serviceFee: bigint;
   onchainFee: bigint;
   paymentRequired: boolean;
@@ -94,6 +97,7 @@ export async function requestWalletSponsorshipQuote(
   tronWeb: TronWeb,
   intent: WalletSponsorshipIntent,
   transaction: Types.Transaction,
+  accessToken: string,
 ): Promise<ApiTransferSponsorship> {
   const extendedTransaction = await ensureSponsoredTransactionTtl(tronWeb, transaction);
   const result = await fetchJson<SponsorshipQuoteResponse>(
@@ -101,8 +105,11 @@ export async function requestWalletSponsorshipQuote(
     undefined,
     {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ transaction: extendedTransaction }),
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ address: intent.ownerAddress, transaction: extendedTransaction }),
     },
   );
 
@@ -112,12 +119,15 @@ export async function requestWalletSponsorshipQuote(
   }
 
   pruneSponsorshipQuotes();
-  const serviceFee = BigInt(result.charge_sun) + BigInt(result.payment_network_fee_sun);
+  const serviceFee = BigInt(result.charge_sun)
+    + BigInt(result.payment_network_fee_sun)
+    + BigInt(result.activation_charge_sun ?? 0);
   sponsorshipQuotes.set(result.quote_id, {
     intent,
     expiresAt: result.expires_at,
     treasuryAddress: result.treasury_address,
     charge: BigInt(result.charge_sun),
+    paymentCharge: BigInt(result.payment_charge_sun ?? result.charge_sun),
     serviceFee,
     onchainFee: BigInt(result.onchain_fee_sun),
     paymentRequired: result.payment_required,
@@ -160,7 +170,7 @@ export async function submitWalletSponsoredTransfer(
   if (sponsorship.paymentRequired) {
     const payment = await tronWeb.transactionBuilder.sendTrx(
       sponsorship.treasuryAddress,
-      Number(sponsorship.charge),
+      Number(sponsorship.paymentCharge),
       intent.ownerAddress,
     );
     const extendedPayment = await ensureSponsoredTransactionTtl(tronWeb, payment);
@@ -218,6 +228,9 @@ export async function submitWalletSponsoredTransfer(
 }
 
 export function getWalletSponsorshipDisplayError(error: ApiServerError) {
+  if (error.code === 'wallet_access_required' || error.statusCode === 401) {
+    return ApiTransactionDraftError.WalletPrepaidAuthorizationRequired;
+  }
   if (error.code === 'wallet_sponsorship_disabled'
     || error.code === 'sponsorship_unavailable'
     || error.statusCode === 503

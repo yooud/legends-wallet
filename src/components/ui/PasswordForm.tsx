@@ -6,6 +6,7 @@ import type { MigrationErrorPresentation } from '../../global/types';
 
 import {
   AUTO_CONFIRM_DURATION_MINUTES,
+  IS_LEGENDS_WALLET,
   PIN_LENGTH,
   SUPPORT_USERNAME,
   WRONG_ATTEMPTS_BEFORE_LOG_OUT_SUGGESTION,
@@ -231,9 +232,10 @@ function PasswordForm({
     showMigrationFailureDialog(presentation.titleKey, presentation.messageKey, presentation.errorCode);
   });
 
-  // One usage for the operation itself plus the extra usages it asked for
-  const operationUsageCount = 1 + (extraAuthUsages ?? 0);
-  const extraUsages = (authUsageCountRequest ?? 0) + (extraAuthUsages ?? 0);
+  // Legends uses the same unlock to establish fee-balance access in the background.
+  const prepaidAccessUsageCount = IS_LEGENDS_WALLET ? 1 : 0;
+  const operationUsageCount = 1 + prepaidAccessUsageCount + (extraAuthUsages ?? 0);
+  const extraUsages = prepaidAccessUsageCount + (authUsageCountRequest ?? 0) + (extraAuthUsages ?? 0);
   const usageCount = extraUsages ? 1 + extraUsages : undefined;
 
   const handleAuthorized = useLastCallback((enclaveToken: string) => {

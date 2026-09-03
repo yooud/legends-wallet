@@ -1,16 +1,18 @@
-import type {
-  ApiActivity,
-  ApiChain,
-  ApiCheckTransactionDraftOptions,
-  ApiCheckTransactionDraftResult,
-  ApiLocalTransactionParams,
-  ApiSubmitGasfullTransferResult,
-  ApiSubmitGaslessTransferResult,
-  ApiSubmitTransferOptions,
-  ApiTransferPayload,
-  OnApiUpdate,
+import {
+  type ApiActivity,
+  type ApiChain,
+  type ApiCheckTransactionDraftOptions,
+  type ApiCheckTransactionDraftResult,
+  type ApiLocalTransactionParams,
+  type ApiSubmitGasfullTransferResult,
+  type ApiSubmitGaslessTransferResult,
+  type ApiSubmitTransferOptions,
+  ApiTransactionDraftError,
+  type ApiTransferPayload,
+  type OnApiUpdate,
 } from '../types';
 
+import { IS_LEGENDS_WALLET } from '../../config';
 import { parseAccountId } from '../../util/account';
 import { buildLocalTxId } from '../../util/activities';
 import { SECOND } from '../../util/dateFormat';
@@ -21,6 +23,7 @@ import { buildLocalTransaction } from '../common/helpers';
 import { bytesToBase64 } from '../common/utils';
 import { FAKE_TX_ID } from '../constants';
 import { publishSignedMfaRequest, registerMfaConfirmationHandler } from './mfa';
+import { clearWalletPrepaidAccessSession, getWalletPrepaidAccessToken } from './prepaid';
 import { buildTokenSlug } from './tokens';
 
 let onUpdate: OnApiUpdate;
@@ -87,7 +90,10 @@ export function initTransfer(_onUpdate: OnApiUpdate) {
 }
 
 export async function checkTransactionDraft(chain: ApiChain, options: ApiCheckTransactionDraftOptions) {
-  const cacheKey = buildDraftCacheKey(chain, options);
+  const resolvedOptions = chain === 'tron' && IS_LEGENDS_WALLET
+    ? { ...options, prepaidAccessToken: await getWalletPrepaidAccessToken(options.accountId) }
+    : options;
+  const cacheKey = buildDraftCacheKey(chain, resolvedOptions);
   const now = Date.now();
   const cached = draftCache.get(cacheKey);
 
@@ -101,8 +107,11 @@ export async function checkTransactionDraft(chain: ApiChain, options: ApiCheckTr
     draftCache.delete(cacheKey);
   }
 
-  const inFlight = chains[chain].checkTransactionDraft(options)
-    .then((result) => {
+  const inFlight = chains[chain].checkTransactionDraft(resolvedOptions)
+    .then(async (result) => {
+      if (chain === 'tron' && result.error === ApiTransactionDraftError.WalletPrepaidAuthorizationRequired) {
+        await clearWalletPrepaidAccessSession(options.accountId);
+      }
       const entry = draftCache.get(cacheKey);
       if (entry) {
         entry.inFlight = undefined;

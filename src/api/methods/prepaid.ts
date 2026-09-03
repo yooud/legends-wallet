@@ -51,6 +51,7 @@ const TERMINAL_TOPUP_FAILURES = new Set(['needs_review', 'failed', 'expired', 'r
 const PREPAID_ACCESS_STORAGE_KEY = 'walletPrepaidAccessSessions';
 const PREPAID_ACCESS_REFRESH_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000;
 const prepaidAccessSessions = new Map<string, PrepaidAccessSession>();
+const prepaidAccessRequests = new Map<string, Promise<void>>();
 
 function prepaidUrl(accountId: string, endpoint: string) {
   const { network } = parseAccountId(accountId);
@@ -82,25 +83,8 @@ async function createWalletProof(
 
 export async function fetchWalletPrepaidOverview(accountId: string): Promise<ApiWalletPrepaidOverview | undefined> {
   const { address } = await getTronAccount(accountId);
-  let session = await getPrepaidAccessSession(accountId);
+  const { session, didRefresh } = await resolvePrepaidAccessSession(accountId, address);
   if (!session) return undefined;
-
-  let didRefresh = false;
-  if (session.expires_at * 1000 - Date.now() <= PREPAID_ACCESS_REFRESH_THRESHOLD_MS) {
-    try {
-      const refreshedSession = await refreshPrepaidAccessSession(accountId, address, session);
-      if (refreshedSession) {
-        session = refreshedSession;
-        didRefresh = true;
-      }
-    } catch (error) {
-      if (isPrepaidAccessError(error)) {
-        await removePrepaidAccessSession(accountId);
-        return undefined;
-      }
-      if (session.expires_at * 1000 <= Date.now()) throw error;
-    }
-  }
 
   try {
     return await fetchJson<ApiWalletPrepaidOverview>(prepaidUrl(accountId, 'overview'), { address }, {
@@ -123,6 +107,40 @@ export async function fetchWalletPrepaidOverview(accountId: string): Promise<Api
     await removePrepaidAccessSession(accountId);
     return undefined;
   }
+}
+
+export async function getWalletPrepaidAccessToken(accountId: string) {
+  const { address } = await getTronAccount(accountId);
+  const { session } = await resolvePrepaidAccessSession(accountId, address);
+  return session?.access_token;
+}
+
+export function clearWalletPrepaidAccessSession(accountId: string) {
+  return removePrepaidAccessSession(accountId);
+}
+
+async function resolvePrepaidAccessSession(accountId: string, address: string) {
+  let session = await getPrepaidAccessSession(accountId);
+  let didRefresh = false;
+  if (!session) return { session, didRefresh };
+
+  if (session.expires_at * 1000 - Date.now() <= PREPAID_ACCESS_REFRESH_THRESHOLD_MS) {
+    try {
+      const refreshedSession = await refreshPrepaidAccessSession(accountId, address, session);
+      if (refreshedSession) {
+        session = refreshedSession;
+        didRefresh = true;
+      }
+    } catch (error) {
+      if (isPrepaidAccessError(error)) {
+        await removePrepaidAccessSession(accountId);
+        return { session: undefined, didRefresh };
+      }
+      if (session.expires_at * 1000 <= Date.now()) throw error;
+    }
+  }
+
+  return { session, didRefresh };
 }
 
 async function refreshPrepaidAccessSession(
@@ -159,6 +177,42 @@ function isPrepaidAccessError(error: unknown) {
 
 export async function authorizeWalletPrepaid(accountId: string, enclaveToken: string) {
   const { address } = await getTronAccount(accountId);
+  await createPrepaidAccessSession(accountId, enclaveToken, address);
+  const overview = await fetchWalletPrepaidOverview(accountId);
+  if (!overview) throw new Error('WalletPrepaidAuthorizationFailed');
+  return overview;
+}
+
+export function ensureWalletPrepaidAccess(accountId: string, enclaveToken: string) {
+  let request = prepaidAccessRequests.get(accountId);
+  if (!request) {
+    request = ensureWalletPrepaidAccessInternal(accountId, enclaveToken).finally(() => {
+      prepaidAccessRequests.delete(accountId);
+    });
+    prepaidAccessRequests.set(accountId, request);
+  }
+  return request;
+}
+
+async function ensureWalletPrepaidAccessInternal(accountId: string, enclaveToken: string) {
+  const { address } = await getTronAccount(accountId);
+  const session = await getPrepaidAccessSession(accountId);
+  if (session) {
+    if (session.expires_at * 1000 - Date.now() > PREPAID_ACCESS_REFRESH_THRESHOLD_MS) return;
+
+    try {
+      if (await refreshPrepaidAccessSession(accountId, address, session)) return;
+    } catch (error) {
+      if (!isPrepaidAccessError(error) && session.expires_at * 1000 > Date.now()) return;
+      if (!isPrepaidAccessError(error)) throw error;
+      await removePrepaidAccessSession(accountId);
+    }
+  }
+
+  await createPrepaidAccessSession(accountId, enclaveToken, address);
+}
+
+async function createPrepaidAccessSession(accountId: string, enclaveToken: string, address: string) {
   const challenge = await fetchJson<PrepaidAccessChallenge>(
     prepaidUrl(accountId, 'access/challenge'),
     undefined,
@@ -184,9 +238,6 @@ export async function authorizeWalletPrepaid(accountId: string, enclaveToken: st
     },
   );
   await savePrepaidAccessSession(accountId, session);
-  const overview = await fetchWalletPrepaidOverview(accountId);
-  if (!overview) throw new Error('WalletPrepaidAuthorizationFailed');
-  return overview;
 }
 
 async function getPrepaidAccessSession(accountId: string) {

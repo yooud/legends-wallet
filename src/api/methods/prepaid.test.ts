@@ -1,9 +1,12 @@
 import {
   authorizeWalletPrepaid,
+  clearWalletPrepaidAccessSession,
   connectWalletBotBalance,
   disconnectWalletBotBalance,
+  ensureWalletPrepaidAccess,
   fetchWalletBotBalanceProjects,
   fetchWalletPrepaidOverview,
+  getWalletPrepaidAccessToken,
   linkWalletPrepaidAccounts,
   setWalletPrepaidCoverageMode,
 } from './prepaid';
@@ -11,6 +14,7 @@ import {
 const PRIMARY_ACCOUNT_ID = '0-testnet';
 const CANDIDATE_ACCOUNT_ID = '1-testnet';
 const REFRESH_ACCOUNT_ID = '2-testnet';
+const SILENT_ACCESS_ACCOUNT_ID = '3-testnet';
 const PRIMARY_ADDRESS = 'TH8s8UjojVBtrT3jVwqYJox19sAWQkFTah';
 const CANDIDATE_ADDRESS = 'TMpwh5GWdwFFYuZ9bQADFHavYRqgpYSSz1';
 const PROOF_ADDRESS = 'TXRrMctE8A2bHegZGwV6fSbwF7DPLN6HCE';
@@ -133,6 +137,34 @@ describe('wallet prepaid proof transactions', () => {
     expect(mockFetchJson.mock.calls[2][0]).toContain('/access/refresh');
     expect(mockFetchJson.mock.calls[2][2].headers.Authorization).toBe('Bearer refresh-token');
     expect(mockFetchJson.mock.calls[3][2].headers.Authorization).toBe('Bearer refreshed-token');
+    expect(mockSign).toHaveBeenCalledTimes(1);
+  });
+
+  it('creates and reuses an access session during an existing wallet unlock', async () => {
+    mockFetchJson
+      .mockResolvedValueOnce({
+        challenge: 'background-challenge',
+        memo: 'background access memo',
+        proof_address: PROOF_ADDRESS,
+      })
+      .mockResolvedValueOnce({
+        access_token: 'background-access-token',
+        expires_at: Math.floor(Date.now() / 1000) + 30 * 86_400,
+        refresh_token: 'background-refresh-token',
+        refresh_expires_at: Math.floor(Date.now() / 1000) + 365 * 86_400,
+      });
+
+    await Promise.all([
+      ensureWalletPrepaidAccess(SILENT_ACCESS_ACCOUNT_ID, 'token'),
+      ensureWalletPrepaidAccess(SILENT_ACCESS_ACCOUNT_ID, 'token'),
+    ]);
+    await ensureWalletPrepaidAccess(SILENT_ACCESS_ACCOUNT_ID, 'token');
+
+    expect(mockFetchJson).toHaveBeenCalledTimes(2);
+    await expect(getWalletPrepaidAccessToken(SILENT_ACCESS_ACCOUNT_ID)).resolves.toBe('background-access-token');
+    await clearWalletPrepaidAccessSession(SILENT_ACCESS_ACCOUNT_ID);
+    await expect(getWalletPrepaidAccessToken(SILENT_ACCESS_ACCOUNT_ID)).resolves.toBeUndefined();
+    expect(mockSendTrx).toHaveBeenCalledWith(PROOF_ADDRESS, 1, CANDIDATE_ADDRESS);
     expect(mockSign).toHaveBeenCalledTimes(1);
   });
 

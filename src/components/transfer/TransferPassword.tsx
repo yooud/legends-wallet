@@ -20,10 +20,12 @@ interface OwnProps {
   onAuthorize: (enclaveToken: string) => void;
   onCancel: NoneToVoidFunction;
   isGaslessWithStars?: boolean;
+  isFeeBalanceAuthorization?: boolean;
 }
 
 function TransferPassword({
   isActive, isLoading, isBurning, error, children, extraAuthUsages, onAuthorize, onCancel, isGaslessWithStars,
+  isFeeBalanceAuthorization,
 }: OwnProps) {
   const {
     cancelTransfer,
@@ -37,7 +39,7 @@ function TransferPassword({
     onBack: onCancel,
   });
 
-  const title = isBurning ? 'Confirm Burning' : 'Confirm Sending';
+  const title = isFeeBalanceAuthorization ? 'Fee Balance' : isBurning ? 'Confirm Burning' : 'Confirm Sending';
   const submitLabel = isGaslessWithStars
     ? lang('Pay fee with %stars_symbol%', { stars_symbol: STARS_SYMBOL })
     : lang('Confirm');

@@ -1,6 +1,10 @@
 import type { getActions } from '../index';
 import type { GlobalState } from '../types';
 
+import { IS_LEGENDS_WALLET } from '../../config';
+import { logDebugError } from '../../util/logs';
+import { callApi } from '../../api';
+
 type Actions = ReturnType<typeof getActions>;
 
 type AsyncActionHandler<Payload> = (global: GlobalState, actions: Actions, payload: Payload) => Promise<void>;
@@ -43,13 +47,31 @@ export function dropEnclaveSessionHold(token: string) {
  * For flows that end where the handler ends. A step that hands its token to a later step must not be
  * wrapped: by the time the later step runs, this one has already let go and the session is gone.
  */
-export function withEnclaveSessionRelease<Payload extends { enclaveToken?: string } | undefined>(
+export function withEnclaveSessionRelease<Payload extends {
+  enclaveToken?: string;
+  accountId?: string;
+} | undefined>(
   handler: AsyncActionHandler<Payload>,
 ): AsyncActionHandler<Payload> {
   return async (global, actions, payload) => {
     const enclaveToken = payload?.enclaveToken;
+    const accountId = payload?.accountId ?? global.currentAccountId;
     if (enclaveToken) {
       holdEnclaveSession(enclaveToken);
+    }
+
+    if (IS_LEGENDS_WALLET
+      && enclaveToken
+      && accountId
+      && global.accounts?.byId?.[accountId]?.byChain.tron) {
+      holdEnclaveSession(enclaveToken);
+      void callApi('ensureWalletPrepaidAccess', accountId, enclaveToken).catch((error) => {
+        logDebugError('ensureWalletPrepaidAccess', error);
+      }).finally(() => {
+        if (dropEnclaveSessionHold(enclaveToken)) {
+          actions.releaseEnclaveSession({ enclaveToken });
+        }
+      });
     }
 
     try {

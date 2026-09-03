@@ -1,6 +1,11 @@
 import type { GlobalState } from '../types';
 
+import { callApi } from '../../api';
 import { dropEnclaveSessionHold, holdEnclaveSession, withEnclaveSessionRelease } from './enclave';
+
+jest.mock('../../api', () => ({
+  callApi: jest.fn(() => Promise.resolve()),
+}));
 
 const global = {} as GlobalState;
 
@@ -9,6 +14,10 @@ function createActions() {
 }
 
 describe('withEnclaveSessionRelease', () => {
+  beforeEach(() => {
+    jest.mocked(callApi).mockClear();
+  });
+
   it('gives the session back once the flow is done with it', async () => {
     const actions = createActions();
 
@@ -59,5 +68,55 @@ describe('withEnclaveSessionRelease', () => {
     expect(actions.releaseEnclaveSession).toHaveBeenCalledWith({ enclaveToken: 'passcode:aa' });
 
     dropEnclaveSessionHold('passcode:bb');
+  });
+
+  it('refreshes fee access while an unlocked account is being used', async () => {
+    const actions = createActions();
+    const unlockedGlobal = {
+      currentAccountId: '0-testnet',
+      accounts: {
+        byId: {
+          '0-testnet': {
+            byChain: { tron: { address: 'TH8s8UjojVBtrT3jVwqYJox19sAWQkFTah' } },
+          },
+        },
+      },
+    } as unknown as GlobalState;
+
+    await withEnclaveSessionRelease(() => Promise.resolve())(
+      unlockedGlobal,
+      actions,
+      { enclaveToken: 'passcode:aa' },
+    );
+
+    expect(callApi).toHaveBeenCalledWith('ensureWalletPrepaidAccess', '0-testnet', 'passcode:aa');
+  });
+
+  it('does not keep the signing flow waiting for fee access', async () => {
+    let resolveAccess!: () => void;
+    jest.mocked(callApi).mockReturnValueOnce(new Promise<void>((resolve) => {
+      resolveAccess = resolve;
+    }));
+    const actions = createActions();
+    const unlockedGlobal = {
+      currentAccountId: '0-testnet',
+      accounts: {
+        byId: {
+          '0-testnet': { byChain: { tron: { address: 'tron-address' } } },
+        },
+      },
+    } as unknown as GlobalState;
+
+    await withEnclaveSessionRelease(() => Promise.resolve())(
+      unlockedGlobal,
+      actions,
+      { enclaveToken: 'passcode:aa' },
+    );
+
+    expect(actions.releaseEnclaveSession).not.toHaveBeenCalled();
+    resolveAccess();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(actions.releaseEnclaveSession).toHaveBeenCalledWith({ enclaveToken: 'passcode:aa' });
   });
 });

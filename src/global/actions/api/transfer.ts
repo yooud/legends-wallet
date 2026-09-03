@@ -38,6 +38,7 @@ import {
   selectCurrentAccountId,
   selectCurrentAccountTokens,
   selectCurrentNetwork,
+  selectEnclaveToken,
   selectIsHardwareAccount,
   selectToken,
 } from '../../selectors';
@@ -45,9 +46,24 @@ import { switchAccount } from './auth';
 
 let latestTransferFeeRequestId = 0;
 
+function requireTransferFeeAuthorization(global: GlobalState) {
+  return updateCurrentTransfer(global, {
+    state: TransferState.Password,
+    isLoading: false,
+    error: undefined,
+    explainedFee: undefined,
+    sponsorship: undefined,
+    isFeeBalanceAuthorizationRequired: true,
+  });
+}
+
 addActionHandler('switchTransferAccount', async (global, actions, { accountId }) => {
   if (accountId === selectCurrentAccountId(global)) {
     return;
+  }
+  if (global.currentTransfer.hasFeeBalanceAuthorizationSession) {
+    const enclaveToken = selectEnclaveToken(global);
+    if (enclaveToken) actions.releaseEnclaveSession({ enclaveToken });
   }
 
   // `switchAccount` clears `currentTransfer`, so snapshot the user-entered draft and re-apply it afterwards
@@ -130,6 +146,11 @@ addActionHandler('submitTransferInitial', async (global, actions, payload) => {
   global = getGlobal();
   global = updateCurrentTransferLoading(global, false);
 
+  if (result?.error === ApiTransactionDraftError.WalletPrepaidAuthorizationRequired) {
+    setGlobal(requireTransferFeeAuthorization(global));
+    return;
+  }
+
   if (result) {
     global = updateCurrentTransferByCheckResult(global, result);
   }
@@ -159,12 +180,18 @@ addActionHandler('submitTransferInitial', async (global, actions, payload) => {
     isGasless,
     isGaslessWithStars,
     isNftBurn,
+    isFeeBalanceAuthorizationRequired: false,
   }));
 });
 
 addActionHandler('fetchTransferFee', async (global, actions, payload) => {
   const requestId = ++latestTransferFeeRequestId;
-  global = updateCurrentTransfer(global, { isLoading: true, error: undefined });
+  global = updateCurrentTransfer(global, {
+    isLoading: true,
+    error: undefined,
+    explainedFee: undefined,
+    sponsorship: undefined,
+  });
   setGlobal(global);
 
   const {
@@ -193,9 +220,19 @@ addActionHandler('fetchTransferFee', async (global, actions, payload) => {
     return;
   }
 
+  if (result?.error === ApiTransactionDraftError.WalletPrepaidAuthorizationRequired) {
+    setGlobal(requireTransferFeeAuthorization(global));
+    return;
+  }
+
   global = updateCurrentTransfer(global, { isLoading: false });
   if (result) {
     global = updateCurrentTransferByCheckResult(global, result);
+  } else {
+    global = updateCurrentTransfer(global, {
+      explainedFee: undefined,
+      sponsorship: undefined,
+    });
   }
   setGlobal(global);
 
@@ -219,6 +256,48 @@ addActionHandler('fetchTransferFee', async (global, actions, payload) => {
     global = getGlobal();
     global = updateCurrentTransfer(global, { scamWarningType: ScamWarningType.DomainLike });
     setGlobal(global);
+  }
+});
+
+addActionHandler('authorizeTransferFeeAccess', async (global, actions, payload) => {
+  const accountId = selectCurrentAccountId(global)!;
+  setGlobal(updateCurrentTransfer(global, { isLoading: true, error: undefined }));
+
+  try {
+    await callApi('ensureWalletPrepaidAccess', accountId, payload.enclaveToken);
+  } catch {
+    actions.releaseEnclaveSession({ enclaveToken: payload.enclaveToken });
+    setGlobal(updateCurrentTransfer(getGlobal(), {
+      isLoading: false,
+      error: ApiCommonError.ServerError,
+    }));
+    return;
+  }
+
+  global = getGlobal();
+  if (selectCurrentAccountId(global) !== accountId) return;
+
+  const {
+    tokenSlug, toAddress, amount, comment, shouldEncrypt, binPayload, stateInit,
+  } = global.currentTransfer;
+  setGlobal(updateCurrentTransfer(global, {
+    state: TransferState.Initial,
+    isLoading: false,
+    error: undefined,
+    isFeeBalanceAuthorizationRequired: false,
+    hasFeeBalanceAuthorizationSession: true,
+  }));
+
+  if (toAddress && amount) {
+    actions.fetchTransferFee({
+      tokenSlug,
+      toAddress,
+      amount,
+      comment,
+      shouldEncrypt,
+      binPayload,
+      stateInit,
+    });
   }
 });
 
@@ -307,6 +386,8 @@ addActionHandler('submitTransfer', withEnclaveSessionRelease(async (global, acti
 
   global = getGlobal();
 
+  const currentAccountId = selectCurrentAccountId(global)!;
+
   const { explainedFee } = global.currentTransfer;
   const fullNativeFee = explainedFee?.fullFee?.nativeSum;
   const realNativeFee = explainedFee?.realFee?.nativeSum;
@@ -349,7 +430,7 @@ addActionHandler('submitTransfer', withEnclaveSessionRelease(async (global, acti
     const { tokenAddress, chain } = selectToken(global, tokenSlug);
 
     const options: ApiSubmitTransferOptions = {
-      accountId: selectCurrentAccountId(global)!,
+      accountId: currentAccountId,
       enclaveToken,
       toAddress: resolvedAddress!,
       amount: amount!,
@@ -385,7 +466,11 @@ addActionHandler('submitTransfer', withEnclaveSessionRelease(async (global, acti
 }));
 
 addActionHandler('cancelTransfer', (global, actions, { shouldReset } = {}) => {
-  const { promiseId, tokenSlug } = global.currentTransfer;
+  const { promiseId, tokenSlug, hasFeeBalanceAuthorizationSession } = global.currentTransfer;
+  if (hasFeeBalanceAuthorizationSession) {
+    const enclaveToken = selectEnclaveToken(global);
+    if (enclaveToken) actions.releaseEnclaveSession({ enclaveToken });
+  }
 
   if (shouldReset) {
     if (promiseId) {

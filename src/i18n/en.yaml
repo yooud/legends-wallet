@@ -1818,6 +1818,7 @@ $bot_balance_disconnect_warning: Disconnecting stops this wallet from using the 
 $prepaid_history_topup: Fee balance top-up
 $prepaid_history_topup_resources: Resources for fee balance top-up
 $prepaid_history_fee_coverage: Transaction fee coverage
+$prepaid_history_activation: Wallet activation
 $prepaid_history_refund: Fee balance refund
 $prepaid_history_adjustment: Fee balance adjustment
 $prepaid_history_balance_received: Balance received from linked wallet

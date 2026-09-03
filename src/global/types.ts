@@ -846,6 +846,8 @@ export type GlobalState = {
      */
     explainedFee?: ExplainedTransferFee;
     sponsorship?: ApiTransferSponsorship;
+    isFeeBalanceAuthorizationRequired?: boolean;
+    hasFeeBalanceAuthorizationSession?: boolean;
     mfaRequestHash?: string;
   };
 
@@ -1366,6 +1368,7 @@ export interface ActionPayloads {
   };
   submitTransferConfirm: undefined;
   submitTransfer: { enclaveToken?: string } | undefined;
+  authorizeTransferFeeAccess: { enclaveToken: string };
   updateMfaRequestStatus: undefined;
   clearTransferError: undefined;
   cancelTransfer: { shouldReset?: boolean } | undefined;

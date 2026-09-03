@@ -11,6 +11,10 @@
   padding-top: var(--safe-area-top);
 
   background-color: var(--color-background-window);
+
+  @include mixins.respond-above(xs) {
+    background-color: transparent;
+  }
 }
 
 .body {
@@ -91,6 +95,10 @@
   border-radius: var(--border-radius-default);
 
   background: var(--color-background-first);
+
+  @include mixins.respond-above(xs) {
+    flex-grow: 0;
+  }
 }
 
 .notice,

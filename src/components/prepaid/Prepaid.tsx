@@ -327,6 +327,7 @@ function getPrepaidHistoryTitle(lang: ReturnType<typeof useLang>, item: HistoryI
     topup_credit: '$prepaid_history_topup',
     topup_resource_debit: '$prepaid_history_topup_resources',
     sponsorship_debit: '$prepaid_history_fee_coverage',
+    activation_debit: '$prepaid_history_activation',
     refund_debit: '$prepaid_history_refund',
     admin_credit: '$prepaid_history_adjustment',
     admin_debit: '$prepaid_history_adjustment',

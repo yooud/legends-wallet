@@ -1841,6 +1841,7 @@ $bot_balance_disconnect_warning: Після відключення гамане�
 $prepaid_history_topup: Поповнення балансу комісій
 $prepaid_history_topup_resources: Ресурси для поповнення балансу комісій
 $prepaid_history_fee_coverage: Покриття комісії транзакції
+$prepaid_history_activation: Активація гаманця
 $prepaid_history_refund: Повернення з балансу комісій
 $prepaid_history_adjustment: Коригування балансу комісій
 $prepaid_history_balance_received: Отримано з пов’язаного гаманця

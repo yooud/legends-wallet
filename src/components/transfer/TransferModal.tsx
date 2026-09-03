@@ -64,6 +64,7 @@ function TransferModal({
     sentNftsCount,
     diesel,
     isNftBurn,
+    isFeeBalanceAuthorizationRequired,
   },
   currentAccountId,
   tokens,
@@ -73,6 +74,7 @@ function TransferModal({
   const {
     submitTransferConfirm,
     submitTransfer,
+    authorizeTransferFeeAccess,
     setTransferScreen,
     cancelTransfer,
     showActivityInfo,
@@ -103,7 +105,11 @@ function TransferModal({
   ), [state, submitTransferConfirm]);
 
   const handleTransferSubmit = useLastCallback((enclaveToken: string) => {
-    submitTransfer({ enclaveToken });
+    if (isFeeBalanceAuthorizationRequired) {
+      authorizeTransferFeeAccess({ enclaveToken });
+    } else {
+      submitTransfer({ enclaveToken });
+    }
   });
 
   const handleBackClick = useLastCallback(() => {
@@ -170,21 +176,24 @@ function TransferModal({
             isBurning={isBurning}
             error={error}
             extraAuthUsages={extraNftBatchCount}
+            isFeeBalanceAuthorization={isFeeBalanceAuthorizationRequired}
             onAuthorize={handleTransferSubmit}
             onCancel={handleClose}
             isGaslessWithStars={diesel?.status === 'stars-fee'}
           >
-            <TransactionBanner
-              tokenIn={selectedToken}
-              imageUrl={nfts?.[0]?.thumbnail}
-              withChainIcon
-              text={isNftTransfer
-                ? (nfts.length > 1 ? lang('%amount% NFTs', nfts.length, 'i') : nfts[0]?.name || 'NFT')
-                : formatCurrency(toDecimal(amount!, decimals), symbol)}
-              className={!getDoesUsePinPad() ? styles.transactionBanner : undefined}
-              secondText={shortenAddress(toAddress!)}
-              isTextHidden={isBurning}
-            />
+            {!isFeeBalanceAuthorizationRequired && (
+              <TransactionBanner
+                tokenIn={selectedToken}
+                imageUrl={nfts?.[0]?.thumbnail}
+                withChainIcon
+                text={isNftTransfer
+                  ? (nfts.length > 1 ? lang('%amount% NFTs', nfts.length, 'i') : nfts[0]?.name || 'NFT')
+                  : formatCurrency(toDecimal(amount!, decimals), symbol)}
+                className={!getDoesUsePinPad() ? styles.transactionBanner : undefined}
+                secondText={shortenAddress(toAddress!)}
+                isTextHidden={isBurning}
+              />
+            )}
           </TransferPassword>
         );
       case TransferState.ConnectHardware:
