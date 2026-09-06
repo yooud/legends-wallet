@@ -7,7 +7,9 @@ import type {
 import type { LoadMoreDirection, Theme, UserSwapToken, UserToken } from '../../../../global/types';
 import { SettingsState } from '../../../../global/types';
 
-import { ANIMATED_STICKER_SMALL_SIZE_PX, IS_FEATURE_LIMITED, IS_MY_WALLET_BRAND } from '../../../../config';
+import {
+  ANIMATED_STICKER_SMALL_SIZE_PX, IS_FEATURE_LIMITED, IS_LEGENDS_WALLET, IS_MY_WALLET_BRAND,
+} from '../../../../config';
 import {
   selectAccountStakingStates,
   selectCurrentAccountId,
@@ -439,7 +441,7 @@ export default memo(
         tokens,
         swapTokens,
         vesting: accountState?.vesting?.info,
-        isInvestorViewEnabled,
+        isInvestorViewEnabled: isInvestorViewEnabled ?? IS_LEGENDS_WALLET,
         currentTokenSlug: accountState?.currentTokenSlug,
         baseCurrency: global.settings.baseCurrency,
         mycoin: selectMycoin(global),

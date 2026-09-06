@@ -28,6 +28,7 @@ import {
   INIT_SWAP_ASSETS,
   IS_EXPLORER,
   IS_FEATURE_LIMITED,
+  IS_LEGENDS_WALLET,
   SHOULD_SHOW_ALL_ASSETS_AND_ACTIVITY,
   SWAP_API_VERSION,
   THEME_DEFAULT,
@@ -123,6 +124,7 @@ export const INITIAL_STATE: GlobalState = {
     areTokensWithNoCostHidden: !SHOULD_SHOW_ALL_ASSETS_AND_ACTIVITY,
     autolockValue: DEFAULT_AUTOLOCK_OPTION,
     baseCurrency: DEFAULT_PRICE_CURRENCY,
+    isInvestorViewEnabled: IS_LEGENDS_WALLET,
   },
 
   byAccountId: {},

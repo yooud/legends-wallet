@@ -446,7 +446,7 @@ export const TONCOIN = {
 } as const;
 
 export const TRX = {
-  name: 'TRON',
+  name: 'Tron',
   symbol: 'TRX',
   slug: 'trx',
   decimals: 6,
