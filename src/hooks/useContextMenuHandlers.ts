@@ -6,11 +6,11 @@ import type { IAnchorPosition } from '../global/types';
 import { requestMutation } from '../lib/fasterdom/fasterdom';
 import { stopEvent } from '../util/domEvents';
 import { vibrate } from '../util/haptics';
-import { IS_IOS, IS_PWA, IS_TOUCH_ENV } from '../util/windowEnvironment';
+import { IS_IOS, IS_TOUCH_ENV } from '../util/windowEnvironment';
 import useLastCallback from './useLastCallback';
 
 const LONG_TAP_DURATION_MS = 200;
-const IOS_PWA_CONTEXT_MENU_DELAY_MS = 100;
+const IOS_CONTEXT_MENU_DELAY_MS = 100;
 
 interface OwnProps {
   elementRef: ElementRef<HTMLElement>;
@@ -108,8 +108,9 @@ const useContextMenuHandlers = ({
 
       // Temporarily intercept and clear the next click
       document.addEventListener('touchend', (e) => {
-        // On iOS in PWA mode, the context menu may cause click-through to the element in the menu upon opening
-        if (IS_IOS && IS_PWA) {
+        // iOS may emit a synthetic click after touchend. Keep it from reaching the trigger or the
+        // newly opened menu in Safari, Telegram WebView, and PWA mode.
+        if (IS_IOS) {
           setTimeout(() => {
             document.removeEventListener('mousedown', stopEvent, {
               capture: true,
@@ -117,7 +118,7 @@ const useContextMenuHandlers = ({
             document.removeEventListener('click', stopEvent, {
               capture: true,
             });
-          }, IOS_PWA_CONTEXT_MENU_DELAY_MS);
+          }, IOS_CONTEXT_MENU_DELAY_MS);
         }
         stopEvent(e);
       }, {
@@ -125,8 +126,9 @@ const useContextMenuHandlers = ({
         capture: true,
       });
 
-      // On iOS15, in PWA mode, the context menu immediately closes after opening
-      if (IS_PWA && IS_IOS) {
+      // On iOS, the click generated after a long press can immediately close the menu or activate
+      // the underlying wallet row.
+      if (IS_IOS) {
         document.addEventListener('mousedown', stopEvent, {
           once: true,
           capture: true,

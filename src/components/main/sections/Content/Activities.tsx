@@ -483,6 +483,8 @@ export default memo(
 
       return stickToFirst((
         isWidget
+        // The token screen shows activities no matter which wallet tab is open.
+        || Boolean(accountState?.currentTokenSlug)
         || accountState?.activeContentTab === ContentTab.Activity
         || (accountState?.activeContentTab === ContentTab.Assets && shouldShowSeparateAssetsPanel)
       ) && selectCurrentAccountId(global));

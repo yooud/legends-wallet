@@ -152,9 +152,11 @@ function App({
     appState,
   });
   const withBottomBar = isPortrait && (!IS_EXPLORER || isAppReady) && APP_STATES_WITH_BOTTOM_BAR.has(renderingKey);
-  // Screens sharing the bottom bar are sibling tabs, so they cross-fade into each other. The token
-  // screen is the exception: the bar stays visible, but the transition slides in.
-  const withSlide = isPortrait && (!withBottomBar || renderingKey === AppState.TokenInfo);
+  // Screens sharing the bottom bar are sibling tabs, so they cross-fade into each other. Upstream
+  // token screens slide in, while Legends keeps the shared shell fixed during that transition.
+  const withSlide = isPortrait && (
+    !withBottomBar || (!IS_LEGENDS_WALLET && renderingKey === AppState.TokenInfo)
+  );
   const transitionName = withSlide ? resolveSlideTransitionName() : 'semiFade';
 
   useTimeout(
@@ -219,7 +221,7 @@ function App({
         );
         return (
           <Transition
-            name="semiFade"
+            name={IS_LEGENDS_WALLET ? 'none' : 'semiFade'}
             activeKey={mainKey}
             shouldCleanup
             nextKey={renderingKey === AppState.Auth && canPrerenderMain ? mainKey + 1 : undefined}
@@ -243,7 +245,7 @@ function App({
       case AppState.Prepaid:
         return <Prepaid isActive={isActive} />;
       case AppState.TokenInfo:
-        return <TokenInfo isActive={isActive} />;
+        return <TokenInfo key={accountId} isActive={isActive} />;
       case AppState.Ledger:
         return <LedgerModal isOpen noBackdropClose onClose={closeThisTab} />;
       case AppState.Inactive:
