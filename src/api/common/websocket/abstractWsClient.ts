@@ -6,7 +6,9 @@ import { throttle } from '../../../util/schedulers';
 
 export type InMessageCallback<T> = (message: T) => void;
 
-const ACTUALIZATION_DELAY = 10;
+// Address churn from account switching can produce a burst of subscribe messages. A second is
+// enough to coalesce that burst below the backend websocket admission limit.
+const ACTUALIZATION_DELAY = 1000;
 
 export interface WalletWatcher {
   /** Whether the socket is connected and subscribed to the given wallets */

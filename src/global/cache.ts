@@ -25,6 +25,7 @@ import { buildAccountId, parseAccountId } from '../util/account';
 import { getActivityTokenSlugs, getIsActivityPending, getIsTxIdLocal } from '../util/activities';
 import { bigintReviver } from '../util/bigint';
 import { getTokenInfo } from '../util/chain';
+import { sanitizeCurrencyRates } from '../util/currencyRates';
 import isEmptyObject from '../util/isEmptyObject';
 import {
   cloneDeep, extractKey, filterValues, mapValues, omit, pick, pickTruthy, unique,
@@ -139,6 +140,8 @@ function migrateCache(cached: GlobalState, initialState: GlobalState) {
     ...initialState.settings,
     ...cached.settings,
   };
+
+  cached.currencyRates = sanitizeCurrencyRates(cached.currencyRates);
 
   if (cached.stateVersion === STATE_VERSION) {
     return;

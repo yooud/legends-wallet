@@ -141,7 +141,7 @@ class BackendSocket extends AbstractWebsocketClient<
 
 function getSocketUrl(network: ApiNetwork) {
   const url = new URL(BRILLIANT_API_BASE_URL);
-  url.protocol = url.protocol === 'http' ? 'ws' : 'wss';
+  url.protocol = url.protocol === 'http:' ? 'ws:' : 'wss:';
   url.pathname += `${network === 'testnet' ? 'testnet/' : ''}ws`;
   addBackendHeadersToSocketUrl(url);
   return url;
