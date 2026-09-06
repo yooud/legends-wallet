@@ -26,21 +26,20 @@
  *
  * # Verdict semantics
  *
- * - recordSuccess()  - host responded with a usable answer (2xx, OR a terminal
- *                      4xx with a meaningful error body - host is alive, request
- *                      was wrong). Resets the failure counter.
+ * - recordSuccess()  - host responded with a usable answer (2xx, OR a deterministic
+ *                      request verdict such as 400/404/422). Resets the failure
+ *                      counter.
  * - recordFailure()  - host did not respond, or responded with an unusable
  *                      error (5xx, timeout, transport failure), or is shedding
- *                      load (429/408). Counts toward the trip threshold.
+ *                      load (429/408), or rejected authentication/access (401/403).
+ *                      Counts toward the trip threshold.
  * - cancelled()      - caller bailed and has no information about host health
  *                      (AbortError from caller's signal, component unmount,
  *                      account switch). Releases the slot without verdicting.
  *
  * AbortError from the CALLER's signal is NOT a host-health signal - use
- * cancelled(), not recordSuccess() or recordFailure(). A terminal 4xx is a
- * host-health signal - use recordSuccess() even if the caller short-circuits
- * the retry budget (host responded, the request was wrong). 429/408 are NOT
- * terminal and verdict as failures.
+ * cancelled(), not recordSuccess() or recordFailure(). Deterministic request
+ * errors are healthy verdicts, while 401/403/408/429 verdict as failures.
  *
  * # Canonical wiring pattern
  *
@@ -54,8 +53,8 @@
  *     return response;
  *   } catch (err) {
  *     if (isCallerAbort(err, init?.signal)) { slot.cancelled(); }
- *     else if (isClientError(err)) { slot.recordSuccess(); }     // terminal 4xx
- *     else { slot.recordFailure(); }                              // 5xx, 429/408, timeout, transport
+ *     else if (isRequestVerdict(err)) { slot.recordSuccess(); }  // e.g. 400/404/422
+ *     else { slot.recordFailure(); }                              // 401/403/408/429/5xx/transport
  *     settled = true;
  *     throw err;
  *   } finally {

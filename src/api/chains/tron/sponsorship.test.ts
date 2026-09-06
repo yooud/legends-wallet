@@ -79,6 +79,7 @@ describe('TRON wallet sponsorship', () => {
         },
         body: JSON.stringify({ address: intent.ownerAddress, transaction }),
       }),
+      { bucketKey: `${BRILLIANT_API_BASE_URL}/wallet-sponsorship/quote` },
     );
 
     await expect(submitWalletSponsoredTransfer(tronWeb, 'private-key', sponsorship.id, {
@@ -108,7 +109,11 @@ describe('TRON wallet sponsorship', () => {
       `${BRILLIANT_API_BASE_URL}/wallet-sponsorship/activity-links`,
       { address: 'TOwner-exact', txids: txId },
       undefined,
-      { retries: 1, timeouts: 3_000 },
+      {
+        retries: 1,
+        timeouts: 3_000,
+        bucketKey: `${BRILLIANT_API_BASE_URL}/wallet-sponsorship/activity-links`,
+      },
     );
     expect(links).toEqual([expect.objectContaining({ quote_id: 'quote-exact', main_txid: txId })]);
     expect(cachedLinks).toEqual(links);
@@ -157,6 +162,9 @@ describe('TRON wallet sponsorship', () => {
       },
     });
     expect(tronWeb.transactionBuilder.sendTrx).not.toHaveBeenCalled();
+    expect(fetchJsonMock.mock.calls[0][3]?.bucketKey).toContain('/wallet-sponsorship/quote');
+    expect(fetchJsonMock.mock.calls[1][3]?.bucketKey).toContain('/wallet-sponsorship/broadcast');
+    expect(fetchJsonMock.mock.calls[0][3]?.bucketKey).not.toBe(fetchJsonMock.mock.calls[1][3]?.bucketKey);
   });
 
   it('pays activation and resources with one direct TRX transaction', async () => {

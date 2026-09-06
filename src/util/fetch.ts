@@ -42,7 +42,7 @@ const MAX_BACKOFF_MS = 10000; // 10 sec - jitter ceiling for retryable failures
 // Deterministic client-error statuses safe to cache and replay: repeating the identical request
 // cannot change the answer. Narrower than the full terminal set on purpose - 401/403 stay
 // terminal (no retry) but are NOT cached, so a transient auth state is never masked for the TTL.
-const NEGATIVE_CACHEABLE_STATUSES = [400, 404, 422];
+const REQUEST_VERDICT_STATUSES = [400, 404, 422];
 
 // The negative-verdict cache is scoped to the evmapi (Zerion) origin - the only path with the
 // deterministic-4xx storm class. Other origins are excluded deliberately: toncenter GETs carry a
@@ -169,9 +169,8 @@ export async function fetchWithRetry(url: string | URL, init?: RequestInit, opti
         const shouldSkipRetry = shouldSkipRetryFn(message, statusCode);
 
         if (shouldSkipRetry) {
-          // Host-health verdict: terminal 4xx = alive host, wrong request; anything else
-          // (5xx, transport, 429/408) counts toward tripping the breaker, even when
-          // shouldSkipRetry short-circuits the retry budget.
+          // Only a deterministic request verdict proves the host healthy. Authentication
+          // failures can affect every request and therefore count toward opening the breaker.
           if (isBreakerHealthy4xx(statusCode)) {
             slot.recordSuccess();
           } else {
@@ -193,7 +192,7 @@ export async function fetchWithRetry(url: string | URL, init?: RequestInit, opti
       }
     }
 
-    // Same verdict as the in-loop branch: only a terminal 4xx proves the host alive.
+    // Same verdict as the in-loop branch: only a deterministic request verdict proves the host alive.
     if (isBreakerHealthy4xx(statusCode)) {
       slot.recordSuccess();
     } else {
@@ -292,14 +291,13 @@ function isTerminalFailure(_message?: string, statusCode?: number): boolean {
   return classifyFetchFailure(statusCode) === 'terminal';
 }
 
-/** Only a terminal 4xx proves the host healthy; 429/408 are overload signals and verdict as failures. */
+/** Only deterministic request verdicts prove the host healthy; auth and overload failures do not. */
 function isBreakerHealthy4xx(statusCode?: number): boolean {
-  return statusCode !== undefined && statusCode >= 400 && statusCode < 500
-    && classifyFetchFailure(statusCode) === 'terminal';
+  return statusCode !== undefined && REQUEST_VERDICT_STATUSES.includes(statusCode);
 }
 
 export function isNegativeCacheableStatus(statusCode?: number): boolean {
-  return statusCode !== undefined && NEGATIVE_CACHEABLE_STATUSES.includes(statusCode);
+  return statusCode !== undefined && REQUEST_VERDICT_STATUSES.includes(statusCode);
 }
 
 function isEvmApiOrigin(url: string): boolean {

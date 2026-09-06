@@ -93,6 +93,17 @@ const sponsorshipQuotes = new Map<string, StoredSponsorshipQuote>();
 const sponsorshipLinksCache = new Map<string, SponsorshipLinksCacheEntry>();
 const sponsorshipExactRequests = new Map<string, Promise<void>>();
 
+function fetchWalletSponsorshipJson<T extends AnyLiteral>(
+  network: ApiNetwork,
+  endpoint: string,
+  data?: Parameters<typeof fetchJson>[1],
+  init?: RequestInit,
+  options?: Parameters<typeof fetchJson>[3],
+) {
+  const url = getWalletSponsorshipUrl(network, endpoint);
+  return fetchJson<T>(url, data, init, { ...options, bucketKey: url });
+}
+
 export async function requestWalletSponsorshipQuote(
   tronWeb: TronWeb,
   intent: WalletSponsorshipIntent,
@@ -100,8 +111,9 @@ export async function requestWalletSponsorshipQuote(
   accessToken: string,
 ): Promise<ApiTransferSponsorship> {
   const extendedTransaction = await ensureSponsoredTransactionTtl(tronWeb, transaction);
-  const result = await fetchJson<SponsorshipQuoteResponse>(
-    getWalletSponsorshipUrl(intent.network, 'quote'),
+  const result = await fetchWalletSponsorshipJson<SponsorshipQuoteResponse>(
+    intent.network,
+    'quote',
     undefined,
     {
       method: 'POST',
@@ -187,8 +199,9 @@ export async function submitWalletSponsoredTransfer(
     onchain_fee_sun: sponsorship.onchainFee.toString(),
   });
 
-  const result = await fetchJson<SponsorshipBroadcastResponse>(
-    getWalletSponsorshipUrl(intent.network, 'broadcast'),
+  const result = await fetchWalletSponsorshipJson<SponsorshipBroadcastResponse>(
+    intent.network,
+    'broadcast',
     undefined,
     {
       method: 'POST',
@@ -270,8 +283,9 @@ export async function loadWalletSponsorshipActivityLinks(
     const requestKey = `${cacheKey}:${uncheckedTxids.slice().sort().join(',')}`;
     let request = sponsorshipExactRequests.get(requestKey);
     if (!request) {
-      request = fetchJson<WalletSponsorshipActivityLinksResponse>(
-        getWalletSponsorshipUrl(network, 'activity-links'),
+      request = fetchWalletSponsorshipJson<WalletSponsorshipActivityLinksResponse>(
+        network,
+        'activity-links',
         { address, txids: uncheckedTxids.join(',') },
         undefined,
         { retries: 1, timeouts: SPONSORSHIP_LINKS_TIMEOUT_MS },

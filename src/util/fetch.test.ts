@@ -180,6 +180,34 @@ describe('fetchWithRetry breaker classification', () => {
     expect(fetchMock).toHaveBeenCalledTimes(BREAKER_FAILURE_THRESHOLD + 1);
   });
 
+  it.each([403, 401])('opens the breaker on a sustained %s storm - an upstream refusing everyone is not healthy',
+    async (status) => {
+      fetchMock.mockResolvedValue(mockResponse(status, {}));
+
+      for (let i = 0; i < BREAKER_FAILURE_THRESHOLD; i++) {
+        await expect(fetchWithRetry(VENDOR_URL)).rejects.toMatchObject({ statusCode: status });
+      }
+
+      const upstreamCalls = fetchMock.mock.calls.length;
+      await expect(fetchWithRetry(VENDOR_URL)).rejects.toBeInstanceOf(CircuitOpenError);
+      expect(fetchMock).toHaveBeenCalledTimes(upstreamCalls);
+    });
+
+  it('isolates explicit endpoint buckets on the same origin', async () => {
+    const overviewBucket = 'https://vendor.example/wallet-prepaid/overview';
+    const challengeBucket = 'https://vendor.example/wallet-prepaid/access/challenge';
+    fetchMock.mockResolvedValue(mockResponse(401, {}));
+
+    for (let i = 0; i < BREAKER_FAILURE_THRESHOLD; i++) {
+      await expect(fetchWithRetry(VENDOR_URL, undefined, { bucketKey: overviewBucket }))
+        .rejects.toMatchObject({ statusCode: 401 });
+    }
+    fetchMock.mockResolvedValueOnce(mockResponse(200, { ok: true }));
+
+    await expect(fetchWithRetry(VENDOR_URL, undefined, { bucketKey: challengeBucket }))
+      .resolves.toMatchObject({ status: 200 });
+  });
+
   it('preserves a nested API error message', async () => {
     fetchMock.mockResolvedValue(mockResponse(400, {
       ok: false,

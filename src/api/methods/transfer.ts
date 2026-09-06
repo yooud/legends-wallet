@@ -29,6 +29,7 @@ import { buildTokenSlug } from './tokens';
 let onUpdate: OnApiUpdate;
 
 const DRAFT_CACHE_TTL = 5 * SECOND;
+const DRAFT_CACHE_MAX_ENTRIES = 64;
 
 type DraftCacheEntry = {
   value?: ApiCheckTransactionDraftResult;
@@ -37,6 +38,20 @@ type DraftCacheEntry = {
 };
 
 const draftCache = new Map<string, DraftCacheEntry>();
+
+function pruneDraftCache(now: number) {
+  for (const [key, entry] of draftCache) {
+    if (entry.expiresAt <= now) {
+      draftCache.delete(key);
+    }
+  }
+
+  while (draftCache.size > DRAFT_CACHE_MAX_ENTRIES) {
+    const oldestKey = draftCache.keys().next().value;
+    if (oldestKey === undefined) break;
+    draftCache.delete(oldestKey);
+  }
+}
 
 function buildDraftCacheKey(chain: ApiChain, options: ApiCheckTransactionDraftOptions) {
   const {
@@ -90,30 +105,40 @@ export function initTransfer(_onUpdate: OnApiUpdate) {
 }
 
 export async function checkTransactionDraft(chain: ApiChain, options: ApiCheckTransactionDraftOptions) {
+  const prepaidAccessToken = chain === 'tron' && IS_LEGENDS_WALLET
+    ? await getWalletPrepaidAccessToken(options.accountId)
+    : undefined;
   const resolvedOptions = chain === 'tron' && IS_LEGENDS_WALLET
-    ? { ...options, prepaidAccessToken: await getWalletPrepaidAccessToken(options.accountId) }
+    ? { ...options, prepaidAccessToken }
     : options;
   const cacheKey = buildDraftCacheKey(chain, resolvedOptions);
   const now = Date.now();
+  pruneDraftCache(now);
   const cached = draftCache.get(cacheKey);
 
   if (cached) {
     if (cached.value && cached.expiresAt > now) {
+      draftCache.delete(cacheKey);
+      draftCache.set(cacheKey, cached);
       return cached.value;
     }
     if (cached.inFlight) {
+      draftCache.delete(cacheKey);
+      draftCache.set(cacheKey, cached);
       return cached.inFlight;
     }
     draftCache.delete(cacheKey);
   }
 
+  const entry: DraftCacheEntry = { expiresAt: now + DRAFT_CACHE_TTL };
   const inFlight = chains[chain].checkTransactionDraft(resolvedOptions)
     .then(async (result) => {
       if (chain === 'tron' && result.error === ApiTransactionDraftError.WalletPrepaidAuthorizationRequired) {
-        await clearWalletPrepaidAccessSession(options.accountId);
+        if (prepaidAccessToken) {
+          await clearWalletPrepaidAccessSession(options.accountId, prepaidAccessToken);
+        }
       }
-      const entry = draftCache.get(cacheKey);
-      if (entry) {
+      if (draftCache.get(cacheKey) === entry) {
         entry.inFlight = undefined;
         if (!('error' in result)) {
           entry.value = result;
@@ -125,16 +150,19 @@ export async function checkTransactionDraft(chain: ApiChain, options: ApiCheckTr
       return result;
     })
     .catch((err) => {
-      draftCache.delete(cacheKey);
+      if (draftCache.get(cacheKey) === entry) draftCache.delete(cacheKey);
       throw err;
     });
 
-  draftCache.set(cacheKey, {
-    inFlight,
-    expiresAt: now + DRAFT_CACHE_TTL,
-  });
+  entry.inFlight = inFlight;
+  draftCache.set(cacheKey, entry);
+  pruneDraftCache(now);
 
   return inFlight;
+}
+
+export function resetDraftCacheForTests() {
+  draftCache.clear();
 }
 
 export async function submitTransfer(

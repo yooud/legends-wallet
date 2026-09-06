@@ -52,10 +52,22 @@ const PREPAID_ACCESS_STORAGE_KEY = 'walletPrepaidAccessSessions';
 const PREPAID_ACCESS_REFRESH_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000;
 const prepaidAccessSessions = new Map<string, PrepaidAccessSession>();
 const prepaidAccessRequests = new Map<string, Promise<void>>();
+let prepaidAccessStorageMutation = Promise.resolve();
 
 function prepaidUrl(accountId: string, endpoint: string) {
   const { network } = parseAccountId(accountId);
   return `${BRILLIANT_API_BASE_URL}${network === 'testnet' ? '/testnet' : ''}/wallet-prepaid/${endpoint}`;
+}
+
+function fetchPrepaidJson<T extends AnyLiteral>(
+  accountId: string,
+  endpoint: string,
+  data?: Parameters<typeof fetchJson>[1],
+  init?: RequestInit,
+  options?: Parameters<typeof fetchJson>[3],
+) {
+  const url = prepaidUrl(accountId, endpoint);
+  return fetchJson<T>(url, data, init, { ...options, bucketKey: url });
 }
 
 async function getTronAccount(accountId: string) {
@@ -85,9 +97,10 @@ export async function fetchWalletPrepaidOverview(accountId: string): Promise<Api
   const { address } = await getTronAccount(accountId);
   const { session, didRefresh } = await resolvePrepaidAccessSession(accountId, address);
   if (!session) return undefined;
+  let failedAccessToken = session.access_token;
 
   try {
-    return await fetchJson<ApiWalletPrepaidOverview>(prepaidUrl(accountId, 'overview'), { address }, {
+    return await fetchPrepaidJson<ApiWalletPrepaidOverview>(accountId, 'overview', { address }, {
       headers: { Authorization: `Bearer ${session.access_token}` },
     });
   } catch (error) {
@@ -96,7 +109,8 @@ export async function fetchWalletPrepaidOverview(accountId: string): Promise<Api
       try {
         const refreshedSession = await refreshPrepaidAccessSession(accountId, address, session);
         if (refreshedSession) {
-          return await fetchJson<ApiWalletPrepaidOverview>(prepaidUrl(accountId, 'overview'), { address }, {
+          failedAccessToken = refreshedSession.access_token;
+          return await fetchPrepaidJson<ApiWalletPrepaidOverview>(accountId, 'overview', { address }, {
             headers: { Authorization: `Bearer ${refreshedSession.access_token}` },
           });
         }
@@ -104,7 +118,7 @@ export async function fetchWalletPrepaidOverview(accountId: string): Promise<Api
         if (!isPrepaidAccessError(refreshError)) throw refreshError;
       }
     }
-    await removePrepaidAccessSession(accountId);
+    await removePrepaidAccessSession(accountId, failedAccessToken);
     return undefined;
   }
 }
@@ -115,8 +129,8 @@ export async function getWalletPrepaidAccessToken(accountId: string) {
   return session?.access_token;
 }
 
-export function clearWalletPrepaidAccessSession(accountId: string) {
-  return removePrepaidAccessSession(accountId);
+export function clearWalletPrepaidAccessSession(accountId: string, expectedAccessToken?: string) {
+  return removePrepaidAccessSession(accountId, expectedAccessToken);
 }
 
 async function resolvePrepaidAccessSession(accountId: string, address: string) {
@@ -133,7 +147,7 @@ async function resolvePrepaidAccessSession(accountId: string, address: string) {
       }
     } catch (error) {
       if (isPrepaidAccessError(error)) {
-        await removePrepaidAccessSession(accountId);
+        await removePrepaidAccessSession(accountId, session.access_token);
         return { session: undefined, didRefresh };
       }
       if (session.expires_at * 1000 <= Date.now()) throw error;
@@ -149,8 +163,9 @@ async function refreshPrepaidAccessSession(
   session: PrepaidAccessSession,
 ) {
   if (!hasValidPrepaidRefreshToken(session)) return undefined;
-  const refreshedSession = await fetchJson<PrepaidAccessSession>(
-    prepaidUrl(accountId, 'access/refresh'),
+  const refreshedSession = await fetchPrepaidJson<PrepaidAccessSession>(
+    accountId,
+    'access/refresh',
     undefined,
     {
       method: 'POST',
@@ -205,7 +220,7 @@ async function ensureWalletPrepaidAccessInternal(accountId: string, enclaveToken
     } catch (error) {
       if (!isPrepaidAccessError(error) && session.expires_at * 1000 > Date.now()) return;
       if (!isPrepaidAccessError(error)) throw error;
-      await removePrepaidAccessSession(accountId);
+      await removePrepaidAccessSession(accountId, session.access_token);
     }
   }
 
@@ -213,8 +228,9 @@ async function ensureWalletPrepaidAccessInternal(accountId: string, enclaveToken
 }
 
 async function createPrepaidAccessSession(accountId: string, enclaveToken: string, address: string) {
-  const challenge = await fetchJson<PrepaidAccessChallenge>(
-    prepaidUrl(accountId, 'access/challenge'),
+  const challenge = await fetchPrepaidJson<PrepaidAccessChallenge>(
+    accountId,
+    'access/challenge',
     undefined,
     {
       method: 'POST',
@@ -228,8 +244,9 @@ async function createPrepaidAccessSession(accountId: string, enclaveToken: strin
     challenge.proof_address,
     challenge.memo,
   );
-  const session = await fetchJson<PrepaidAccessSession>(
-    prepaidUrl(accountId, 'access/complete'),
+  const session = await fetchPrepaidJson<PrepaidAccessSession>(
+    accountId,
+    'access/complete',
     undefined,
     {
       method: 'POST',
@@ -245,13 +262,13 @@ async function getPrepaidAccessSession(accountId: string) {
   if (!session) {
     const stored = await storage.getItem(PREPAID_ACCESS_STORAGE_KEY) as
       Record<string, PrepaidAccessSession> | undefined;
-    session = stored?.[accountId];
+    session = prepaidAccessSessions.get(accountId) ?? stored?.[accountId];
   }
   if (!session || typeof session.access_token !== 'string' || !Number.isFinite(session.expires_at)) {
     return undefined;
   }
   if (session.expires_at * 1000 <= Date.now() && !hasValidPrepaidRefreshToken(session)) {
-    await removePrepaidAccessSession(accountId);
+    await removePrepaidAccessSession(accountId, session.access_token);
     return undefined;
   }
 
@@ -261,32 +278,42 @@ async function getPrepaidAccessSession(accountId: string) {
 
 async function savePrepaidAccessSession(accountId: string, session: PrepaidAccessSession) {
   prepaidAccessSessions.set(accountId, session);
-  if (storage.mutateItem) {
-    await storage.mutateItem(PREPAID_ACCESS_STORAGE_KEY, (stored: Record<string, PrepaidAccessSession> = {}) => ({
-      ...stored,
-      [accountId]: session,
-    }));
-    return;
-  }
-
-  const stored = await storage.getItem(PREPAID_ACCESS_STORAGE_KEY) as Record<string, PrepaidAccessSession> | undefined;
-  await storage.setItem(PREPAID_ACCESS_STORAGE_KEY, { ...stored, [accountId]: session });
+  await mutateStoredPrepaidAccessSessions((stored) => ({ ...stored, [accountId]: session }));
 }
 
-async function removePrepaidAccessSession(accountId: string) {
+async function removePrepaidAccessSession(accountId: string, expectedAccessToken?: string) {
+  const currentSession = prepaidAccessSessions.get(accountId);
+  if (expectedAccessToken && currentSession && currentSession.access_token !== expectedAccessToken) return;
+
   prepaidAccessSessions.delete(accountId);
   const remove = (stored: Record<string, PrepaidAccessSession> = {}) => {
+    if (expectedAccessToken && stored[accountId]?.access_token !== expectedAccessToken) return stored;
+
     const next = { ...stored };
     delete next[accountId];
     return next;
   };
-  if (storage.mutateItem) {
-    await storage.mutateItem(PREPAID_ACCESS_STORAGE_KEY, remove);
-    return;
-  }
+  await mutateStoredPrepaidAccessSessions(remove);
+}
 
-  const stored = await storage.getItem(PREPAID_ACCESS_STORAGE_KEY) as Record<string, PrepaidAccessSession> | undefined;
-  await storage.setItem(PREPAID_ACCESS_STORAGE_KEY, remove(stored));
+async function mutateStoredPrepaidAccessSessions(
+  mutate: (stored: Record<string, PrepaidAccessSession>) => Record<string, PrepaidAccessSession>,
+) {
+  const mutation = prepaidAccessStorageMutation.then(async () => {
+    if (storage.mutateItem) {
+      await storage.mutateItem(
+        PREPAID_ACCESS_STORAGE_KEY,
+        (stored: Record<string, PrepaidAccessSession> = {}) => mutate(stored),
+      );
+      return;
+    }
+
+    const stored = await storage.getItem(PREPAID_ACCESS_STORAGE_KEY) as
+      Record<string, PrepaidAccessSession> | undefined;
+    await storage.setItem(PREPAID_ACCESS_STORAGE_KEY, mutate(stored ?? {}));
+  });
+  prepaidAccessStorageMutation = mutation.catch(() => undefined);
+  await mutation;
 }
 
 export async function setWalletPrepaidCoverageMode(
@@ -295,17 +322,17 @@ export async function setWalletPrepaidCoverageMode(
   mode: ApiWalletPrepaidCoverageMode,
 ): Promise<ApiWalletPrepaidOverview> {
   const { address } = await getTronAccount(accountId);
-  const challenge = await fetchJson<{
+  const challenge = await fetchPrepaidJson<{
     challenge_id: string;
     memo: string;
     proof_address: string;
-  }>(prepaidUrl(accountId, 'preferences/challenge'), undefined, {
+  }>(accountId, 'preferences/challenge', undefined, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ address, coverage_mode: mode }),
   });
   const proof = await createWalletProof(accountId, enclaveToken, challenge.proof_address, challenge.memo);
-  return fetchJson<ApiWalletPrepaidOverview>(prepaidUrl(accountId, 'preferences'), undefined, {
+  return fetchPrepaidJson<ApiWalletPrepaidOverview>(accountId, 'preferences', undefined, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ challenge_id: challenge.challenge_id, coverage_mode: mode, proof }),
@@ -345,7 +372,7 @@ export async function topUpWalletPrepaid(
     )).transaction
     : await tronWeb.transactionBuilder.sendTrx(overview.deposit_address, Number(amountBaseUnits), address);
   const extendedTransaction = await ensureSponsoredTransactionTtl(tronWeb, transaction);
-  const quote = await fetchJson<TopupQuote>(prepaidUrl(accountId, 'topups/quote'), undefined, {
+  const quote = await fetchPrepaidJson<TopupQuote>(accountId, 'topups/quote', undefined, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ transaction: extendedTransaction }),
@@ -357,8 +384,11 @@ export async function topUpWalletPrepaid(
   const privateKey = await fetchPrivateKeyString(accountId, enclaveToken, account);
   if (!privateKey) return { error: 'InvalidPassword' };
   const signedTransaction = await tronWeb.trx.sign(quote.transaction, privateKey);
-  const result = await fetchJson<{ ok: true; result: boolean; txid: string; quote_id: string; status: string }>(
-    prepaidUrl(accountId, 'topups/broadcast'),
+  const result = await fetchPrepaidJson<{
+    ok: true; result: boolean; txid: string; quote_id: string; status: string;
+  }>(
+    accountId,
+    'topups/broadcast',
     undefined,
     {
       method: 'POST',
@@ -398,10 +428,10 @@ export async function linkWalletPrepaidAccounts(
   if ([primary.account.type, candidate.account.type].some((type) => type === 'view' || type === 'ledger')) {
     return { error: 'UnsupportedAccountType' };
   }
-  const challenge = await fetchJson<{
+  const challenge = await fetchPrepaidJson<{
     challenge_id: string;
     memo: string;
-  }>(prepaidUrl(primaryAccountId, 'link/challenge'), undefined, {
+  }>(primaryAccountId, 'link/challenge', undefined, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -432,7 +462,7 @@ export async function linkWalletPrepaidAccounts(
   const candidateProof = await createProof(
     candidateAccountId, candidate.address, primary.address, candidate.account,
   );
-  return fetchJson<ApiWalletPrepaidOverview>(prepaidUrl(primaryAccountId, 'link/complete'), undefined, {
+  return fetchPrepaidJson<ApiWalletPrepaidOverview>(primaryAccountId, 'link/complete', undefined, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -449,8 +479,9 @@ export async function connectWalletBotBalance(
   auth: ApiWalletBalanceIntegrationAuth,
 ) {
   const { address } = await getTronAccount(accountId);
-  const challenge = await fetchJson<BalanceIntegrationChallenge>(
-    prepaidUrl(accountId, 'integration/challenge'),
+  const challenge = await fetchPrepaidJson<BalanceIntegrationChallenge>(
+    accountId,
+    'integration/challenge',
     undefined,
     {
       method: 'POST',
@@ -474,7 +505,7 @@ export async function connectWalletBotBalance(
     challenge.proof_address,
     challenge.memo,
   );
-  return fetchJson<ApiWalletPrepaidOverview>(prepaidUrl(accountId, 'integration/complete'), undefined, {
+  return fetchPrepaidJson<ApiWalletPrepaidOverview>(accountId, 'integration/complete', undefined, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ challenge_id: challenge.challenge_id, proof }),
@@ -485,8 +516,9 @@ export async function fetchWalletBotBalanceProjects(
   accountId: string,
   auth: ApiWalletBalanceIntegrationAuth,
 ) {
-  return fetchJson<ApiWalletBalanceIntegrationProjects>(
-    prepaidUrl(accountId, 'integration/projects'),
+  return fetchPrepaidJson<ApiWalletBalanceIntegrationProjects>(
+    accountId,
+    'integration/projects',
     undefined,
     {
       method: 'POST',
@@ -504,8 +536,9 @@ export async function fetchWalletBotBalanceProjects(
 
 export async function disconnectWalletBotBalance(accountId: string, enclaveToken: string) {
   const { address } = await getTronAccount(accountId);
-  const challenge = await fetchJson<BalanceIntegrationChallenge>(
-    prepaidUrl(accountId, 'integration/disconnect/challenge'),
+  const challenge = await fetchPrepaidJson<BalanceIntegrationChallenge>(
+    accountId,
+    'integration/disconnect/challenge',
     undefined,
     {
       method: 'POST',
@@ -519,7 +552,7 @@ export async function disconnectWalletBotBalance(accountId: string, enclaveToken
     challenge.proof_address,
     challenge.memo,
   );
-  return fetchJson<ApiWalletPrepaidOverview>(prepaidUrl(accountId, 'integration/disconnect'), undefined, {
+  return fetchPrepaidJson<ApiWalletPrepaidOverview>(accountId, 'integration/disconnect', undefined, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ challenge_id: challenge.challenge_id, proof }),

@@ -15,6 +15,7 @@ const PRIMARY_ACCOUNT_ID = '0-testnet';
 const CANDIDATE_ACCOUNT_ID = '1-testnet';
 const REFRESH_ACCOUNT_ID = '2-testnet';
 const SILENT_ACCESS_ACCOUNT_ID = '3-testnet';
+const PERSISTED_ACCESS_ACCOUNT_ID = '4-testnet';
 const PRIMARY_ADDRESS = 'TH8s8UjojVBtrT3jVwqYJox19sAWQkFTah';
 const CANDIDATE_ADDRESS = 'TMpwh5GWdwFFYuZ9bQADFHavYRqgpYSSz1';
 const PROOF_ADDRESS = 'TXRrMctE8A2bHegZGwV6fSbwF7DPLN6HCE';
@@ -108,6 +109,13 @@ describe('wallet prepaid proof transactions', () => {
 
     expect(mockSendTrx).toHaveBeenCalledWith(CANDIDATE_ADDRESS, 1, CANDIDATE_ADDRESS);
     expect(mockFetchJson.mock.calls[2][2].headers).toEqual({ Authorization: 'Bearer access-token' });
+    const bucketKeys = mockFetchJson.mock.calls.map((call) => call[3]?.bucketKey);
+    expect(bucketKeys).toEqual([
+      expect.stringContaining('/access/challenge'),
+      expect.stringContaining('/access/complete'),
+      expect.stringContaining('/overview'),
+    ]);
+    expect(new Set(bucketKeys).size).toBe(3);
     expect(mockStorage.mutateItem).toHaveBeenCalledWith('walletPrepaidAccessSessions', expect.any(Function));
   });
 
@@ -162,10 +170,22 @@ describe('wallet prepaid proof transactions', () => {
 
     expect(mockFetchJson).toHaveBeenCalledTimes(2);
     await expect(getWalletPrepaidAccessToken(SILENT_ACCESS_ACCOUNT_ID)).resolves.toBe('background-access-token');
-    await clearWalletPrepaidAccessSession(SILENT_ACCESS_ACCOUNT_ID);
+    await clearWalletPrepaidAccessSession(SILENT_ACCESS_ACCOUNT_ID, 'stale-access-token');
+    await expect(getWalletPrepaidAccessToken(SILENT_ACCESS_ACCOUNT_ID)).resolves.toBe('background-access-token');
+    await clearWalletPrepaidAccessSession(SILENT_ACCESS_ACCOUNT_ID, 'background-access-token');
     await expect(getWalletPrepaidAccessToken(SILENT_ACCESS_ACCOUNT_ID)).resolves.toBeUndefined();
     expect(mockSendTrx).toHaveBeenCalledWith(PROOF_ADDRESS, 1, CANDIDATE_ADDRESS);
     expect(mockSign).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps a newer persisted session when a stale request tries to clear it', async () => {
+    await clearWalletPrepaidAccessSession(PERSISTED_ACCESS_ACCOUNT_ID, 'stale-access-token');
+
+    const mutate = mockStorage.mutateItem.mock.calls[0][1] as (
+      stored: Record<string, { access_token: string }>
+    ) => Record<string, { access_token: string }>;
+    const stored = { [PERSISTED_ACCESS_ACCOUNT_ID]: { access_token: 'fresh-access-token' } };
+    expect(mutate(stored)).toBe(stored);
   });
 
   it('uses the server-provided recipient for a preference proof', async () => {
@@ -208,7 +228,10 @@ describe('wallet prepaid proof transactions', () => {
     expect(mockFetchJson.mock.calls[0][2].headers).toEqual({ 'Content-Type': 'application/json' });
     expect(mockFetchJson.mock.calls[0][2].body).toContain('signed-init-data');
     expect(mockFetchJson.mock.calls[0][2].body).toContain('"project_id":42');
-    expect(mockFetchJson.mock.calls[1][3]).toEqual({ retries: 1 });
+    expect(mockFetchJson.mock.calls[1][3]).toEqual({
+      retries: 1,
+      bucketKey: expect.stringContaining('/integration/complete'),
+    });
   });
 
   it('loads Telegram projects before requesting a wallet proof', async () => {
