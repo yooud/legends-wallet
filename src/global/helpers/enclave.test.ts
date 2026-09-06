@@ -119,4 +119,23 @@ describe('withEnclaveSessionRelease', () => {
     await Promise.resolve();
     expect(actions.releaseEnclaveSession).toHaveBeenCalledWith({ enclaveToken: 'passcode:aa' });
   });
+
+  it('can leave prepaid access to a handler that creates a different account', async () => {
+    const actions = createActions();
+    const unlockedGlobal = {
+      currentAccountId: '0-testnet',
+      accounts: {
+        byId: {
+          '0-testnet': { byChain: { tron: { address: 'tron-address' } } },
+        },
+      },
+    } as unknown as GlobalState;
+
+    await withEnclaveSessionRelease(
+      () => Promise.resolve(),
+      { shouldEnsureWalletPrepaidAccess: false },
+    )(unlockedGlobal, actions, { enclaveToken: 'passcode:aa' });
+
+    expect(callApi).not.toHaveBeenCalled();
+  });
 });

@@ -49,7 +49,12 @@ import {
   handleStandardMode,
   removeTemporaryAccount,
 } from '../../helpers/auth';
-import { dropEnclaveSessionHold, holdEnclaveSession, withEnclaveSessionRelease } from '../../helpers/enclave';
+import {
+  dropEnclaveSessionHold,
+  holdEnclaveSession,
+  tryEnsureWalletPrepaidAccess,
+  withEnclaveSessionRelease,
+} from '../../helpers/enclave';
 import { presentMigrationFailure } from '../../helpers/migrationFailure';
 import { isErrorTransferResult } from '../../helpers/transfer';
 import { INITIAL_STATE } from '../../initialState';
@@ -87,6 +92,7 @@ import { getIsPortrait } from '../../../hooks/useDeviceScreen';
 
 const CREATING_DURATION = 3300;
 const SWITHCHING_ACCOUNT_DURATION_MS = IS_IOS ? 450 : IS_ANDROID ? 350 : 300;
+const ACCOUNT_CREATION_AUTH_USAGE_COUNT = IS_LEGENDS_WALLET ? 2 : undefined;
 
 export async function switchAccount(global: GlobalState, accountId: string, newNetwork?: ApiNetwork) {
   const currentActiveAccountId = selectCurrentAccountId(global);
@@ -258,11 +264,12 @@ addActionHandler('confirmPin', async (global, actions, { isImporting }) => {
   setGlobal(global);
 
   try {
-    const enclaveSession = await enclave.setupAuth('passcode', pin);
+    const enclaveSession = await enclave.setupAuth('passcode', pin, ACCOUNT_CREATION_AUTH_USAGE_COUNT);
     if (!enclaveSession) throw new Error('Failed to setup auth');
 
     global = getGlobal();
     global = updateAuth(global, { isLoading: false });
+    global = updateSettings(global, { isPasswordNumeric: true });
     global = { ...global, authTypes: ['passcode'], enclaveSession };
     setGlobal(global);
 
@@ -313,8 +320,8 @@ addActionHandler('createPassword', async (global, actions, { password, isNumeric
 
     const isProvisioned = await enclave.isAuthProvisioned('passcode');
     const enclaveSession = isProvisioned
-      ? await enclave.authorize('passcode', false, password)
-      : await enclave.setupAuth('passcode', password);
+      ? await enclave.authorize('passcode', false, password, ACCOUNT_CREATION_AUTH_USAGE_COUNT)
+      : await enclave.setupAuth('passcode', password, ACCOUNT_CREATION_AUTH_USAGE_COUNT);
     if (!enclaveSession) {
       throw new Error(isProvisioned ? 'Wrong password, please try again.' : 'Failed to setup auth');
     }
@@ -347,8 +354,8 @@ addActionHandler('setupBiometricAuth', async (global, actions) => {
     // only the password that sealed the master key can hand it over to biometrics.
     const isProvisioned = await enclave.isAuthProvisioned('biometric');
     const enclaveSession = isProvisioned
-      ? await enclave.authorize('biometric', false)
-      : await enclave.setupAuth('biometric');
+      ? await enclave.authorize('biometric', false, undefined, ACCOUNT_CREATION_AUTH_USAGE_COUNT)
+      : await enclave.setupAuth('biometric', false, ACCOUNT_CREATION_AUTH_USAGE_COUNT);
     if (!enclaveSession) {
       throw new Error(isProvisioned ? 'Biometric confirmation failed.' : 'Failed to setup biometric auth');
     }
@@ -454,6 +461,10 @@ addActionHandler('createAccount', async (global, actions) => {
     setGlobal(global);
     actions.showError({ error: ApiCommonError.Unexpected });
     return;
+  }
+
+  if (accounts[0]?.byChain.tron) {
+    await tryEnsureWalletPrepaidAccess(accounts[0].accountId, enclaveToken);
   }
 
   global = getGlobal();
@@ -1008,6 +1019,7 @@ addActionHandler('createSubWallet', withEnclaveSessionRelease(async (global, act
   }
 
   if (!result.isNew) {
+    await tryEnsureWalletPrepaidAccess(result.accountId, enclaveToken);
     actions.switchAccount({ accountId: result.accountId });
     actions.showToast({
       message: getTranslation('Subwallet Switched'),
@@ -1019,6 +1031,8 @@ addActionHandler('createSubWallet', withEnclaveSessionRelease(async (global, act
   }
 
   if (!await duplicateSecretOrShowError(accountId, result.accountId)) return;
+
+  await tryEnsureWalletPrepaidAccess(result.accountId, enclaveToken);
 
   const currentAccount = selectAccount(global, accountId)!;
 
@@ -1049,7 +1063,7 @@ addActionHandler('createSubWallet', withEnclaveSessionRelease(async (global, act
     action: 'openRenameWallet',
     actionText: getTranslation('Set Name'),
   });
-}));
+}, { shouldEnsureWalletPrepaidAccess: false }));
 
 addActionHandler('upgradeMultichainAccounts', async (global, actions, { enclaveToken }) => {
   // `PasswordForm` starts this upgrade after every authorization, so a second password entry

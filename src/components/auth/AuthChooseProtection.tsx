@@ -1,6 +1,7 @@
 import React, { memo, useLayoutEffect, useRef } from '../../lib/teact/teact';
 import { getActions } from '../../global';
 
+import { IS_LEGENDS_WALLET } from '../../config';
 import renderText from '../../global/helpers/renderText';
 import { getIsFaceIdAvailable, getIsTouchIdAvailable } from '../../util/biometrics';
 import buildClassName from '../../util/buildClassName';
@@ -31,7 +32,9 @@ interface OwnProps {
 }
 
 const AuthChooseProtection = ({ isActive, isLoading, isImporting }: OwnProps) => {
-  const { setupBiometricAuth, skipCreateBiometrics, resetAuth } = getActions();
+  const {
+    setupBiometricAuth, skipBiometrics, skipCreateBiometrics, resetAuth,
+  } = getActions();
 
   const lang = useLang();
   const canvasRef = useRef<HTMLCanvasElement>();
@@ -72,7 +75,12 @@ const AuthChooseProtection = ({ isActive, isLoading, isImporting }: OwnProps) =>
     setupBiometricAuth();
   });
 
-  const handleUsePassword = useLastCallback(() => {
+  const handleUseAlternativeProtection = useLastCallback(() => {
+    if (IS_LEGENDS_WALLET) {
+      skipBiometrics();
+      return;
+    }
+
     skipCreateBiometrics({ isImporting });
   });
 
@@ -109,9 +117,9 @@ const AuthChooseProtection = ({ isActive, isLoading, isImporting }: OwnProps) =>
             isText
             isDisabled={isLoading}
             className={buildClassName(styles.btn, styles.btn_text)}
-            onClick={handleUsePassword}
+            onClick={handleUseAlternativeProtection}
           >
-            {lang('Use Password')}
+            {lang(IS_LEGENDS_WALLET ? 'Use PIN' : 'Use Password')}
           </Button>
         </div>
       </div>

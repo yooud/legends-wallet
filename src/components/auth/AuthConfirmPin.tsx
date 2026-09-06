@@ -3,7 +3,7 @@ import { getActions, withGlobal } from '../../global';
 
 import type { AuthMethod } from '../../global/types';
 
-import { PIN_LENGTH } from '../../config';
+import { IS_LEGENDS_WALLET, PIN_LENGTH } from '../../config';
 import buildClassName from '../../util/buildClassName';
 import { pause } from '../../util/schedulers';
 import { ANIMATED_STICKERS_PATHS } from '../ui/helpers/animatedAssets';
@@ -28,6 +28,7 @@ interface StateProps {
 }
 
 const SUBMIT_PAUSE_MS = 1500;
+const LEGENDS_PIN_ICON_SIZE = 84;
 
 const AuthConfirmPin = ({
   isActive,
@@ -42,7 +43,9 @@ const AuthConfirmPin = ({
   const [error, setError] = useState<string>('');
   const [isConfirmed, setIsConfirmed] = useState<boolean>(false);
   const isImporting = method !== 'createAccount';
-  const title = lang(isImporting ? 'Wallet is imported!' : 'Wallet is ready!');
+  const title = lang(IS_LEGENDS_WALLET
+    ? 'Confirm Passcode'
+    : isImporting ? 'Wallet is imported!' : 'Wallet is ready!');
 
   const handleBackClick = useLastCallback(() => {
     cancelConfirmPin({ isImporting });
@@ -84,12 +87,18 @@ const AuthConfirmPin = ({
         topTargetRef={headerRef}
         onBackClick={handleBackClick}
       />
-      <div className={buildClassName(styles.container, styles.containerFullSize)}>
+      <div className={buildClassName(
+        styles.container,
+        styles.containerFullSize,
+        IS_LEGENDS_WALLET && styles.containerPinLegends,
+      )}
+      >
         <div className={styles.pinPadHeader}>
           <AnimatedIconWithPreview
             play={isActive}
             tgsUrl={ANIMATED_STICKERS_PATHS.guard}
             previewUrl={ANIMATED_STICKERS_PATHS.guardPreview}
+            size={IS_LEGENDS_WALLET ? LEGENDS_PIN_ICON_SIZE : undefined}
             noLoop={false}
             nonInteractive
           />

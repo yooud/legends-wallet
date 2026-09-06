@@ -1,4 +1,4 @@
-import { IS_TELEGRAM_APP } from '../config';
+import { IS_LEGENDS_WALLET, IS_TELEGRAM_APP } from '../config';
 import {
   getIsTelegramBiometricAuthSupported,
   getIsTelegramFaceIdAvailable,
@@ -23,5 +23,5 @@ export function getIsTouchIdAvailable() {
 }
 
 export function getDoesUsePinPad() {
-  return getIsMobileTelegramApp();
+  return IS_LEGENDS_WALLET || getIsMobileTelegramApp();
 }

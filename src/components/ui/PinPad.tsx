@@ -1,7 +1,8 @@
+import type { TeactNode } from '../../lib/teact/teact';
 import React, { memo, useEffect } from '../../lib/teact/teact';
 import { getActions, withGlobal } from '../../global';
 
-import { WRONG_ATTEMPTS_BEFORE_LOG_OUT_SUGGESTION } from '../../config';
+import { IS_LEGENDS_WALLET, WRONG_ATTEMPTS_BEFORE_LOG_OUT_SUGGESTION } from '../../config';
 import { getIsFaceIdAvailable } from '../../util/biometrics';
 import buildClassName from '../../util/buildClassName';
 import { vibrateOnError } from '../../util/haptics';
@@ -29,6 +30,7 @@ interface OwnProps {
   className?: string;
   isMinified?: boolean;
   topContent?: TeactJsx;
+  footer?: TeactNode;
   onBiometricsClick?: NoneToVoidFunction;
   onChange: (value: string) => void;
   onClearError?: NoneToVoidFunction;
@@ -56,6 +58,7 @@ function PinPad({
   className,
   isMinified,
   topContent,
+  footer,
   onBiometricsClick,
   onChange,
   onClearError,
@@ -165,7 +168,13 @@ function PinPad({
   }
 
   return (
-    <div className={buildClassName(styles.root, className, SWIPE_DISABLED_CLASS_NAME)}>
+    <div className={buildClassName(
+      styles.root,
+      IS_LEGENDS_WALLET && styles.rootLegends,
+      className,
+      SWIPE_DISABLED_CLASS_NAME,
+    )}
+    >
       {topContent ?? <div className={titleClassName}>{title}</div>}
       {renderDots()}
 
@@ -207,6 +216,7 @@ function PinPad({
           )}
         </Transition>
       </div>
+      {footer}
     </div>
   );
 }

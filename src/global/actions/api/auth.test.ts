@@ -132,6 +132,41 @@ describe('add-account routing', () => {
     expect(result.auth.state).toBeUndefined();
     expect(actions.confirmDisclaimer).toHaveBeenCalled();
   });
+
+  it('uses the two-step PIN setup for a new Legends wallet', async () => {
+    const result = await run('afterImportMnemonic', makeGlobal({
+      accounts: { byId: {} },
+    }), {}, { mnemonic: MNEMONIC });
+
+    expect(result.auth.state).toBe(AuthState.importWalletCreatePin);
+  });
+
+  it('keeps PIN confirmation on a separate second screen', async () => {
+    const result = await run('createPin', makeGlobal({
+      auth: { state: AuthState.importWalletCreatePin },
+    }), {}, { pin: '1234', isImporting: true });
+
+    expect(result.auth.state).toBe(AuthState.importWalletConfirmPin);
+    expect(result.auth.pin).toBe('1234');
+  });
+
+  it('establishes fee access while the newly added TRON account is still authorized', async () => {
+    const account = {
+      accountId: '0-tron-mainnet',
+      byChain: { tron: { address: 'TVpWp3GMyNY8Zemo3JHogbWq4o4eDLa5r8' } },
+    };
+    (callApi as jest.Mock).mockImplementation((method: string) => (
+      method === 'importMnemonic' ? Promise.resolve([account]) : Promise.resolve(true)
+    ));
+
+    await run('createAccount', makeGlobal({
+      auth: { state: AuthState.safetyRules, method: 'createAccount', mnemonic: MNEMONIC },
+      enclaveSession: { token: 'passcode:aa' },
+    }), { showError: jest.fn() });
+
+    expect(enclave.importSecret).toHaveBeenCalledWith(account.accountId, MNEMONIC.join(' '), 'passcode:aa');
+    expect(callApi).toHaveBeenCalledWith('ensureWalletPrepaidAccess', account.accountId, 'passcode:aa');
+  });
 });
 
 describe('auth setup over existing storage', () => {
@@ -181,7 +216,7 @@ describe('auth setup over existing storage', () => {
 
     const result = await createPassword();
 
-    expect(enclave.setupAuth).toHaveBeenCalledWith('passcode', PASSWORD);
+    expect(enclave.setupAuth).toHaveBeenCalledWith('passcode', PASSWORD, 2);
     expect(enclave.authorize).not.toHaveBeenCalled();
     expect(result.enclaveSession).toEqual({ token: 'passcode:new' });
   });
@@ -196,7 +231,7 @@ describe('auth setup over existing storage', () => {
     const result = await createPassword(actions);
 
     expect(enclave.setupAuth).not.toHaveBeenCalled();
-    expect(enclave.authorize).toHaveBeenCalledWith('passcode', false, PASSWORD);
+    expect(enclave.authorize).toHaveBeenCalledWith('passcode', false, PASSWORD, 2);
     expect(result.enclaveSession).toEqual({ token: 'passcode:resumed' });
     expect(actions.createAccount).toHaveBeenCalled();
   });
@@ -220,7 +255,7 @@ describe('auth setup over existing storage', () => {
     const result = await createPassword();
 
     expect(enclave.reset).toHaveBeenCalled();
-    expect(enclave.setupAuth).toHaveBeenCalledWith('passcode', PASSWORD);
+    expect(enclave.setupAuth).toHaveBeenCalledWith('passcode', PASSWORD, 2);
     expect(enclave.authorize).not.toHaveBeenCalled();
     expect(result.enclaveSession).toEqual({ token: 'passcode:fresh' });
   });
@@ -243,7 +278,7 @@ describe('auth setup over existing storage', () => {
     const result = await setupBiometricAuth();
 
     expect(enclave.reset).toHaveBeenCalled();
-    expect(enclave.setupAuth).toHaveBeenCalledWith('biometric');
+    expect(enclave.setupAuth).toHaveBeenCalledWith('biometric', false, 2);
     expect(result.enclaveSession).toEqual({ token: 'biometric:fresh' });
   });
 

@@ -5,6 +5,7 @@ import { getActions, getGlobal, withGlobal } from '../../global';
 import type { MigrationErrorPresentation } from '../../global/types';
 
 import {
+  ANIMATED_STICKER_TINY_SIZE_PX,
   AUTO_CONFIRM_DURATION_MINUTES,
   IS_LEGENDS_WALLET,
   PIN_LENGTH,
@@ -66,6 +67,7 @@ interface OwnProps {
   stickerSize?: number;
   placeholder?: string;
   error?: string;
+  pinPadHeading?: string;
   pinPadTitle?: string;
   help?: string;
   resetStateDelayMs?: number;
@@ -147,6 +149,7 @@ function PasswordForm({
   stickerSize = STICKER_SIZE,
   placeholder = getDoesUsePinPad() ? 'Enter your passcode' : 'Enter your password',
   error,
+  pinPadHeading,
   pinPadTitle,
   help,
   resetStateDelayMs,
@@ -189,10 +192,16 @@ function PasswordForm({
   const inputRef = useRef<HTMLInputElement>();
   const [inputValue, setInputValue] = useState<string>('');
   const [localError, setLocalError] = useState<string>('');
+  const [isLegacyPasswordMode, setIsLegacyPasswordMode] = useState(false);
   const { isSmallHeight, isPortrait } = useDeviceScreen();
   const withAutoConfirm = useCanAutoConfirm(enclaveSessionValidUntil, noAutoConfirm);
+  // `noAutoConfirm` controls whether this screen may be skipped, not whether a successful
+  // passcode entry can open the five-minute session used by subsequent protected actions.
+  const canArmAutoConfirm = !isBiometricAuthEnabledProp && operationType !== 'turnOnBiometrics';
+  const isLongSession = canArmAutoConfirm && Boolean(isAutoConfirmEnabled);
   const isSubmitDisabled = !inputValue.length && !withAutoConfirm;
-  const canUsePinPad = getDoesUsePinPad();
+  const canUsePinPad = getDoesUsePinPad() && !isLegacyPasswordMode && !isBiometricAuthEnabled;
+  const canUseLegacyPassword = IS_LEGENDS_WALLET && !isPasswordNumeric;
   const [isLogOutModalOpened, openLogOutModal, closeLogOutModal] = useFlag(false);
   // The biometric screen offers its retry only while something failed, and the dialog paths clear the
   // inline error the retry used to be keyed on, which would leave that screen without a single control
@@ -248,6 +257,7 @@ function PasswordForm({
     if (isActive) {
       setLocalError('');
       setInputValue('');
+      setIsLegacyPasswordMode(false);
       clearMigrationFailure();
       isAuthorizingRef.current = false;
     }
@@ -275,7 +285,7 @@ function PasswordForm({
     if (shouldMigrate) {
       migrateLegacyAuth({
         password,
-        isLongSession: !noAutoConfirm && Boolean(isAutoConfirmEnabled),
+        isLongSession,
         // A migration hands its session straight to the operation and never starts the multichain
         // upgrade, so budgeting for the upgrade would leave those reads unspent - and unspent means
         // available for good, since a counted session has no expiry. Turning biometrics back on does
@@ -295,7 +305,7 @@ function PasswordForm({
     // Normal authorization
     const enclaveSession = await enclave.authorize(
       'passcode',
-      !noAutoConfirm && Boolean(isAutoConfirmEnabled),
+      isLongSession,
       password,
       usageCount,
     );
@@ -353,7 +363,7 @@ function PasswordForm({
 
     migrateLegacyBiometricAuth({
       legacyAuthConfig,
-      isLongSession: !noAutoConfirm && Boolean(isAutoConfirmEnabled),
+      isLongSession,
       // The upgrade is left out for the same reason as in the passcode migration above
       usageCount: operationUsageCount,
       onSuccess: onAuthorize,
@@ -410,6 +420,12 @@ function PasswordForm({
   const handleInput = useLastCallback((value: string) => {
     setInputValue(value);
     handleClearError();
+  });
+
+  const handleUseLegacyPassword = useLastCallback(() => {
+    setInputValue('');
+    setLocalError('');
+    setIsLegacyPasswordMode(true);
   });
 
   const handleAutoConfirmChange = useLastCallback((isEnabled: boolean) => {
@@ -515,11 +531,11 @@ function PasswordForm({
     );
   }
 
-  const shouldRenderAutoConfirmCheckbox = operationType !== 'turnOnBiometrics' && !isBiometricAuthEnabled;
+  const shouldRenderAutoConfirmCheckbox = canArmAutoConfirm;
 
   if (canUsePinPad) {
     const hasError = Boolean(localError || error);
-    const title = getPinPadTitle();
+    const title = pinPadHeading || getPinPadTitle();
     const actionName = lang(
       !isBiometricAuthEnabled
         ? 'Enter code'
@@ -542,12 +558,17 @@ function PasswordForm({
             <i className={buildClassName(modalStyles.closeIcon, 'icon-close')} aria-hidden />
           </Button>
         )}
-        <div className={styles.pinPadHeader}>
-          {isPortrait && !noAnimatedIcon && (
+        <div className={buildClassName(
+          styles.pinPadHeader,
+          IS_LEGENDS_WALLET && styles.pinPadHeaderLegends,
+        )}
+        >
+          {(isPortrait || IS_LEGENDS_WALLET) && !noAnimatedIcon && (
             <AnimatedIconWithPreview
               play={isActive}
               tgsUrl={ANIMATED_STICKERS_PATHS.guard}
               previewUrl={ANIMATED_STICKERS_PATHS.guardPreview}
+              size={IS_LEGENDS_WALLET ? ANIMATED_STICKER_TINY_SIZE_PX : undefined}
               noLoop={false}
               nonInteractive
             />
@@ -568,6 +589,16 @@ function PasswordForm({
             resetStateDelayMs={resetStateDelayMs}
             value={inputValue}
             topContent={shouldRenderAutoConfirmCheckbox ? renderAutoConfirmCheckbox() : undefined}
+            footer={canUseLegacyPassword ? (
+              <Button
+                isSimple
+                isText
+                className={styles.legacyPasswordButton}
+                onClick={handleUseLegacyPassword}
+              >
+                {lang('Enter your password')}
+              </Button>
+            ) : undefined}
             className={pinPadClassName}
             onBiometricsClick={isBiometricAuthEnabled
               ? (shouldMigrate && hasLegacyBiometrics ? handleLegacyBiometricsMigration : handleBiometrics)

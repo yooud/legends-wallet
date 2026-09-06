@@ -57,7 +57,7 @@ export async function setAuths(authTypes?: AuthType[]) {
   }
 }
 
-export function setupAuth(authType: 'passcode', passcode: string): Promise<EnclaveSession>;
+export function setupAuth(authType: 'passcode', passcode: string, usageCount?: number): Promise<EnclaveSession>;
 export function setupAuth(
   authType: 'biometric', isLong?: boolean, usageCount?: number,
 ): Promise<EnclaveSession>;
@@ -77,7 +77,7 @@ export async function setupAuth(
 
     const auth = initAuth(authType);
     const session = auth.type === 'passcode'
-      ? await auth.setup(passcodeOrIsLong as string)
+      ? await auth.setup(passcodeOrIsLong as string, undefined, usageCount)
       : await auth.setup(undefined, passcodeOrIsLong as boolean, usageCount);
     const encryptKey = auth.getKey(session.token, true);
 

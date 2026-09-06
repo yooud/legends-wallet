@@ -3,6 +3,7 @@ import { addCallback } from '../../../lib/teact/teactn';
 import type { AuthType, GlobalState } from '../../types';
 import { SettingsState } from '../../types';
 
+import { getDoesUsePinPad } from '../../../util/biometrics';
 import { getChainsSupportingLedger } from '../../../util/chain';
 import { setLanguage } from '../../../util/langProvider';
 import switchTheme from '../../../util/switchTheme';
@@ -118,6 +119,9 @@ addActionHandler('changePasscode', async (global, actions, { passcode, onSuccess
     const authTypes: AuthType[] = global.authTypes?.includes('passcode')
       ? global.authTypes
       : [...(global.authTypes || []), 'passcode'];
+    if (getDoesUsePinPad()) {
+      global = updateSettings(global, { isPasswordNumeric: true });
+    }
     global = { ...global, authTypes, enclaveSession: newEnclaveSession };
     setGlobal(global);
 

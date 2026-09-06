@@ -12,7 +12,7 @@ const STORAGE_KEY_VERIFIER = 'PasscodeAuth:verifier';
 export default class PasscodeAuth extends BaseAuth {
   readonly type = 'passcode';
 
-  async setup(passcode: string) {
+  async setup(passcode: string, _isLong?: boolean, usageCount?: number) {
     const salt = randomBase64(SALT_BYTES);
     const verifierSalt = randomBase64(SALT_BYTES);
     const verifier = await generateVerifier(passcode, verifierSalt);
@@ -23,7 +23,7 @@ export default class PasscodeAuth extends BaseAuth {
       this.storage.setItem(STORAGE_KEY_VERIFIER, verifier),
     ]);
 
-    return this.setupSession([passcode, salt]);
+    return this.setupSession([passcode, salt], false, usageCount);
   }
 
   async authorize(isLong: boolean, passcode: string, usageCount?: number) {

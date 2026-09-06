@@ -16,6 +16,7 @@ import {
   selectEnclaveToken,
   selectIsEnclaveSessionValid,
 } from '../../../global/selectors';
+import { getDoesUsePinPad } from '../../../util/biometrics';
 import buildClassName from '../../../util/buildClassName';
 import { calculateTokenPrice } from '../../../util/calculatePrice';
 import { getOrderedAccountChains } from '../../../util/chain';
@@ -33,6 +34,7 @@ import useScrolledState from '../../../hooks/useScrolledState';
 
 import Button from '../../ui/Button';
 import MenuItem from '../../ui/MenuItem';
+import Modal from '../../ui/Modal';
 import PasswordForm from '../../ui/PasswordForm';
 import Spinner from '../../ui/Spinner';
 import Transition from '../../ui/Transition';
@@ -173,7 +175,7 @@ function SettingsWalletVariants({
   }, [isActive]);
 
   useHistoryBack({
-    isActive,
+    isActive: isActive && (isInsideModal || currentSlide !== SLIDES.password),
     onBack: handleBackToSettingsClick,
   });
 
@@ -581,28 +583,56 @@ function SettingsWalletVariants({
     );
   }
 
+  function renderPasswordForm(isFormActive: boolean, forceBiometricsInMain: boolean) {
+    return (
+      <PasswordForm
+        isActive={isFormActive}
+        operationType="passcode"
+        pinPadHeading={lang('Enter code')}
+        placeholder={lang('Enter your current password')}
+        forceBiometricsInMain={forceBiometricsInMain}
+        submitLabel={lang('Continue')}
+        noAutoConfirm
+        // Listing the variants reads the secret, and creating the one that was picked reads
+        // it again
+        extraAuthUsages={1}
+        onCancel={handleBackToSettingsClick}
+        onAuthorize={handleAuthorize}
+      />
+    );
+  }
+
+  const passwordTitle = lang(getDoesUsePinPad() ? 'Confirm Passcode' : 'Confirm Password');
+
+  if (!isInsideModal) {
+    return (
+      <>
+        {renderUnifiedContent()}
+        <Modal
+          isOpen={currentSlide === SLIDES.password && Boolean(isActive)}
+          title={passwordTitle}
+          hasCloseButton
+          noBackdropClose
+          onClose={handleBackToSettingsClick}
+        >
+          {renderPasswordForm(currentSlide === SLIDES.password && Boolean(isActive), true)}
+        </Modal>
+      </>
+    );
+  }
+
   function renderContent(isSlideActive: boolean, _isFrom: boolean, _currentKey: number) {
     switch (currentSlide) {
       case SLIDES.password:
         return (
           <div className={styles.slide}>
             <SettingsHeader
-              title={lang('Confirm Password')}
+              title={passwordTitle}
               onBackClick={handleBackToSettingsClick}
             />
-            <PasswordForm
-              isActive={isSlideActive && !!isActive}
-              containerClassName={styles.passwordFormWithHeaderOffset}
-              placeholder={lang('Enter your current password')}
-              forceBiometricsInMain={!isInsideModal}
-              submitLabel={lang('Continue')}
-              noAutoConfirm
-              // Listing the variants reads the secret, and creating the one that was picked reads
-              // it again
-              extraAuthUsages={1}
-              onCancel={handleBackToSettingsClick}
-              onAuthorize={handleAuthorize}
-            />
+            <div className={styles.passwordFormWithHeaderOffset}>
+              {renderPasswordForm(isSlideActive && Boolean(isActive), false)}
+            </div>
           </div>
         );
 

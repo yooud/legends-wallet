@@ -9,6 +9,10 @@ type Actions = ReturnType<typeof getActions>;
 
 type AsyncActionHandler<Payload> = (global: GlobalState, actions: Actions, payload: Payload) => Promise<void>;
 
+interface EnclaveSessionReleaseOptions {
+  shouldEnsureWalletPrepaidAccess?: boolean;
+}
+
 /**
  * How many flows are still reading with a given token. One password entry can serve more than one -
  * the multichain upgrade runs alongside the operation the user actually asked for - so the one that
@@ -37,6 +41,16 @@ export function dropEnclaveSessionHold(token: string) {
   return true;
 }
 
+export async function tryEnsureWalletPrepaidAccess(accountId: string, enclaveToken: string) {
+  if (!IS_LEGENDS_WALLET) return;
+
+  try {
+    await callApi('ensureWalletPrepaidAccess', accountId, enclaveToken);
+  } catch (error) {
+    logDebugError('ensureWalletPrepaidAccess', error);
+  }
+}
+
 /**
  * Wraps an operation that authorizes so the secret reads it does not take are given back once the
  * last flow on that session is done, however it ended. A flow has to name its budget before it
@@ -52,6 +66,7 @@ export function withEnclaveSessionRelease<Payload extends {
   accountId?: string;
 } | undefined>(
   handler: AsyncActionHandler<Payload>,
+  options: EnclaveSessionReleaseOptions = {},
 ): AsyncActionHandler<Payload> {
   return async (global, actions, payload) => {
     const enclaveToken = payload?.enclaveToken;
@@ -60,14 +75,13 @@ export function withEnclaveSessionRelease<Payload extends {
       holdEnclaveSession(enclaveToken);
     }
 
-    if (IS_LEGENDS_WALLET
+    if (options.shouldEnsureWalletPrepaidAccess !== false
+      && IS_LEGENDS_WALLET
       && enclaveToken
       && accountId
       && global.accounts?.byId?.[accountId]?.byChain.tron) {
       holdEnclaveSession(enclaveToken);
-      void callApi('ensureWalletPrepaidAccess', accountId, enclaveToken).catch((error) => {
-        logDebugError('ensureWalletPrepaidAccess', error);
-      }).finally(() => {
+      void tryEnsureWalletPrepaidAccess(accountId, enclaveToken).finally(() => {
         if (dropEnclaveSessionHold(enclaveToken)) {
           actions.releaseEnclaveSession({ enclaveToken });
         }
