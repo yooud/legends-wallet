@@ -31,6 +31,20 @@
   }
 }
 
+.unavailable {
+  display: flex;
+  flex-grow: 1;
+  align-items: center;
+  justify-content: center;
+
+  padding: 1.5rem;
+
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--color-gray-2);
+  text-align: center;
+}
+
 .summary {
   display: flex;
   flex-direction: column;

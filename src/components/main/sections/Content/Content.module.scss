@@ -193,15 +193,13 @@
   }
 
   .tabsContainerStandaloneActivity {
-    height: 0;
+    // Keep a measurable sticky target for IntersectionObserver without reserving
+    // a separate Activity row before the content reaches the header.
+    height: 2.75rem;
+    margin-bottom: -2.75rem;
 
     &::after {
       display: none;
-    }
-
-    .tabsContent {
-      position: absolute;
-      top: 0;
     }
   }
 

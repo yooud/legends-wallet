@@ -6,7 +6,7 @@ import { getActions, withGlobal } from '../../../../global';
 import type { Theme } from '../../../../global/types';
 
 import { IS_FEATURE_LIMITED, NO_AGENT_AND_EXPLORE } from '../../../../config';
-import { selectCurrentAccountSettings, selectIsCurrentAccountViewMode } from '../../../../global/selectors';
+import { selectCurrentAccountSettings } from '../../../../global/selectors';
 import { ACCENT_COLORS } from '../../../../util/accentColor/constants';
 import buildClassName from '../../../../util/buildClassName';
 import buildStyle from '../../../../util/buildStyle';
@@ -33,7 +33,6 @@ interface StateProps {
   isExploreOpen?: boolean;
   isPrepaidOpen?: boolean;
   accentColorIndex?: number;
-  isViewMode: boolean;
 }
 
 type IconKey = 'iconWallet' | 'iconAgent' | 'iconExplore' | 'iconSettings' | 'iconEarn';
@@ -48,6 +47,10 @@ interface TabConfig {
 
 const ICON_SIZE_PX = 38;
 const ANIMATED_STICKER_SPEED = 2;
+const DEFAULT_ICON_COLORS = {
+  light: { active: '#2C92F0', inactive: '#2C333E' },
+  dark: { active: '#469CEC', inactive: '#F6F7F8' },
+};
 
 const TAB_WALLET = 0;
 const TAB_AGENT = 1;
@@ -61,7 +64,7 @@ const PREPAID_INDEX = IS_REDUCED_NAV ? 1 : TAB_PREPAID_FULL;
 const SETTINGS_INDEX = IS_REDUCED_NAV ? 2 : TAB_SETTINGS_WITH_PREPAID_FULL;
 
 function BottomBar({
-  theme, areSettingsOpen, isAgentOpen, isExploreOpen, isPrepaidOpen, accentColorIndex, isViewMode,
+  theme, areSettingsOpen, isAgentOpen, isExploreOpen, isPrepaidOpen, accentColorIndex,
 }: StateProps) {
   const { switchToWallet, switchToAgent, switchToExplore, switchToSettings, switchToPrepaid } = getActions();
 
@@ -78,9 +81,9 @@ function BottomBar({
   });
 
   const activeIndex = getActiveIndex({
-    isAgentOpen, isExploreOpen, areSettingsOpen, isPrepaidOpen, isViewMode,
+    isAgentOpen, isExploreOpen, areSettingsOpen, isPrepaidOpen,
   });
-  const tabCount = isViewMode ? TAB_COUNT - 1 : TAB_COUNT;
+  const tabCount = TAB_COUNT;
 
   const tabs: TabConfig[] = IS_REDUCED_NAV
     ? [
@@ -91,15 +94,15 @@ function BottomBar({
         activeIconKey: 'iconWalletSolid',
         onClick: switchToWallet,
       },
-      ...(!isViewMode ? [{
+      {
         index: PREPAID_INDEX,
         label: 'Prepaid',
-        iconKey: 'iconEarn' as const,
-        activeIconKey: 'iconEarn' as const,
+        iconKey: 'iconEarn',
+        activeIconKey: 'iconEarn',
         onClick: switchToPrepaid,
-      }] : []),
+      },
       {
-        index: isViewMode ? 1 : SETTINGS_INDEX,
+        index: SETTINGS_INDEX,
         label: 'Settings',
         iconKey: 'iconSettings',
         activeIconKey: 'iconSettingsSolid',
@@ -124,15 +127,15 @@ function BottomBar({
         activeIconKey: 'iconExploreSolid',
         onClick: switchToExplore,
       },
-      ...(!isViewMode ? [{
+      {
         index: PREPAID_INDEX,
         label: 'Prepaid',
-        iconKey: 'iconEarn' as const,
-        activeIconKey: 'iconEarn' as const,
+        iconKey: 'iconEarn',
+        activeIconKey: 'iconEarn',
         onClick: switchToPrepaid,
-      }] : []),
+      },
       {
-        index: isViewMode ? 3 : SETTINGS_INDEX,
+        index: SETTINGS_INDEX,
         label: 'Settings',
         iconKey: 'iconSettings',
         activeIconKey: 'iconSettingsSolid',
@@ -175,6 +178,9 @@ function BottomBar({
         {tabs.map(({ index, label, iconKey, activeIconKey, onClick }) => {
           const isActive = renderedActiveIndex === index;
           const variant = isActive ? activeIconKey : iconKey;
+          const iconColor = iconKey === 'iconEarn'
+            ? (isActive ? accentColor ?? DEFAULT_ICON_COLORS[appTheme].active : DEFAULT_ICON_COLORS[appTheme].inactive)
+            : accentColor;
 
           return (
             <TabButton
@@ -183,7 +189,7 @@ function BottomBar({
               label={lang(label)}
               tgsUrl={stickerPaths[variant]}
               previewUrl={stickerPaths.preview[variant]}
-              accentColor={accentColor}
+              accentColor={iconColor}
               onClick={onClick}
             />
           );
@@ -202,7 +208,6 @@ export default memo(withGlobal((global): StateProps => {
     isAgentOpen,
     isExploreOpen,
     isPrepaidOpen,
-    isViewMode: selectIsCurrentAccountViewMode(global),
     accentColorIndex: selectCurrentAccountSettings(global)?.accentColorIndex,
   };
 })(BottomBar));
@@ -248,17 +253,15 @@ const TabButton = memo(({
 });
 
 function getActiveIndex({
-  isAgentOpen, isExploreOpen, areSettingsOpen, isPrepaidOpen, isViewMode,
-}: Pick<StateProps, 'isAgentOpen' | 'isExploreOpen' | 'areSettingsOpen' | 'isPrepaidOpen' | 'isViewMode'>) {
+  isAgentOpen, isExploreOpen, areSettingsOpen, isPrepaidOpen,
+}: Pick<StateProps, 'isAgentOpen' | 'isExploreOpen' | 'areSettingsOpen' | 'isPrepaidOpen'>) {
   if (IS_REDUCED_NAV) {
-    if (isViewMode) return areSettingsOpen ? 1 : TAB_WALLET;
     if (isPrepaidOpen) return PREPAID_INDEX;
     return areSettingsOpen ? SETTINGS_INDEX : TAB_WALLET;
   }
 
   if (isAgentOpen) return TAB_AGENT;
   if (isExploreOpen) return TAB_EXPLORE;
-  if (isViewMode) return areSettingsOpen ? 3 : TAB_WALLET;
   if (isPrepaidOpen) return PREPAID_INDEX;
   if (areSettingsOpen) return SETTINGS_INDEX;
 

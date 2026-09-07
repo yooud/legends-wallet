@@ -26,6 +26,7 @@ interface Props<T extends string> {
   menuClassName?: string;
   fontIconClassName?: string;
   menuPositionY?: 'top' | 'bottom';
+  shouldSelectOnTouchEnd?: boolean;
 }
 
 export default function WithContextMenu<T extends string>({
@@ -38,6 +39,7 @@ export default function WithContextMenu<T extends string>({
   menuClassName,
   fontIconClassName,
   menuPositionY = 'bottom',
+  shouldSelectOnTouchEnd,
 }: Props<T>) {
   const buttonRef = useRef<HTMLDivElement | HTMLButtonElement>();
   const menuRef = useRef<HTMLDivElement>();
@@ -97,6 +99,7 @@ export default function WithContextMenu<T extends string>({
           menuAnchor={contextMenuAnchor}
           bubbleClassName={menuClassName}
           fontIconClassName={fontIconClassName}
+          shouldSelectOnTouchEnd={shouldSelectOnTouchEnd}
           getTriggerElement={getTriggerElement}
           getRootElement={getRootElement}
           getMenuElement={getMenuElement}

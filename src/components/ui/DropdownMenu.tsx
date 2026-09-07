@@ -31,6 +31,7 @@ interface OwnProps<T extends string> {
   fontIconClassName?: string;
   itemDescriptionClassName?: string;
   shouldCleanup?: boolean;
+  shouldSelectOnTouchEnd?: boolean;
   onSelect?: (value: T, e?: React.MouseEvent) => void;
   onClose: NoneToVoidFunction;
   getTriggerElement?: () => HTMLElement | undefined | null;
@@ -57,6 +58,7 @@ function DropdownMenu<T extends string>({
   fontIconClassName,
   itemDescriptionClassName,
   shouldCleanup,
+  shouldSelectOnTouchEnd,
   onSelect,
   onClose,
   getTriggerElement,
@@ -107,6 +109,13 @@ function DropdownMenu<T extends string>({
     onClose();
   });
 
+  const handleItemTouchEnd = useLastCallback((e: React.TouchEvent, value: T) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onSelect?.(value);
+    onClose();
+  });
+
   return (
     <Menu
       menuRef={menuRef}
@@ -141,6 +150,7 @@ function DropdownMenu<T extends string>({
             itemClassName="menuItemName"
             itemDescriptionClassName={itemDescriptionClassName}
             onClick={handleItemClick}
+            onTouchEnd={shouldSelectOnTouchEnd ? handleItemTouchEnd : undefined}
           />
         );
       })}

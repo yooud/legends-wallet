@@ -34,7 +34,6 @@ import useLastCallback from '../../hooks/useLastCallback';
 import usePrevious from '../../hooks/usePrevious';
 
 import Button from '../ui/Button';
-import CreatePasswordForm from '../ui/CreatePasswordForm';
 import ModalHeader from '../ui/ModalHeader';
 import PasswordForm from '../ui/PasswordForm';
 import Transition from '../ui/Transition';
@@ -56,7 +55,7 @@ const enum SLIDES {
   changePasscode,
   backup,
   biometrics,
-  disableBiometricsCreatePassword,
+  disableBiometricsCreatePasscode,
   mfa,
   confirmMfaInstallation,
   mfaInstalled,
@@ -329,7 +328,8 @@ function SettingsSecurity({
     closeBiometricSettings();
     if (CAN_AUTHENTICATE_WITH_BIOMETRIC_ONLY) {
       ensureAuthenticatedAction(() => {
-        setCurrentSlide(SLIDES.disableBiometricsCreatePassword);
+        setChangePasscodeSlide(ChangePasscodeSlide.CreateNewPin);
+        setCurrentSlide(SLIDES.disableBiometricsCreatePasscode);
         setNextKey(SLIDES.settings);
       });
     } else {
@@ -337,8 +337,8 @@ function SettingsSecurity({
     }
   });
 
-  const handleDisableBiometricsCreatePassword = useLastCallback((password: string, isNumeric?: boolean) => {
-    disableBiometrics({ newPassword: password, isPasswordNumeric: isNumeric });
+  const handleDisableBiometricsCreatePasscode = useLastCallback((passcode: string) => {
+    disableBiometrics({ newPassword: passcode, isPasswordNumeric: true });
   });
 
   const handleBiometricTurnOnConfirm = useLastCallback(() => {
@@ -477,36 +477,21 @@ function SettingsSecurity({
           />
         );
 
-      case SLIDES.disableBiometricsCreatePassword: {
-        const createPasswordTitle = lang('Create Password');
+      case SLIDES.disableBiometricsCreatePasscode:
         return (
-          <>
-            {isInsideModal ? (
-              <ModalHeader
-                title={createPasswordTitle}
-                onBackButtonClick={openSettingsSlide}
-                className={styles.modalHeader}
-              />
-            ) : (
-              <div className={styles.header}>
-                <Button isSimple isText onClick={openSettingsSlide} className={styles.headerBack}>
-                  <i className={buildClassName(styles.iconChevron, 'icon-chevron-left')} aria-hidden />
-                  <span>{lang('Back')}</span>
-                </Button>
-                <span className={styles.headerTitle}>{createPasswordTitle}</span>
-              </div>
-            )}
-            <CreatePasswordForm
-              isActive={isSlideActive && isActive}
-              isLoading={isLoading}
-              formId="settings_disable_biometrics_create_password"
-              containerClassName={styles.passwordFormWithHeaderOffset}
-              onCancel={openSettingsSlide}
-              onSubmit={handleDisableBiometricsCreatePassword}
-            />
-          </>
+          <ChangePasscodeFlow
+            isActive={isActive}
+            isSlideActive={isSlideActive}
+            currentSlide={changePasscodeSlide}
+            isInsideModal={isInsideModal}
+            isLoading={isLoading}
+            title="Create Passcode"
+            onSlideChange={setChangePasscodeSlide}
+            onPasscodeSubmit={handleDisableBiometricsCreatePasscode}
+            onComplete={openSettingsSlide}
+            onCancel={openSettingsSlide}
+          />
         );
-      }
 
       case SLIDES.mfa:
         return (

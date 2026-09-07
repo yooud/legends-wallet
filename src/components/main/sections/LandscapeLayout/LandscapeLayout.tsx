@@ -3,7 +3,7 @@ import { withGlobal } from '../../../../global';
 
 import { ContentTab } from '../../../../global/types';
 
-import { selectCurrentAccountId, selectIsCurrentAccountViewMode } from '../../../../global/selectors';
+import { selectCurrentAccountId } from '../../../../global/selectors';
 import buildClassName from '../../../../util/buildClassName';
 
 import Agent from '../../../agent/Agent';
@@ -104,7 +104,7 @@ export default memo(
         isAgentOpen,
         isExploreOpen,
         isPortfolioOpen,
-        isPrepaidOpen: selectIsCurrentAccountViewMode(global) ? undefined : isPrepaidOpen,
+        isPrepaidOpen,
       };
     },
     (global, _, stickToFirst) => stickToFirst(selectCurrentAccountId(global)),

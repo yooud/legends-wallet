@@ -18,7 +18,6 @@ import {
   selectCurrentAccountId,
   selectCurrentAccountSettings,
   selectCurrentAccountState,
-  selectIsCurrentAccountViewMode,
 } from '../global/selectors';
 import { useAccentColor } from '../util/accentColor';
 import { setActiveTabChangeListener } from '../util/activeTabMonitor';
@@ -330,7 +329,7 @@ export default memo(withGlobal((global): StateProps => {
     isAgentOpen: global.isAgentOpen,
     isExploreOpen: global.isExploreOpen,
     isPortfolioOpen: global.isPortfolioOpen,
-    isPrepaidOpen: selectIsCurrentAccountViewMode(global) ? undefined : global.isPrepaidOpen,
+    isPrepaidOpen: global.isPrepaidOpen,
     currentTokenSlug: selectCurrentAccountState(global)?.currentTokenSlug,
     areSettingsOpen: global.areSettingsOpen,
     isFullscreen: Boolean(global.isFullscreen),

@@ -5,7 +5,7 @@ import type { Theme } from '../../../../global/types';
 import { ContentTab } from '../../../../global/types';
 
 import { IS_FEATURE_LIMITED, NO_AGENT_AND_EXPLORE } from '../../../../config';
-import { selectCurrentAccountSettings, selectIsCurrentAccountViewMode } from '../../../../global/selectors';
+import { selectCurrentAccountSettings } from '../../../../global/selectors';
 import { ACCENT_COLORS } from '../../../../util/accentColor/constants';
 import buildClassName from '../../../../util/buildClassName';
 import { IS_TOUCH_ENV } from '../../../../util/windowEnvironment';
@@ -23,6 +23,10 @@ import styles from './LandscapeNavBar.module.scss';
 
 const ANIMATED_ICON_SIZE_PX = 34;
 const ANIMATED_STICKER_SPEED = 2;
+const DEFAULT_ICON_COLORS = {
+  light: { active: '#2C92F0', inactive: '#2C333E' },
+  dark: { active: '#469CEC', inactive: '#F6F7F8' },
+};
 
 interface StateProps {
   areSettingsOpen?: boolean;
@@ -31,11 +35,10 @@ interface StateProps {
   isPrepaidOpen?: boolean;
   theme: Theme;
   accentColorIndex?: number;
-  isViewMode: boolean;
 }
 
 function LandscapeNavBar({
-  areSettingsOpen, isAgentOpen, isExploreOpen, isPrepaidOpen, theme, accentColorIndex, isViewMode,
+  areSettingsOpen, isAgentOpen, isExploreOpen, isPrepaidOpen, theme, accentColorIndex,
 }: StateProps) {
   const {
     switchToWallet, switchToAgent, switchToExplore, switchToSettings, switchToPrepaid,
@@ -86,16 +89,16 @@ function LandscapeNavBar({
           />
         </>
       )}
-      {!isViewMode && (
-        <NavButton
-          isActive={isPrepaidOpen}
-          label={lang('Prepaid')}
-          tgsUrl={stickerPaths.iconEarn}
-          previewUrl={stickerPaths.preview.iconEarn}
-          accentColor={accentColor}
-          onClick={switchToPrepaid}
-        />
-      )}
+      <NavButton
+        isActive={isPrepaidOpen}
+        label={lang('Prepaid')}
+        tgsUrl={stickerPaths.iconEarn}
+        previewUrl={stickerPaths.preview.iconEarn}
+        accentColor={isPrepaidOpen
+          ? accentColor ?? DEFAULT_ICON_COLORS[appTheme].active
+          : DEFAULT_ICON_COLORS[appTheme].inactive}
+        onClick={switchToPrepaid}
+      />
       <NavButton
         isActive={areSettingsOpen}
         label={lang('Settings')}
@@ -116,7 +119,6 @@ export default memo(withGlobal((global): StateProps => {
     isAgentOpen,
     isExploreOpen,
     isPrepaidOpen,
-    isViewMode: selectIsCurrentAccountViewMode(global),
     theme: global.settings.theme,
     accentColorIndex: selectCurrentAccountSettings(global)?.accentColorIndex,
   };

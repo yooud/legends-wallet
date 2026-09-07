@@ -224,35 +224,37 @@ function SecurityMain({
           </div>
           <p className={styles.blockDescription}>{lang('$app_lock_description', { app_name: APP_NAME })}</p>
 
-          <div className={buildClassName(styles.block, styles.settingsBlockWithDescription)}>
-            <div
-              className={buildClassName(
-                styles.item,
-                styles.itemSmall,
-                !isAutoConfirmAvailable && styles.itemDisabled,
-              )}
-              onClick={isAutoConfirmAvailable ? onAutoConfirmToggle : undefined}
-            >
-              <span className={styles.itemTitle}>
-                {getDoesUsePinPad() ? lang('Remember Passcode') : lang('Remember Password')}
-              </span>
+          {!getDoesUsePinPad() && (
+            <>
+              <div className={buildClassName(styles.block, styles.settingsBlockWithDescription)}>
+                <div
+                  className={buildClassName(
+                    styles.item,
+                    styles.itemSmall,
+                    !isAutoConfirmAvailable && styles.itemDisabled,
+                  )}
+                  onClick={isAutoConfirmAvailable ? onAutoConfirmToggle : undefined}
+                >
+                  <span className={styles.itemTitle}>{lang('Remember Password')}</span>
 
-              <Switcher
-                className={styles.menuSwitcher}
-                label={getDoesUsePinPad() ? lang('Remember Passcode') : lang('Remember Password')}
-                checked={isAutoConfirmAvailable && isAutoConfirmEnabled}
-              />
-            </div>
-          </div>
-          <p className={styles.blockDescription}>
-            {
-              lang(
-                'App will not ask for signature for %1$d minutes after last entry.',
-                AUTO_CONFIRM_DURATION_MINUTES,
-              )
-            }
-            {!isAutoConfirmAvailable && ` ${lang('Not available with biometrics.')}`}
-          </p>
+                  <Switcher
+                    className={styles.menuSwitcher}
+                    label={lang('Remember Password')}
+                    checked={isAutoConfirmAvailable && isAutoConfirmEnabled}
+                  />
+                </div>
+              </div>
+              <p className={styles.blockDescription}>
+                {
+                  lang(
+                    'App will not ask for signature for %1$d minutes after last entry.',
+                    AUTO_CONFIRM_DURATION_MINUTES,
+                  )
+                }
+                {!isAutoConfirmAvailable && ` ${lang('Not available with biometrics.')}`}
+              </p>
+            </>
+          )}
         </>
 
         {IS_ELECTRON && (

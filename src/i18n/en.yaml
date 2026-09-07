@@ -1802,6 +1802,7 @@ Prepaid only: Prepaid only
 Pay with TRX: Pay with TRX
 Prepaid balance is insufficient: Prepaid balance is insufficient
 $prepaid_unavailable: Prepaid fee coverage is temporarily unavailable.
+$prepaid_watch_only_unavailable: Fee balance is unavailable for this address.
 $prepaid_link_help: Both wallets sign a local proof. No transaction is broadcast and keys never leave this device.
 $prepaid_topup_help: Deposit a supported asset in one transfer. Resources are supplied automatically and their service cost is deducted from the credited balance.
 $prepaid_settings_help: Choose how resource coverage is paid for this wallet.

@@ -149,7 +149,7 @@ function Prepaid({
     if (isActive && !isViewMode) void load();
   }, [currentAccountId, isActive, isViewMode]);
   useInterval(load, isActive && !isViewMode ? 10_000 : undefined);
-  useHistoryBack({ isActive: isActive && !isViewMode, onBack: closePrepaid });
+  useHistoryBack({ isActive, onBack: closePrepaid });
 
   const history = useMemo<HistoryItem[]>(() => {
     if (!overview) return [];
@@ -203,7 +203,16 @@ function Prepaid({
     openTransactionInfo({ txHash: item.txHash, chain: TRX.chain });
   });
 
-  if (isViewMode) return undefined;
+  if (isViewMode) {
+    return (
+      <div className={styles.root}>
+        <BackHeader title={lang('Prepaid')} onBackClick={closePrepaid} />
+        <div className={styles.unavailable}>
+          {lang('$prepaid_watch_only_unavailable')}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.root}>

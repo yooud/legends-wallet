@@ -22,6 +22,7 @@ interface OwnProps<T extends string> {
   itemClassName?: string;
   itemDescriptionClassName?: string;
   onClick?(event: React.MouseEvent<HTMLButtonElement, MouseEvent>, value: T): void;
+  onTouchEnd?(event: React.TouchEvent<HTMLButtonElement>, value: T): void;
 }
 
 function DropdownItemContent<T extends string>({
@@ -37,6 +38,7 @@ function DropdownItemContent<T extends string>({
   itemClassName,
   itemDescriptionClassName,
   onClick,
+  onTouchEnd,
 }: OwnProps<T>) {
   const lang = useLang();
   const displayedName = shouldUseSelectedName ? (item.selectedName ?? item.name) : item.name;
@@ -73,6 +75,7 @@ function DropdownItemContent<T extends string>({
       className={fullClassName}
       disabled={item.isDisabled}
       onClick={onClick && ((e) => onClick(e, item.value))}
+      onTouchEnd={onTouchEnd && ((e) => onTouchEnd(e, item.value))}
     >
       {prefix}
       {Boolean(item.icon) && renderIcon()}

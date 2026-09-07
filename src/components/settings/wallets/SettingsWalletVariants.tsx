@@ -588,7 +588,7 @@ function SettingsWalletVariants({
       <PasswordForm
         isActive={isFormActive}
         operationType="passcode"
-        pinPadHeading={lang('Enter code')}
+        pinPadHeading={lang('Subwallets')}
         placeholder={lang('Enter your current password')}
         forceBiometricsInMain={forceBiometricsInMain}
         submitLabel={lang('Continue')}

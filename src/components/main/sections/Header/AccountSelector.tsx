@@ -152,6 +152,7 @@ function AccountSelector({
           <WithContextMenu
             items={WALLET_CONTEXT_MENU_ITEMS}
             withBackdrop
+            shouldSelectOnTouchEnd
             onItemClick={handleMenuItemClick}
           >
             {(menuProps) => renderAccountTitle(menuProps)}

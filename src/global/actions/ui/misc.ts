@@ -840,7 +840,7 @@ addActionHandler('switchToSettings', (global: GlobalState, actions) => {
 });
 
 addActionHandler('switchToPrepaid', (global: GlobalState, actions) => {
-  if (global.isPrepaidOpen || selectIsCurrentAccountViewMode(global)) return;
+  if (global.isPrepaidOpen) return;
   actions.closeAgent(undefined, { forceOnHeavyAnimation: true });
   actions.closeExplore(undefined, { forceOnHeavyAnimation: true });
   actions.closeSettings(undefined, { forceOnHeavyAnimation: true });

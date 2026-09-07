@@ -41,7 +41,9 @@ interface OwnProps {
   currentSlide: ChangePasscodeSlide;
   isInsideModal?: boolean;
   isLoading?: boolean;
+  title?: string;
   onSlideChange: (slide: ChangePasscodeSlide) => void;
+  onPasscodeSubmit?: (passcode: string) => void;
   onComplete: NoneToVoidFunction;
   onCancel: NoneToVoidFunction;
 }
@@ -52,7 +54,9 @@ function ChangePasscodeFlow({
   currentSlide,
   isInsideModal,
   isLoading,
+  title = 'Change Passcode',
   onSlideChange,
+  onPasscodeSubmit,
   onComplete,
   onCancel,
 }: OwnProps) {
@@ -65,6 +69,7 @@ function ChangePasscodeFlow({
   const [pinPadTitle, setPinPadTitle] = useState<string>();
 
   const shouldRenderMinifiedPinPad = isInsideModal && getDoesUsePinPad();
+  const flowTitle = lang(title);
 
   const cleanup = useLastCallback(() => {
     setPinValue('');
@@ -75,6 +80,11 @@ function ChangePasscodeFlow({
   });
 
   const handleNewPasscodeSubmit = useLastCallback((passcode: string) => {
+    if (onPasscodeSubmit) {
+      onPasscodeSubmit(passcode);
+      return;
+    }
+
     changePasscode({
       passcode,
       onSuccess: () => {
@@ -182,7 +192,7 @@ function ChangePasscodeFlow({
             <ModalHeader
               onBackButtonClick={handleCancel}
               className={styles.modalHeader}
-              title={shouldRenderMinifiedPinPad && lang('Change Passcode')}
+              title={shouldRenderMinifiedPinPad && flowTitle}
             />
           ) : (
             <div className={styles.header}>
@@ -204,7 +214,7 @@ function ChangePasscodeFlow({
               size={shouldRenderMinifiedPinPad ? ANIMATED_STICKER_SMALL_SIZE_PX : ANIMATED_STICKER_HUGE_SIZE_PX}
               nonInteractive
             />
-            {!shouldRenderMinifiedPinPad && <div className={styles.pinPadTitle}>{lang('Change Passcode')}</div>}
+            {!shouldRenderMinifiedPinPad && <div className={styles.pinPadTitle}>{flowTitle}</div>}
           </div>
           <PinPad
             isActive={isActive}
@@ -228,7 +238,7 @@ function ChangePasscodeFlow({
               title={shouldRenderMinifiedPinPad && (
                 passwordError && pinValue === confirmPinValue
                   ? lang('Passcode Changed!')
-                  : lang('Change Passcode')
+                  : flowTitle
               )}
             />
           ) : (
@@ -257,7 +267,7 @@ function ChangePasscodeFlow({
                   {
                     passwordError && pinValue === confirmPinValue
                       ? lang('Passcode Changed!')
-                      : lang('Change Passcode')
+                      : flowTitle
                   }
                 </div>
               )

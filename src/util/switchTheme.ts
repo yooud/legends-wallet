@@ -1,14 +1,15 @@
 import { getGlobal } from '../global';
 
-import type { Theme } from '../global/types';
+import type { AppTheme, Theme } from '../global/types';
 
 import { IS_TELEGRAM_APP } from '../config';
 import { requestMeasure } from '../lib/fasterdom/fasterdom';
 import cssColorToHex from './cssColorToHex';
-import { getTelegramApp, getTelegramAppAsync } from './telegram';
+import { getTelegramApp, getTelegramAppAsync, isInsideTelegram } from './telegram';
 
 const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
 let currentTheme: Theme;
+const appThemeChangeListeners = new Set<NoneToVoidFunction>();
 
 export default function switchTheme(theme: Theme) {
   currentTheme = theme;
@@ -16,22 +17,45 @@ export default function switchTheme(theme: Theme) {
   setThemeValue();
   setStatusBarStyle();
   setThemeColor();
+  notifyAppThemeChange();
 }
 
 function setThemeValue() {
-  const isDarkTheme = currentTheme === 'dark'
-    || (currentTheme === 'system'
-      && (IS_TELEGRAM_APP
-        ? getTelegramApp()?.colorScheme === 'dark'
-        : prefersDark.matches)
-    );
+  const isDarkTheme = resolveAppTheme(currentTheme) === 'dark';
 
   document.documentElement.classList.toggle('theme-dark', isDarkTheme);
 }
 
+export function resolveAppTheme(theme: Theme): AppTheme {
+  if (theme !== 'system') return theme;
+
+  const telegramApp = getTelegramApp();
+  if (IS_TELEGRAM_APP && isInsideTelegram() && telegramApp?.colorScheme) {
+    return telegramApp.colorScheme;
+  }
+
+  return prefersDark.matches ? 'dark' : 'light';
+}
+
+export function subscribeToAppThemeChange(listener: NoneToVoidFunction) {
+  appThemeChangeListeners.add(listener);
+
+  return () => {
+    appThemeChangeListeners.delete(listener);
+  };
+}
+
+function notifyAppThemeChange() {
+  appThemeChangeListeners.forEach((listener) => listener());
+}
+
 function handlePrefersColorSchemeChange() {
+  if (currentTheme !== 'system') return;
+
   setThemeValue();
   setStatusBarStyle();
+  setThemeColor();
+  notifyAppThemeChange();
 }
 
 function setThemeColor() {

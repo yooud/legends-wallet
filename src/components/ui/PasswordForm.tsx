@@ -5,7 +5,6 @@ import { getActions, getGlobal, withGlobal } from '../../global';
 import type { MigrationErrorPresentation } from '../../global/types';
 
 import {
-  ANIMATED_STICKER_TINY_SIZE_PX,
   AUTO_CONFIRM_DURATION_MINUTES,
   IS_LEGENDS_WALLET,
   PIN_LENGTH,
@@ -107,6 +106,7 @@ interface StateProps {
 }
 
 const STICKER_SIZE = 180;
+const LEGENDS_PIN_STICKER_SIZE_PX = 90;
 const APPEAR_ANIMATION_DURATION_MS = 300;
 
 const [getHandleBiometricsSignal, setHandleBiometricsSignal] = createSignal(Date.now());
@@ -194,13 +194,14 @@ function PasswordForm({
   const [localError, setLocalError] = useState<string>('');
   const [isLegacyPasswordMode, setIsLegacyPasswordMode] = useState(false);
   const { isSmallHeight, isPortrait } = useDeviceScreen();
-  const withAutoConfirm = useCanAutoConfirm(enclaveSessionValidUntil, noAutoConfirm);
-  // `noAutoConfirm` controls whether this screen may be skipped, not whether a successful
-  // passcode entry can open the five-minute session used by subsequent protected actions.
-  const canArmAutoConfirm = !isBiometricAuthEnabledProp && operationType !== 'turnOnBiometrics';
+  const doesUsePinPad = getDoesUsePinPad();
+  const withAutoConfirm = useCanAutoConfirm(enclaveSessionValidUntil, noAutoConfirm || doesUsePinPad);
+  const canArmAutoConfirm = !doesUsePinPad
+    && !isBiometricAuthEnabledProp
+    && operationType !== 'turnOnBiometrics';
   const isLongSession = canArmAutoConfirm && Boolean(isAutoConfirmEnabled);
   const isSubmitDisabled = !inputValue.length && !withAutoConfirm;
-  const canUsePinPad = getDoesUsePinPad() && !isLegacyPasswordMode && !isBiometricAuthEnabled;
+  const canUsePinPad = doesUsePinPad && !isLegacyPasswordMode && !isBiometricAuthEnabled;
   const canUseLegacyPassword = IS_LEGENDS_WALLET && !isPasswordNumeric;
   const [isLogOutModalOpened, openLogOutModal, closeLogOutModal] = useFlag(false);
   // The biometric screen offers its retry only while something failed, and the dialog paths clear the
@@ -545,6 +546,11 @@ function PasswordForm({
             ? 'Enter code or use Touch ID'
             : 'Enter code or use biometrics',
     );
+    const translatedTitle = title ? lang(title) : undefined;
+    const pinPadLabel = lang(hasError
+      ? (localError || error!)
+      : (pinPadTitle || (isSmallHeight && title ? title : actionName)));
+    const shouldHidePinPadLabel = !hasError && !isSmallHeight && translatedTitle === pinPadLabel;
 
     const content = (
       <>
@@ -568,22 +574,19 @@ function PasswordForm({
               play={isActive}
               tgsUrl={ANIMATED_STICKERS_PATHS.guard}
               previewUrl={ANIMATED_STICKERS_PATHS.guardPreview}
-              size={IS_LEGENDS_WALLET ? ANIMATED_STICKER_TINY_SIZE_PX : undefined}
+              size={IS_LEGENDS_WALLET ? LEGENDS_PIN_STICKER_SIZE_PX : undefined}
               noLoop={false}
               nonInteractive
             />
           )}
-          {!isSmallHeight && title && <div className={styles.title}>{lang(title)}</div>}
+          {!isSmallHeight && translatedTitle && <div className={styles.title}>{translatedTitle}</div>}
           {children}
         </div>
 
         {withAutoConfirm ? renderFooterButtons() : (
           <PinPad
             isActive={isActive}
-            title={lang(hasError
-              ? (localError || error!)
-              : (pinPadTitle || (isSmallHeight && title ? title : actionName)),
-            )}
+            title={shouldHidePinPadLabel ? '' : pinPadLabel}
             type={hasError ? 'error' : undefined}
             length={PIN_LENGTH}
             resetStateDelayMs={resetStateDelayMs}
