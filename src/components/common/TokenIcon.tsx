@@ -14,7 +14,7 @@ import styles from './TokenIcon.module.scss';
 interface OwnProps {
   token: UserToken | UserSwapToken | ApiSwapAsset | ApiToken;
   withChainIcon?: boolean;
-  size?: 'x-small' | 'small' | 'middle' | 'large' | 'xx-large';
+  size?: 'x-small' | 'small' | 'middle' | 'large' | 'x-large' | 'xx-large';
   className?: string;
   iconClassName?: string;
   children?: TeactNode;
@@ -29,7 +29,6 @@ function TokenIcon({
   const isNativeTokenStaking = getIsNativeStakedToken(slug);
   const shouldRenderImage = Boolean(image) && !isLoadingError;
   const shapeClassName = getIsRwaStockToken(token) ? styles.square : styles.circle;
-  const shouldRenderChainIcon = Boolean(withChainIcon && !isNativeToken && !isNativeTokenStaking && chain);
   const iconFullClassName = buildClassName(styles.icon, size && styles[size], shapeClassName, iconClassName);
 
   function renderDefaultIcon() {
@@ -41,14 +40,7 @@ function TokenIcon({
   }
 
   return (
-    <div
-      className={buildClassName(
-        styles.wrapper,
-        size && styles[size],
-        shouldRenderChainIcon && styles.withChainIcon,
-        className,
-      )}
-    >
+    <div className={buildClassName(styles.wrapper, className)}>
       {
         shouldRenderImage ? (
           <img
@@ -61,11 +53,11 @@ function TokenIcon({
           />
         ) : renderDefaultIcon()
       }
-      {shouldRenderChainIcon && (
+      {withChainIcon && !isNativeToken && !isNativeTokenStaking && chain && (
         <img
           src={getChainNetworkIcon(chain)}
           alt=""
-          className={styles.blockchainIcon}
+          className={buildClassName(styles.blockchainIcon, size && styles[size])}
           draggable={false}
         />
       )}

@@ -162,6 +162,7 @@ Description Copied: คัดลอกคำอธิบายแล้ว
 Message Copied: คัดลอกข้อความแล้ว
 Sender: ผู้ส่ง
 Recipient: ผู้รับ
+Counterparty: คู่สัญญา
 "%chain% Address Copied": "คัดลอกที่อยู่ %chain% แล้ว"
 Repeat: ทำซ้ำ
 Switch Account: สลับที่อยู่บัญชี
@@ -1748,5 +1749,6 @@ $enclave_migration_interrupted_message: |
 Hide Unverified NFTs: ซ่อน NFT ที่ยังไม่ได้ตรวจสอบ
 Unverified: ยังไม่ได้ตรวจสอบ
 Prepaid: ยอดคงเหลือค่าธรรมเนียม
+$prepaid_history_topup: เติมยอดคงเหลือค่าธรรมเนียม
 $bot_balance_project_help: เลือกยอดคงเหลือของโปรเจกต์บอตที่จะใช้ชำระค่าธรรมเนียมของวอลเล็ตนี้
 $bot_balance_disconnect_warning: หลังยกเลิกการเชื่อมต่อ วอลเล็ตนี้จะหยุดใช้ยอดคงเหลือของโปรเจกต์เพื่อชำระค่าธรรมเนียม เงินจะยังคงอยู่ในยอดคงเหลือของโปรเจกต์บอตและใช้ได้ในบอต

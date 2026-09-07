@@ -143,7 +143,7 @@ type StateProps = {
 
 const AMOUNT_OF_CLICKS_FOR_DEVELOPERS_MODE = 5;
 const SUPPORT_ACCOUNTS_COUNT_DEFAULT = 1;
-const IS_DEVELOPER_OPTIONS_ENABLED = APP_ENV !== 'production' && !IS_EXPLORER;
+const IS_DEVELOPER_OPTIONS_ENABLED = (APP_ENV !== 'production' || IS_LEGENDS_WALLET) && !IS_EXPLORER;
 
 function Settings({
   settings: {
@@ -521,7 +521,7 @@ function Settings({
           )}
 
           <div className={styles.block}>
-            {IS_LEGENDS_WALLET && (
+            {IS_LEGENDS_WALLET && !isViewMode && (
               <div className={buildClassName(styles.item, styles.itemMenu)} onClick={handleFeeCoverageOpen}>
                 <img className={styles.menuIcon} src={assetsActivityImg} alt={lang('Fee Coverage')} />
                 <div className={styles.itemContent}>
@@ -800,6 +800,7 @@ function Settings({
           />
         );
       case SettingsState.FeeCoverage:
+        if (isViewMode) return renderSettings();
         return (
           <SettingsFeeCoverage
             isActive={isActive && isSlideActive}

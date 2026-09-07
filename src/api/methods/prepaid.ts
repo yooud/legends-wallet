@@ -12,7 +12,10 @@ import { parseAccountId } from '../../util/account';
 import { fetchJson } from '../../util/fetch';
 import { pause } from '../../util/schedulers';
 import { fetchPrivateKeyString } from '../chains/tron/auth';
-import { ensureSponsoredTransactionTtl } from '../chains/tron/sponsorship';
+import {
+  ensureSponsoredTransactionTtl,
+  rememberWalletSponsorshipActivityLink,
+} from '../chains/tron/sponsorship';
 import { getTronClient } from '../chains/tron/util/tronweb';
 import { fetchStoredChainAccount } from '../common/accounts';
 import { getTokenBySlug } from '../common/tokens';
@@ -35,7 +38,13 @@ type PrepaidAccessChallenge = {
   challenge: string;
   memo: string;
   proof_address: string;
+  proof_type?: 'message_v2';
   expires_at: number;
+};
+
+type PrepaidAccessMessageProof = {
+  type: 'message_v2';
+  signature: string;
 };
 
 type PrepaidAccessSession = {
@@ -50,9 +59,22 @@ const TOPUP_CONFIRMATION_ATTEMPTS = 30;
 const TERMINAL_TOPUP_FAILURES = new Set(['needs_review', 'failed', 'expired', 'refunded']);
 const PREPAID_ACCESS_STORAGE_KEY = 'walletPrepaidAccessSessions';
 const PREPAID_ACCESS_REFRESH_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000;
+const PREPAID_ACCESS_REQUEST_RETRIES = 3;
+const PREPAID_ACCESS_REQUEST_TIMEOUTS = [3_000, 5_000, 7_000];
+const PREPAID_ACCESS_REVOKE_TIMEOUT_MS = 2_000;
 const prepaidAccessSessions = new Map<string, PrepaidAccessSession>();
 const prepaidAccessRequests = new Map<string, Promise<void>>();
+const prepaidRefreshRequests = new Map<string, Promise<PrepaidAccessSession | undefined>>();
+const prepaidAccessGenerations = new Map<string, number>();
 let prepaidAccessStorageMutation = Promise.resolve();
+
+export function resetPrepaidAccessCacheForTests() {
+  prepaidAccessSessions.clear();
+  prepaidAccessRequests.clear();
+  prepaidRefreshRequests.clear();
+  prepaidAccessGenerations.clear();
+  prepaidAccessStorageMutation = Promise.resolve();
+}
 
 function prepaidUrl(accountId: string, endpoint: string) {
   const { network } = parseAccountId(accountId);
@@ -93,8 +115,27 @@ async function createWalletProof(
   return tronWeb.trx.sign(transaction, privateKey);
 }
 
+async function createWalletAccessProof(
+  accountId: string,
+  enclaveToken: string,
+  challenge: PrepaidAccessChallenge,
+): Promise<Types.Transaction | PrepaidAccessMessageProof> {
+  if (challenge.proof_type !== 'message_v2') {
+    return createWalletProof(accountId, enclaveToken, challenge.proof_address, challenge.memo);
+  }
+
+  const { account } = await getTronAccount(accountId);
+  if (account.type === 'view' || account.type === 'ledger') throw new Error('UnsupportedAccountType');
+  const privateKey = await fetchPrivateKeyString(accountId, enclaveToken, account);
+  if (!privateKey) throw new Error('InvalidPassword');
+  const { network } = parseAccountId(accountId);
+  const signature = getTronClient(network).trx.signMessageV2(challenge.memo, privateKey);
+  return { type: 'message_v2', signature };
+}
+
 export async function fetchWalletPrepaidOverview(accountId: string): Promise<ApiWalletPrepaidOverview | undefined> {
-  const { address } = await getTronAccount(accountId);
+  const { account, address } = await getTronAccount(accountId);
+  if (account.type === 'view') return undefined;
   const { session, didRefresh } = await resolvePrepaidAccessSession(accountId, address);
   if (!session) return undefined;
   let failedAccessToken = session.access_token;
@@ -118,24 +159,70 @@ export async function fetchWalletPrepaidOverview(accountId: string): Promise<Api
         if (!isPrepaidAccessError(refreshError)) throw refreshError;
       }
     }
-    await removePrepaidAccessSession(accountId, failedAccessToken);
+    await removePrepaidAccessSession(accountId, address, failedAccessToken);
     return undefined;
   }
 }
 
 export async function getWalletPrepaidAccessToken(accountId: string) {
-  const { address } = await getTronAccount(accountId);
+  const { account, address } = await getTronAccount(accountId);
+  if (account.type === 'view') return undefined;
   const { session } = await resolvePrepaidAccessSession(accountId, address);
   return session?.access_token;
 }
 
 export function clearWalletPrepaidAccessSession(accountId: string, expectedAccessToken?: string) {
-  return removePrepaidAccessSession(accountId, expectedAccessToken);
+  return getTronAccount(accountId).then(({ address }) => (
+    removePrepaidAccessSession(accountId, address, expectedAccessToken)
+  ));
+}
+
+export async function revokeWalletPrepaidAccessSession(accountId: string) {
+  invalidatePrepaidAccessOperations(accountId);
+  try {
+    const { account, address } = await getTronAccount(accountId);
+    if (account.type === 'view') return;
+    const session = await getPrepaidAccessSession(accountId, address);
+    if (!session) return;
+
+    await removePrepaidAccessSession(accountId, address, session.access_token);
+    if (!hasValidPrepaidRefreshToken(session)) return;
+
+    await revokePrepaidAccessSessionRemotely(accountId, address, session);
+  } catch {
+    // The account may already be partially removed; stale local sessions are cleared by the caller.
+  }
+}
+
+export async function clearWalletPrepaidAccessSessionsForNetwork(network: string) {
+  const prefix = `${network}:`;
+  for (const sessionKey of prepaidAccessSessions.keys()) {
+    if (sessionKey.startsWith(prefix)) prepaidAccessSessions.delete(sessionKey);
+  }
+  await mutateStoredPrepaidAccessSessions((stored) => Object.fromEntries(
+    Object.entries(stored).filter(([sessionKey]) => !sessionKey.startsWith(prefix)),
+  ));
+}
+
+export async function clearAllWalletPrepaidAccessSessions() {
+  prepaidAccessSessions.clear();
+  prepaidAccessRequests.clear();
+  prepaidRefreshRequests.clear();
+  await storage.removeItem(PREPAID_ACCESS_STORAGE_KEY);
 }
 
 async function resolvePrepaidAccessSession(accountId: string, address: string) {
-  let session = await getPrepaidAccessSession(accountId);
+  let session = await getPrepaidAccessSession(accountId, address);
   let didRefresh = false;
+  const pendingAccessRequest = prepaidAccessRequests.get(accountId);
+  if (!session && pendingAccessRequest) {
+    try {
+      await pendingAccessRequest;
+    } catch {
+      // The caller will fall back to the normal authorization state if background access failed.
+    }
+    session = await getPrepaidAccessSession(accountId, address);
+  }
   if (!session) return { session, didRefresh };
 
   if (session.expires_at * 1000 - Date.now() <= PREPAID_ACCESS_REFRESH_THRESHOLD_MS) {
@@ -147,7 +234,7 @@ async function resolvePrepaidAccessSession(accountId: string, address: string) {
       }
     } catch (error) {
       if (isPrepaidAccessError(error)) {
-        await removePrepaidAccessSession(accountId, session.access_token);
+        await removePrepaidAccessSession(accountId, address, session.access_token);
         return { session: undefined, didRefresh };
       }
       if (session.expires_at * 1000 <= Date.now()) throw error;
@@ -162,6 +249,25 @@ async function refreshPrepaidAccessSession(
   address: string,
   session: PrepaidAccessSession,
 ) {
+  const sessionKey = getPrepaidAccessSessionKey(accountId, address);
+  let request = prepaidRefreshRequests.get(sessionKey);
+  if (!request) {
+    request = refreshPrepaidAccessSessionInternal(accountId, address, session).finally(() => {
+      if (prepaidRefreshRequests.get(sessionKey) === request) prepaidRefreshRequests.delete(sessionKey);
+    });
+    prepaidRefreshRequests.set(sessionKey, request);
+  }
+  return request;
+}
+
+async function refreshPrepaidAccessSessionInternal(
+  accountId: string,
+  address: string,
+  session: PrepaidAccessSession,
+) {
+  const generation = getPrepaidAccessGeneration(accountId);
+  const currentSession = await getPrepaidAccessSession(accountId, address);
+  if (currentSession && currentSession.access_token !== session.access_token) return currentSession;
   if (!hasValidPrepaidRefreshToken(session)) return undefined;
   const refreshedSession = await fetchPrepaidJson<PrepaidAccessSession>(
     accountId,
@@ -175,8 +281,13 @@ async function refreshPrepaidAccessSession(
       },
       body: JSON.stringify({ address }),
     },
+    { retries: 1, timeouts: PREPAID_ACCESS_REQUEST_TIMEOUTS[0] },
   );
-  await savePrepaidAccessSession(accountId, refreshedSession);
+  if (generation !== getPrepaidAccessGeneration(accountId)) {
+    await revokePrepaidAccessSessionRemotely(accountId, address, refreshedSession);
+    return undefined;
+  }
+  await savePrepaidAccessSession(accountId, address, refreshedSession);
   return refreshedSession;
 }
 
@@ -191,7 +302,8 @@ function isPrepaidAccessError(error: unknown) {
 }
 
 export async function authorizeWalletPrepaid(accountId: string, enclaveToken: string) {
-  const { address } = await getTronAccount(accountId);
+  const { account, address } = await getTronAccount(accountId);
+  if (account.type === 'view') throw new Error('UnsupportedAccountType');
   await createPrepaidAccessSession(accountId, enclaveToken, address);
   const overview = await fetchWalletPrepaidOverview(accountId);
   if (!overview) throw new Error('WalletPrepaidAuthorizationFailed');
@@ -210,8 +322,9 @@ export function ensureWalletPrepaidAccess(accountId: string, enclaveToken: strin
 }
 
 async function ensureWalletPrepaidAccessInternal(accountId: string, enclaveToken: string) {
-  const { address } = await getTronAccount(accountId);
-  const session = await getPrepaidAccessSession(accountId);
+  const { account, address } = await getTronAccount(accountId);
+  if (account.type === 'view') return;
+  const session = await getPrepaidAccessSession(accountId, address);
   if (session) {
     if (session.expires_at * 1000 - Date.now() > PREPAID_ACCESS_REFRESH_THRESHOLD_MS) return;
 
@@ -220,7 +333,7 @@ async function ensureWalletPrepaidAccessInternal(accountId: string, enclaveToken
     } catch (error) {
       if (!isPrepaidAccessError(error) && session.expires_at * 1000 > Date.now()) return;
       if (!isPrepaidAccessError(error)) throw error;
-      await removePrepaidAccessSession(accountId, session.access_token);
+      await removePrepaidAccessSession(accountId, address, session.access_token);
     }
   }
 
@@ -228,6 +341,7 @@ async function ensureWalletPrepaidAccessInternal(accountId: string, enclaveToken
 }
 
 async function createPrepaidAccessSession(accountId: string, enclaveToken: string, address: string) {
+  const generation = getPrepaidAccessGeneration(accountId);
   const challenge = await fetchPrepaidJson<PrepaidAccessChallenge>(
     accountId,
     'access/challenge',
@@ -237,13 +351,9 @@ async function createPrepaidAccessSession(accountId: string, enclaveToken: strin
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ address }),
     },
+    { retries: PREPAID_ACCESS_REQUEST_RETRIES, timeouts: PREPAID_ACCESS_REQUEST_TIMEOUTS },
   );
-  const proof = await createWalletProof(
-    accountId,
-    enclaveToken,
-    challenge.proof_address,
-    challenge.memo,
-  );
+  const proof = await createWalletAccessProof(accountId, enclaveToken, challenge);
   const session = await fetchPrepaidJson<PrepaidAccessSession>(
     accountId,
     'access/complete',
@@ -253,47 +363,111 @@ async function createPrepaidAccessSession(accountId: string, enclaveToken: strin
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ challenge: challenge.challenge, proof }),
     },
+    { retries: PREPAID_ACCESS_REQUEST_RETRIES, timeouts: PREPAID_ACCESS_REQUEST_TIMEOUTS },
   );
-  await savePrepaidAccessSession(accountId, session);
+  if (generation !== getPrepaidAccessGeneration(accountId)) {
+    await revokePrepaidAccessSessionRemotely(accountId, address, session);
+    return;
+  }
+  await savePrepaidAccessSession(accountId, address, session);
 }
 
-async function getPrepaidAccessSession(accountId: string) {
-  let session = prepaidAccessSessions.get(accountId);
+async function revokePrepaidAccessSessionRemotely(
+  accountId: string,
+  address: string,
+  session: PrepaidAccessSession,
+) {
+  if (!hasValidPrepaidRefreshToken(session)) return;
+  try {
+    await fetchPrepaidJson<{ revoked: boolean }>(accountId, 'access/revoke', undefined, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.refresh_token}`,
+      },
+      body: JSON.stringify({ address }),
+      keepalive: true,
+    }, { retries: 1, timeouts: PREPAID_ACCESS_REVOKE_TIMEOUT_MS });
+  } catch {
+    // Local wallet removal must remain available when the API cannot be reached.
+  }
+}
+
+function getPrepaidAccessGeneration(accountId: string) {
+  return prepaidAccessGenerations.get(accountId) ?? 0;
+}
+
+function invalidatePrepaidAccessOperations(accountId: string) {
+  prepaidAccessGenerations.set(accountId, getPrepaidAccessGeneration(accountId) + 1);
+}
+
+async function getPrepaidAccessSession(accountId: string, address: string) {
+  const sessionKey = getPrepaidAccessSessionKey(accountId, address);
+  let session = prepaidAccessSessions.get(sessionKey);
+  let shouldMigrate = false;
   if (!session) {
     const stored = await storage.getItem(PREPAID_ACCESS_STORAGE_KEY) as
       Record<string, PrepaidAccessSession> | undefined;
-    session = prepaidAccessSessions.get(accountId) ?? stored?.[accountId];
+    session = prepaidAccessSessions.get(sessionKey) ?? stored?.[sessionKey] ?? stored?.[accountId];
+    shouldMigrate = !stored?.[sessionKey] && Boolean(stored?.[accountId]);
   }
   if (!session || typeof session.access_token !== 'string' || !Number.isFinite(session.expires_at)) {
     return undefined;
   }
   if (session.expires_at * 1000 <= Date.now() && !hasValidPrepaidRefreshToken(session)) {
-    await removePrepaidAccessSession(accountId, session.access_token);
+    await removePrepaidAccessSession(accountId, address, session.access_token);
     return undefined;
   }
 
-  prepaidAccessSessions.set(accountId, session);
+  prepaidAccessSessions.set(sessionKey, session);
+  if (shouldMigrate) await migrateStoredPrepaidAccessSession(accountId, sessionKey, session);
   return session;
 }
 
-async function savePrepaidAccessSession(accountId: string, session: PrepaidAccessSession) {
-  prepaidAccessSessions.set(accountId, session);
-  await mutateStoredPrepaidAccessSessions((stored) => ({ ...stored, [accountId]: session }));
+async function savePrepaidAccessSession(accountId: string, address: string, session: PrepaidAccessSession) {
+  const sessionKey = getPrepaidAccessSessionKey(accountId, address);
+  prepaidAccessSessions.set(sessionKey, session);
+  await mutateStoredPrepaidAccessSessions((stored) => {
+    const next = { ...stored, [sessionKey]: session };
+    delete next[accountId];
+    return next;
+  });
 }
 
-async function removePrepaidAccessSession(accountId: string, expectedAccessToken?: string) {
-  const currentSession = prepaidAccessSessions.get(accountId);
+async function removePrepaidAccessSession(accountId: string, address: string, expectedAccessToken?: string) {
+  const sessionKey = getPrepaidAccessSessionKey(accountId, address);
+  const currentSession = prepaidAccessSessions.get(sessionKey);
   if (expectedAccessToken && currentSession && currentSession.access_token !== expectedAccessToken) return;
 
-  prepaidAccessSessions.delete(accountId);
+  prepaidAccessSessions.delete(sessionKey);
   const remove = (stored: Record<string, PrepaidAccessSession> = {}) => {
-    if (expectedAccessToken && stored[accountId]?.access_token !== expectedAccessToken) return stored;
+    const storedSession = stored[sessionKey] ?? stored[accountId];
+    if (expectedAccessToken && storedSession?.access_token !== expectedAccessToken) return stored;
 
     const next = { ...stored };
+    delete next[sessionKey];
     delete next[accountId];
     return next;
   };
   await mutateStoredPrepaidAccessSessions(remove);
+}
+
+function getPrepaidAccessSessionKey(accountId: string, address: string) {
+  return `${parseAccountId(accountId).network}:${address}`;
+}
+
+async function migrateStoredPrepaidAccessSession(
+  accountId: string,
+  sessionKey: string,
+  session: PrepaidAccessSession,
+) {
+  await mutateStoredPrepaidAccessSessions((stored) => {
+    if (!stored[accountId]) return stored;
+
+    const next = { ...stored, [sessionKey]: stored[sessionKey] ?? session };
+    delete next[accountId];
+    return next;
+  });
 }
 
 async function mutateStoredPrepaidAccessSessions(
@@ -397,6 +571,13 @@ export async function topUpWalletPrepaid(
     },
     { retries: 1, timeouts: 275_000 },
   );
+  if (result.result && result.txid) {
+    rememberWalletSponsorshipActivityLink(network, address, {
+      quote_id: result.quote_id || quote.quote_id,
+      main_txid: result.txid,
+      purpose: 'prepaid_topup',
+    });
+  }
   if (result.status === 'completed') return result;
 
   for (let attempt = 0; attempt < TOPUP_CONFIRMATION_ATTEMPTS; attempt++) {

@@ -114,8 +114,8 @@ addActionHandler('fetchActivityDetails', async (global, actions, { id }) => {
     IS_LEGENDS_WALLET
     && activity?.kind === 'transaction'
     && getChainBySlug(activity.slug) === 'tron'
-    && !activity.extra?.walletSponsorship
-    && !activity.extra?.walletSponsorshipChecked,
+    && selectAccount(global, accountId)?.type !== 'view'
+    && !activity.extra?.walletPrepaidTopupChecked,
   );
 
   if (!activity?.shouldLoadDetails && !shouldRefreshWalletSponsorship) {
@@ -128,6 +128,7 @@ addActionHandler('fetchActivityDetails', async (global, actions, { id }) => {
     if (!walletAddress) return;
 
     const refreshedActivities = await callApi('fetchTransactionById', {
+      accountId,
       chain: 'tron',
       network: selectCurrentNetwork(global),
       txHash: parseTxId(activity.id).hash,

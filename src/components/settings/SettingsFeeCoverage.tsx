@@ -19,7 +19,7 @@ import {
 import buildClassName from '../../util/buildClassName';
 import { shortenAddress } from '../../util/shortenAddress';
 import { getTelegramApp } from '../../util/telegram';
-import { callApi } from '../../api';
+import { callApiWithThrow } from '../../api';
 
 import useHistoryBack from '../../hooks/useHistoryBack';
 import useLang from '../../hooks/useLang';
@@ -106,7 +106,7 @@ function SettingsFeeCoverage({
     setIsLoading(true);
     setError('');
     try {
-      setOverview(await callApi('authorizeWalletPrepaid', accountId, token));
+      setOverview(await callApiWithThrow('authorizeWalletPrepaid', accountId, token));
       setIsAuthorizationOpen(false);
       return true;
     } catch (authorizationError) {
@@ -121,10 +121,11 @@ function SettingsFeeCoverage({
   const load = useLastCallback(async () => {
     if (!accountId || isLoading) return;
     try {
-      const result = await callApi('fetchWalletPrepaidOverview', accountId);
+      const result = await callApiWithThrow('fetchWalletPrepaidOverview', accountId);
       if (result) {
         setOverview(result);
         setError('');
+        setIsAuthorizationOpen(false);
         return;
       }
 
@@ -174,7 +175,7 @@ function SettingsFeeCoverage({
     setIsLoading(true);
     setError('');
     try {
-      setOverview(await callApi('setWalletPrepaidCoverageMode', accountId, enclaveToken, pendingMode));
+      setOverview(await callApiWithThrow('setWalletPrepaidCoverageMode', accountId, enclaveToken, pendingMode));
       setPendingMode(undefined);
     } catch (updateError) {
       setError(updateError instanceof Error ? updateError.message : 'Unable to update fee coverage mode');
@@ -203,7 +204,9 @@ function SettingsFeeCoverage({
     setIsLoading(true);
     setError('');
     try {
-      const result = await callApi('linkWalletPrepaidAccounts', accountId, candidateAccountId, enclaveToken);
+      const result = await callApiWithThrow(
+        'linkWalletPrepaidAccounts', accountId, candidateAccountId, enclaveToken,
+      );
       if (result && 'error' in result) throw new Error(result.error);
       setOverview(result);
       closeLinkModal();
@@ -231,7 +234,7 @@ function SettingsFeeCoverage({
     setIsLoading(true);
     setError('');
     try {
-      const result = await callApi('fetchWalletBotBalanceProjects', accountId, auth);
+      const result = await callApiWithThrow('fetchWalletBotBalanceProjects', accountId, auth);
       if (!result?.projects.length) throw new Error('No bot projects are available');
       if (result.projects.length === 1) {
         setIntegrationAuth({ ...auth, projectId: result.projects[0].id });
@@ -276,10 +279,10 @@ function SettingsFeeCoverage({
     setIsLoading(true);
     setError('');
     try {
-      setOverview(await callApi('connectWalletBotBalance', accountId, enclaveToken, integrationAuth));
+      setOverview(await callApiWithThrow('connectWalletBotBalance', accountId, enclaveToken, integrationAuth));
       closeIntegrationModal();
     } catch (integrationError) {
-      const currentOverview = await callApi('fetchWalletPrepaidOverview', accountId).catch(() => undefined);
+      const currentOverview = await callApiWithThrow('fetchWalletPrepaidOverview', accountId).catch(() => undefined);
       if (currentOverview) {
         setOverview(currentOverview);
       }
@@ -303,7 +306,7 @@ function SettingsFeeCoverage({
     setIsLoading(true);
     setError('');
     try {
-      setOverview(await callApi('disconnectWalletBotBalance', accountId, enclaveToken));
+      setOverview(await callApiWithThrow('disconnectWalletBotBalance', accountId, enclaveToken));
       setIsDisconnectModalOpen(false);
       setIsDisconnectConfirmed(false);
     } catch (disconnectError) {

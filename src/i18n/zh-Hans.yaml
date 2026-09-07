@@ -161,6 +161,7 @@ Description Copied: 描述已复制
 Message Copied: 消息已复制
 Sender: 发送者
 Recipient: 接收者
+Counterparty: 交易对手
 "%chain% Address Copied": "%chain% 地址已复制"
 Repeat: 重复
 Switch Account: 切换账户
@@ -1749,5 +1750,6 @@ $enclave_migration_interrupted_message: |
 Hide Unverified NFTs: 隐藏未验证的NFT
 Unverified: 未验证
 Prepaid: 手续费余额
+$prepaid_history_topup: 手续费余额充值
 $bot_balance_project_help: 选择用于支付此钱包手续费的机器人项目余额。
 $bot_balance_disconnect_warning: 断开连接后，此钱包将停止使用项目余额支付手续费。资金仍会保留在机器人项目余额中，并可继续在机器人中使用。

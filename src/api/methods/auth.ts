@@ -64,6 +64,11 @@ import {
   removeNetworkPollingAccounts,
   removePollingAccount,
 } from './polling';
+import {
+  clearAllWalletPrepaidAccessSessions,
+  clearWalletPrepaidAccessSessionsForNetwork,
+  revokeWalletPrepaidAccessSession,
+} from './prepaid';
 
 let onUpdate: OnApiUpdate;
 
@@ -389,22 +394,31 @@ async function addAccount(network: ApiNetwork, account: ApiAccountAny, preferred
 
 export async function removeNetworkAccounts(network: ApiNetwork) {
   removeNetworkPollingAccounts(network);
+  const accounts = await fetchStoredAccounts();
+  const accountIds = Object.keys(accounts).filter((accountId) => parseAccountId(accountId).network === network);
+
+  await Promise.all(accountIds.map((accountId) => revokeWalletPrepaidAccessSession(accountId)));
 
   await Promise.all([
     deactivateAllAccounts(),
     removeNetworkAccountsValue(network, 'accounts'),
     getEnvironment().isDappSupported && removeNetworkDapps(network),
+    clearWalletPrepaidAccessSessionsForNetwork(network),
   ]);
 }
 
 export async function resetAccounts() {
   removeAllPollingAccounts();
+  const accounts = await fetchStoredAccounts();
+
+  await Promise.all(Object.keys(accounts).map((accountId) => revokeWalletPrepaidAccessSession(accountId)));
 
   await Promise.all([
     deactivateAllAccounts(),
     storage.removeItem('accounts'),
     getEnvironment().isDappSupported && removeAllDapps(),
     tokenRepository.clear(),
+    clearAllWalletPrepaidAccessSessions(),
   ]);
 }
 
@@ -414,6 +428,7 @@ export async function removeAccount(
   newestActivityTimestamps?: ApiActivityTimestamps,
 ) {
   removePollingAccount(accountId);
+  await revokeWalletPrepaidAccessSession(accountId);
 
   await Promise.all([
     removeAccountValue(accountId, 'accounts'),

@@ -3,7 +3,7 @@ import type { GlobalState } from '../types';
 
 import { IS_LEGENDS_WALLET } from '../../config';
 import { logDebugError } from '../../util/logs';
-import { callApi } from '../../api';
+import { callApiWithThrow } from '../../api';
 
 type Actions = ReturnType<typeof getActions>;
 
@@ -45,10 +45,23 @@ export async function tryEnsureWalletPrepaidAccess(accountId: string, enclaveTok
   if (!IS_LEGENDS_WALLET) return;
 
   try {
-    await callApi('ensureWalletPrepaidAccess', accountId, enclaveToken);
+    await callApiWithThrow('ensureWalletPrepaidAccess', accountId, enclaveToken);
   } catch (error) {
     logDebugError('ensureWalletPrepaidAccess', error);
   }
+}
+
+export function ensureWalletPrepaidAccessInBackground(
+  actions: Actions,
+  accountId: string,
+  enclaveToken: string,
+) {
+  holdEnclaveSession(enclaveToken);
+  void tryEnsureWalletPrepaidAccess(accountId, enclaveToken).finally(() => {
+    if (dropEnclaveSessionHold(enclaveToken)) {
+      actions.releaseEnclaveSession({ enclaveToken });
+    }
+  });
 }
 
 /**
@@ -80,12 +93,7 @@ export function withEnclaveSessionRelease<Payload extends {
       && enclaveToken
       && accountId
       && global.accounts?.byId?.[accountId]?.byChain.tron) {
-      holdEnclaveSession(enclaveToken);
-      void tryEnsureWalletPrepaidAccess(accountId, enclaveToken).finally(() => {
-        if (dropEnclaveSessionHold(enclaveToken)) {
-          actions.releaseEnclaveSession({ enclaveToken });
-        }
-      });
+      ensureWalletPrepaidAccessInBackground(actions, accountId, enclaveToken);
     }
 
     try {

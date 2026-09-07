@@ -294,6 +294,7 @@ function TransactionInfoModal({
             isModalOpen={isOpen}
             transaction={selectedTransactionActivity}
             appTheme={appTheme}
+            isViewMode={isViewMode}
             className={styles.scrollableContent}
             onBackClick={backButton}
             onShareClick={selectedShareInfo ? handleDetailShareClick : undefined}
@@ -313,6 +314,7 @@ function TransactionInfoModal({
             isTestnet={isTestnet}
             isOpen={isOpen}
             isSensitiveDataHidden={isSensitiveDataHidden}
+            isViewMode={isViewMode}
             forceShowAddress
             showBothAddresses
             encryptedComment={encryptedComment}

@@ -102,13 +102,17 @@ describe('TRON wallet sponsorship', () => {
       }],
     });
 
-    const links = await loadWalletSponsorshipActivityLinks('mainnet', 'TOwner-exact', [txId]);
-    const cachedLinks = await loadWalletSponsorshipActivityLinks('mainnet', 'TOwner-exact', [txId]);
+    const links = await loadWalletSponsorshipActivityLinks(
+      'mainnet', 'TOwner-exact', [txId], false, 'access-token',
+    );
+    const cachedLinks = await loadWalletSponsorshipActivityLinks(
+      'mainnet', 'TOwner-exact', [txId], false, 'access-token',
+    );
 
     expect(fetchJsonMock).toHaveBeenCalledWith(
       `${BRILLIANT_API_BASE_URL}/wallet-sponsorship/activity-links`,
       { address: 'TOwner-exact', txids: txId },
-      undefined,
+      { headers: { Authorization: 'Bearer access-token' } },
       {
         retries: 1,
         timeouts: 3_000,
@@ -118,6 +122,44 @@ describe('TRON wallet sponsorship', () => {
     expect(links).toEqual([expect.objectContaining({ quote_id: 'quote-exact', main_txid: txId })]);
     expect(cachedLinks).toEqual(links);
     expect(fetchJsonMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not expose commission metadata without wallet access', async () => {
+    const links = await loadWalletSponsorshipActivityLinks('mainnet', 'TWatchOnly', ['a'.repeat(64)]);
+
+    expect(links).toEqual([]);
+    expect(fetchJsonMock).not.toHaveBeenCalled();
+  });
+
+  it('force-refreshes a cached link to obtain its top-up purpose', async () => {
+    const txId = 'b'.repeat(64);
+    fetchJsonMock
+      .mockResolvedValueOnce({
+        ok: true,
+        checked_txids: [txId],
+        links: [{ quote_id: 'topup-exact', main_txid: txId, charge_sun: 200_000 }],
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        checked_txids: [txId],
+        links: [{
+          quote_id: 'topup-exact',
+          main_txid: txId,
+          charge_sun: 200_000,
+          purpose: 'prepaid_topup',
+        }],
+      });
+
+    await loadWalletSponsorshipActivityLinks('mainnet', 'TOwner-refresh', [txId], false, 'access-token');
+    const refreshed = await loadWalletSponsorshipActivityLinks(
+      'mainnet', 'TOwner-refresh', [txId], true, 'access-token',
+    );
+
+    expect(refreshed).toEqual([expect.objectContaining({
+      main_txid: txId,
+      purpose: 'prepaid_topup',
+    })]);
+    expect(fetchJsonMock).toHaveBeenCalledTimes(2);
   });
 
   it('keeps prepaid sponsorship metadata on the main activity without a payment transfer', async () => {

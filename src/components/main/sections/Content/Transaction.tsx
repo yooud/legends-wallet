@@ -161,6 +161,7 @@ function Transaction({
 
   const token = tokensBySlug[slug];
   const { chain } = token || {};
+  const isViewMode = accounts?.[currentAccountId]?.type === 'view';
   const address = isIncoming ? fromAddress : toAddress;
   const localAddressName = useMemo(() => {
     if (!chain) return undefined;
@@ -478,7 +479,10 @@ function Transaction({
               isNoSubheaderLeft && attachmentsTakeSubheader === 'none' && styles.atMiddle,
             )}
           >
-            {displayOverrides?.title ?? getTransactionTitle(transaction, titleTense, lang)}
+            {displayOverrides?.title
+              ?? (!isViewMode && extra?.walletPrepaidTopup
+                ? lang('$prepaid_history_topup')
+                : getTransactionTitle(transaction, titleTense, lang))}
             {isScamTransaction(transaction) && <img src={scamImg} alt={lang('Scam')} className={styles.scamImage} />}
           </div>
           {renderAmount()}

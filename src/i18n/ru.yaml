@@ -166,6 +166,7 @@ Description Copied: Описание скопировано
 Message Copied: Сообщение скопировано
 Sender: Отправитель
 Recipient: Получатель
+Counterparty: Контрагент
 "%chain% Address Copied": "Адрес %chain% скопирован"
 Repeat: Повторить
 Switch Account: Сменить аккаунт

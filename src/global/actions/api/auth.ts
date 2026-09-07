@@ -51,6 +51,7 @@ import {
 } from '../../helpers/auth';
 import {
   dropEnclaveSessionHold,
+  ensureWalletPrepaidAccessInBackground,
   holdEnclaveSession,
   tryEnsureWalletPrepaidAccess,
   withEnclaveSessionRelease,
@@ -1019,7 +1020,7 @@ addActionHandler('createSubWallet', withEnclaveSessionRelease(async (global, act
   }
 
   if (!result.isNew) {
-    await tryEnsureWalletPrepaidAccess(result.accountId, enclaveToken);
+    ensureWalletPrepaidAccessInBackground(actions, result.accountId, enclaveToken);
     actions.switchAccount({ accountId: result.accountId });
     actions.showToast({
       message: getTranslation('Subwallet Switched'),
@@ -1031,8 +1032,6 @@ addActionHandler('createSubWallet', withEnclaveSessionRelease(async (global, act
   }
 
   if (!await duplicateSecretOrShowError(accountId, result.accountId)) return;
-
-  await tryEnsureWalletPrepaidAccess(result.accountId, enclaveToken);
 
   const currentAccount = selectAccount(global, accountId)!;
 
@@ -1056,6 +1055,8 @@ addActionHandler('createSubWallet', withEnclaveSessionRelease(async (global, act
 
     void actions.tryAddNotificationAccount({ accountId: result.accountId });
   }
+
+  ensureWalletPrepaidAccessInBackground(actions, result.accountId, enclaveToken);
 
   actions.showToast({
     message: getTranslation('Subwallet Created'),

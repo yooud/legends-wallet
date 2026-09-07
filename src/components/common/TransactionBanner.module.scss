@@ -21,6 +21,7 @@
     color: var(--color-transaction-amount-purple-text);
     background-color: var(--color-transaction-amount-purple-bg);
 
+    .tokenIcon,
     .chainIcon {
       --color-background-first: var(--color-transaction-amount-purple-bg);
     }
@@ -30,6 +31,7 @@
     color: var(--color-transaction-amount-green-text);
     background-color: var(--color-transaction-amount-green-bg);
 
+    .tokenIcon,
     .chainIcon {
       --color-background-first: var(--color-transaction-amount-green-bg);
     }
@@ -38,6 +40,11 @@
   &.twoIcons {
     padding: 0 0.375rem;
   }
+}
+
+.tokenIcon,
+.chainIcon {
+  --color-background-first: var(--color-transaction-amount-bg);
 }
 
 .nftIcon {
@@ -63,8 +70,6 @@
 }
 
 .chainIcon {
-  --color-background-first: var(--color-transaction-amount-bg);
-
   position: absolute;
   top: 0.625rem;
   inset-inline-start: 0.625rem;

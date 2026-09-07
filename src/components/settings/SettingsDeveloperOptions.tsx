@@ -83,6 +83,7 @@ const SEASONAL_THEME_OVERRIDE_OPTIONS: DropdownItem<SeasonalThemeOverrideOption>
 // downloading files from `blob:https://` schemes is limited by Telegram itself.
 // Also, file downloading is limited in extensions.
 const CAN_DOWNLOAD_LOGS = IS_IOS || !(IS_EXTENSION || IS_TELEGRAM_APP);
+const IS_LOGS_ONLY = APP_ENV === 'production' && IS_LEGENDS_WALLET;
 
 function SettingsDeveloperOptions({
   isOpen,
@@ -114,7 +115,7 @@ function SettingsDeveloperOptions({
 
   // Check if legacy data exists
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !IS_LOGS_ONLY) {
       void callApi('hasLegacyData')
         .then((result) => {
           setHasLegacyData(Boolean(result));
@@ -170,73 +171,79 @@ function SettingsDeveloperOptions({
       isCompact
       title={lang('Developer Options')}
     >
-      <div className={styles.settingsBlock}>
-        <Dropdown
-          label={lang('Network')}
-          items={NETWORK_OPTIONS}
-          selectedValue={currentNetwork}
-          theme="light"
-          arrow="chevron"
-          className={buildClassName(styles.item, styles.item_small)}
-          onChange={handleNetworkChange}
-        />
+      {!IS_LOGS_ONLY && (
+        <div className={styles.settingsBlock}>
+          <Dropdown
+            label={lang('Network')}
+            items={NETWORK_OPTIONS}
+            selectedValue={currentNetwork}
+            theme="light"
+            arrow="chevron"
+            className={buildClassName(styles.item, styles.item_small)}
+            onChange={handleNetworkChange}
+          />
 
-        {!IS_LEGENDS_WALLET && (
-          <div className={buildClassName(styles.item, styles.item_small)} onClick={handleAddTonOnlyWallet}>
-            <span className={styles.itemTitle}>{lang('Create TON-Only Wallet')}</span>
+          {!IS_LEGENDS_WALLET && (
+            <div className={buildClassName(styles.item, styles.item_small)} onClick={handleAddTonOnlyWallet}>
+              <span className={styles.itemTitle}>{lang('Create TON-Only Wallet')}</span>
 
-            <i className={buildClassName(styles.iconChevronRight, 'icon-plus')} aria-hidden />
-          </div>
-        )}
-
-        {!isViewMode && (
-          <div className={buildClassName(styles.item, styles.item_small)} onClick={onOpenPermissions}>
-            <span className={styles.itemTitle}>{lang('Permissions')}</span>
-
-            <i className={buildClassName(styles.iconChevronRight, 'icon-chevron-right')} aria-hidden />
-          </div>
-        )}
-
-        {!IS_LEGENDS_WALLET && (
-          <div
-            className={buildClassName(
-              styles.item,
-              styles.item_small,
-              !canViewAllWalletVersions && styles.item_disabled,
-            )}
-            onClick={onShowAllWalletVersions}
-          >
-            <span className={styles.itemTitle}>{lang('All Wallet Versions')}</span>
-
-            <div className={styles.itemInfo}>
-              {canViewAllWalletVersions ? (
-                <i className={buildClassName(styles.iconChevronRight, 'icon-chevron-right')} aria-hidden />
-
-              ) : (
-                <>
-                  <span className={styles.small}>{lang('Multichain')}</span>
-                  <i className={buildClassName(styles.iconChevronRight, 'icon-lock')} aria-hidden />
-                </>
-              )}
+              <i className={buildClassName(styles.iconChevronRight, 'icon-plus')} aria-hidden />
             </div>
+          )}
+
+          {!isViewMode && (
+            <div className={buildClassName(styles.item, styles.item_small)} onClick={onOpenPermissions}>
+              <span className={styles.itemTitle}>{lang('Permissions')}</span>
+
+              <i className={buildClassName(styles.iconChevronRight, 'icon-chevron-right')} aria-hidden />
+            </div>
+          )}
+
+          {!IS_LEGENDS_WALLET && (
+            <div
+              className={buildClassName(
+                styles.item,
+                styles.item_small,
+                !canViewAllWalletVersions && styles.item_disabled,
+              )}
+              onClick={onShowAllWalletVersions}
+            >
+              <span className={styles.itemTitle}>{lang('All Wallet Versions')}</span>
+
+              <div className={styles.itemInfo}>
+                {canViewAllWalletVersions ? (
+                  <i className={buildClassName(styles.iconChevronRight, 'icon-chevron-right')} aria-hidden />
+
+                ) : (
+                  <>
+                    <span className={styles.small}>{lang('Multichain')}</span>
+                    <i className={buildClassName(styles.iconChevronRight, 'icon-lock')} aria-hidden />
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {!IS_LOGS_ONLY && (
+        <>
+          <p className={styles.blockTitle}>{lang('Overrides')}</p>
+          <div className={styles.settingsBlock}>
+            <Dropdown
+              label={lang('Seasonal Theme Override')}
+              items={SEASONAL_THEME_OVERRIDE_OPTIONS}
+              selectedValue={seasonalThemeOverride ?? 'default'}
+              theme="light"
+              arrow="chevron"
+              className={buildClassName(styles.item, styles.item_small)}
+              onChange={handleSeasonalThemeOverrideChange}
+            />
           </div>
-        )}
-      </div>
+        </>
+      )}
 
-      <p className={styles.blockTitle}>{lang('Overrides')}</p>
-      <div className={styles.settingsBlock}>
-        <Dropdown
-          label={lang('Seasonal Theme Override')}
-          items={SEASONAL_THEME_OVERRIDE_OPTIONS}
-          selectedValue={seasonalThemeOverride ?? 'default'}
-          theme="light"
-          arrow="chevron"
-          className={buildClassName(styles.item, styles.item_small)}
-          onChange={handleSeasonalThemeOverrideChange}
-        />
-      </div>
-
-      {(isCopyStorageEnabled || canRollbackMigration) && (
+      {!IS_LOGS_ONLY && (isCopyStorageEnabled || canRollbackMigration) && (
         <>
           <p className={styles.blockTitle}>{lang('Dangerous')}</p>
           <div className={styles.settingsBlock}>

@@ -16,6 +16,7 @@ import {
   selectCurrentAccountId,
   selectCurrentAccountSettings,
   selectEnclaveToken,
+  selectIsCurrentAccountViewMode,
   selectIsEnclaveSessionValid,
 } from '../../global/selectors';
 import { ACCENT_COLORS } from '../../util/accentColor/constants';
@@ -23,7 +24,7 @@ import buildClassName from '../../util/buildClassName';
 import { formatHumanDay, formatTime, getDayStartAt } from '../../util/dateFormat';
 import { fromDecimal } from '../../util/decimals';
 import { shortenAddress } from '../../util/shortenAddress';
-import { callApi } from '../../api';
+import { callApiWithThrow } from '../../api';
 import { ANIMATED_STICKERS_PATHS } from '../ui/helpers/animatedAssets';
 
 import useAppTheme from '../../hooks/useAppTheme';
@@ -57,6 +58,7 @@ interface StateProps {
   isSensitiveDataHidden?: true;
   enclaveToken?: string;
   isEnclaveSessionValid: boolean;
+  isViewMode: boolean;
 }
 
 type HistoryItem = {
@@ -83,6 +85,7 @@ function Prepaid({
   isSensitiveDataHidden,
   enclaveToken,
   isEnclaveSessionValid,
+  isViewMode,
 }: OwnProps & StateProps) {
   const { closePrepaid, openTransactionInfo, releaseEnclaveSession } = getActions();
   const lang = useLang();
@@ -110,7 +113,7 @@ function Prepaid({
     setIsAuthorizing(true);
     setError('');
     try {
-      setOverview(await callApi('authorizeWalletPrepaid', currentAccountId, token));
+      setOverview(await callApiWithThrow('authorizeWalletPrepaid', currentAccountId, token));
       setIsAuthorizationOpen(false);
       return true;
     } catch (authorizationError) {
@@ -123,12 +126,13 @@ function Prepaid({
   });
 
   const load = useLastCallback(async () => {
-    if (!currentAccountId || isAuthorizing) return;
+    if (!currentAccountId || isAuthorizing || isViewMode) return;
     try {
-      const result = await callApi('fetchWalletPrepaidOverview', currentAccountId);
+      const result = await callApiWithThrow('fetchWalletPrepaidOverview', currentAccountId);
       if (result) {
         setOverview(result);
         setError('');
+        setIsAuthorizationOpen(false);
         return;
       }
 
@@ -142,10 +146,10 @@ function Prepaid({
   });
 
   useEffect(() => {
-    if (isActive) void load();
-  }, [currentAccountId, isActive]);
-  useInterval(load, isActive ? 10_000 : undefined);
-  useHistoryBack({ isActive, onBack: closePrepaid });
+    if (isActive && !isViewMode) void load();
+  }, [currentAccountId, isActive, isViewMode]);
+  useInterval(load, isActive && !isViewMode ? 10_000 : undefined);
+  useHistoryBack({ isActive: isActive && !isViewMode, onBack: closePrepaid });
 
   const history = useMemo<HistoryItem[]>(() => {
     if (!overview) return [];
@@ -198,6 +202,8 @@ function Prepaid({
 
     openTransactionInfo({ txHash: item.txHash, chain: TRX.chain });
   });
+
+  if (isViewMode) return undefined;
 
   return (
     <div className={styles.root}>
@@ -388,4 +394,5 @@ export default memo(withGlobal<OwnProps>((global): StateProps => ({
   isSensitiveDataHidden: global.settings.isSensitiveDataHidden,
   enclaveToken: selectEnclaveToken(global),
   isEnclaveSessionValid: selectIsEnclaveSessionValid(global),
+  isViewMode: selectIsCurrentAccountViewMode(global),
 }))(Prepaid));

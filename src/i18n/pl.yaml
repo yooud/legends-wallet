@@ -164,6 +164,7 @@ Description Copied: Opis skopiowany
 Message Copied: Wiadomość skopiowana
 Sender: Nadawca
 Recipient: Odbiorca
+Counterparty: Kontrahent
 "%chain% Address Copied": "Adres %chain% skopiowany"
 Repeat: Powtórzenie
 Switch Account: Konto Switch
@@ -1795,5 +1796,6 @@ $enclave_migration_interrupted_message: |
 Hide Unverified NFTs: Ukryj niezweryfikowane NFT
 Unverified: Niezweryfikowane
 Prepaid: Saldo opłat
+$prepaid_history_topup: Doładowanie salda opłat
 $bot_balance_project_help: Wybierz saldo projektu bota, które będzie używane do pokrywania opłat tego portfela.
 $bot_balance_disconnect_warning: Po odłączeniu ten portfel przestanie używać salda projektu do pokrywania opłat. Środki pozostaną na saldzie projektu bota i nadal będą dostępne w bocie.

@@ -162,6 +162,7 @@ Description Copied: Açıklama kopyalandı
 Message Copied: Mesaj kopyalandı
 Sender: Gönderici
 Recipient: Alıcı
+Counterparty: Karşı taraf
 "%chain% Address Copied": "%chain% Adresi kopyalandı"
 Repeat: Tekrarla
 Switch Account: Hesap değiştir
@@ -1754,5 +1755,6 @@ $enclave_migration_interrupted_message: |
 Hide Unverified NFTs: Doğrulanmamış NFT'leri Gizle
 Unverified: Doğrulanmamış
 Prepaid: Komisyon Bakiyesi
+$prepaid_history_topup: Komisyon bakiyesi yükleme
 $bot_balance_project_help: Bu cüzdanın ücretlerini karşılamak için hangi bot projesi bakiyesinin kullanılacağını seçin.
 $bot_balance_disconnect_warning: Bağlantı kesildiğinde bu cüzdan, ücretleri karşılamak için proje bakiyesini kullanmayı bırakır. Fonlar bot projesi bakiyesinde kalır ve botta kullanılmaya devam eder.

@@ -14,7 +14,12 @@ import {
   IS_LEGENDS_WALLET,
   IS_MY_WALLET_BRAND,
 } from '../config';
-import { selectCurrentAccountId, selectCurrentAccountSettings, selectCurrentAccountState } from '../global/selectors';
+import {
+  selectCurrentAccountId,
+  selectCurrentAccountSettings,
+  selectCurrentAccountState,
+  selectIsCurrentAccountViewMode,
+} from '../global/selectors';
 import { useAccentColor } from '../util/accentColor';
 import { setActiveTabChangeListener } from '../util/activeTabMonitor';
 import buildClassName from '../util/buildClassName';
@@ -325,7 +330,7 @@ export default memo(withGlobal((global): StateProps => {
     isAgentOpen: global.isAgentOpen,
     isExploreOpen: global.isExploreOpen,
     isPortfolioOpen: global.isPortfolioOpen,
-    isPrepaidOpen: global.isPrepaidOpen,
+    isPrepaidOpen: selectIsCurrentAccountViewMode(global) ? undefined : global.isPrepaidOpen,
     currentTokenSlug: selectCurrentAccountState(global)?.currentTokenSlug,
     areSettingsOpen: global.areSettingsOpen,
     isFullscreen: Boolean(global.isFullscreen),

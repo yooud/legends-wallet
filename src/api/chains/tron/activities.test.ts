@@ -1,6 +1,7 @@
 import type { ApiTransactionActivity } from '../../types';
 
 import { TRX } from '../../../config';
+import { shouldShowTransactionAddress } from '../../../util/activities';
 import { fetchJson } from '../../../util/fetch';
 import { makeMockSwapActivity, makeMockTransactionActivity } from '../../../../tests/mocks';
 import { ApiServerError } from '../../errors';
@@ -80,6 +81,25 @@ describe('mergeActivities', () => {
     // tokenTx should have fee from trxTx
     const resultTokenTx = result.find((a) => a.id === 'a') as ApiTransactionActivity;
     expect(resultTokenTx.fee).toBe(123n);
+  });
+
+  it('preserves the prepaid top-up marker in the ordinary activity history', () => {
+    const txsBySlug = {
+      [TRX.slug]: [makeMockTransactionActivity({ id: 'topup', timestamp: 1, fee: 200_000n })],
+      'mock-token': [makeMockTransactionActivity({
+        id: 'topup',
+        timestamp: 1,
+        extra: { walletPrepaidTopup: true },
+      })],
+    };
+
+    const [activity] = mergeActivities(txsBySlug);
+
+    expect(activity).toMatchObject({
+      id: 'topup',
+      fee: 200_000n,
+      extra: { walletPrepaidTopup: true },
+    });
   });
 
   it('does not duplicate swap activities shared between TRX and token', () => {
@@ -275,6 +295,7 @@ describe('reconcileWalletSponsorshipActivities', () => {
         charge_sun: 200_000,
         service_fee_sun: 200_000,
         onchain_fee_sun: 268_000,
+        purpose: 'prepaid_topup' as const,
       }],
     );
 
@@ -285,7 +306,30 @@ describe('reconcileWalletSponsorshipActivities', () => {
           serviceFee: 200_000n,
           onchainFee: 268_000n,
         },
+        walletPrepaidTopup: true,
       },
     });
+    expect(shouldShowTransactionAddress(activity as ApiTransactionActivity)).toEqual([]);
+  });
+
+  it('labels a bot top-up without replacing its on-chain fee', () => {
+    const [activity] = reconcileWalletSponsorshipActivities(
+      TRX.slug,
+      [makeMockTransactionActivity({ id: 'bot-topup-tx', fee: 268_000n })],
+      [{
+        quote_id: 'bot-topup-42',
+        main_txid: 'bot-topup-tx',
+        purpose: 'prepaid_topup' as const,
+      }],
+    );
+
+    expect(activity).toMatchObject({
+      fee: 268_000n,
+      extra: {
+        walletPrepaidTopup: true,
+      },
+    });
+    expect(activity.extra?.walletSponsorship).toBeUndefined();
+    expect(shouldShowTransactionAddress(activity as ApiTransactionActivity)).toEqual([]);
   });
 });

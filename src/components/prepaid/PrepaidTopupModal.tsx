@@ -8,15 +8,15 @@ import { selectAccountTokens } from '../../global/selectors';
 import buildClassName from '../../util/buildClassName';
 import { fromDecimal, toDecimal } from '../../util/decimals';
 import { stopEvent } from '../../util/domEvents';
-import { callApi } from '../../api';
+import { callApiWithThrow } from '../../api';
 
 import useLang from '../../hooks/useLang';
 import useLastCallback from '../../hooks/useLastCallback';
 import { useAmountInputState } from '../ui/hooks/useAmountInputState';
 
-import AddressInput from '../ui/AddressInput';
 import AmountInput from '../ui/AmountInput';
 import Button from '../ui/Button';
+import InteractiveTextField from '../ui/InteractiveTextField';
 import Modal from '../ui/Modal';
 import ModalHeader from '../ui/ModalHeader';
 import PasswordForm from '../ui/PasswordForm';
@@ -86,7 +86,7 @@ function PrepaidTopupModal({
     setAmount(undefined);
     setIsAuthorizing(false);
     setError('');
-    void callApi('fetchWalletPrepaidOverview', accountId).then(setOverview).catch((loadError) => {
+    void callApiWithThrow('fetchWalletPrepaidOverview', accountId).then(setOverview).catch((loadError) => {
       setError(getErrorText(loadError));
     });
   }, [accountId, isOpen]);
@@ -128,7 +128,9 @@ function PrepaidTopupModal({
     setIsLoading(true);
     setError('');
     try {
-      const result = await callApi('topUpWalletPrepaid', accountId, enclaveToken, selectedToken.slug, amount);
+      const result = await callApiWithThrow(
+        'topUpWalletPrepaid', accountId, enclaveToken, selectedToken.slug, amount,
+      );
       if (result && 'error' in result) throw new Error(result.error);
       onSuccess();
       onClose();
@@ -186,16 +188,11 @@ function PrepaidTopupModal({
 
           <div className={transferStyles.transferTitle}>{lang('Top Up')}</div>
 
-          <AddressInput
-            label={lang('Recipient Address')}
-            value={overview?.deposit_address || ''}
-            chain="tron"
-            isReadonly
-            shouldHideAddressBook
-            address={overview?.deposit_address || ''}
-            addressName="Legends Energy"
-            onInput={() => undefined}
-            onClose={onClose}
+          <div className={transferStyles.label}>{lang('Counterparty')}</div>
+          <InteractiveTextField
+            isStatic
+            text="Legends Energy"
+            className={styles.counterparty}
           />
 
           <AmountInput

@@ -273,6 +273,7 @@ function TransactionModal({
                 transaction={renderedTransaction}
                 appTheme={appTheme}
                 isModalOpen={isModalOpen}
+                isViewMode={isViewMode}
                 onShareClick={chain && transactionHash ? handleShareClick : undefined}
                 onClose={handleClose}
               />

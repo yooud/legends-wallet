@@ -162,6 +162,7 @@ Description Copied: Beschreibung kopiert
 Message Copied: Nachricht kopiert
 Sender: Absender
 Recipient: Empfänger
+Counterparty: Gegenpartei
 "%chain% Address Copied": "%chain%-Adresse kopiert"
 Repeat: Wiederholen
 Switch Account: Konto wechseln
@@ -1763,5 +1764,6 @@ $enclave_migration_interrupted_message: |
 Hide Unverified NFTs: Ungeprüfte NFTs ausblenden
 Unverified: Ungeprüft
 Prepaid: Gebührenguthaben
+$prepaid_history_topup: Aufladung des Gebührenguthabens
 $bot_balance_project_help: Wählen Sie aus, welches Bot-Projektguthaben zur Deckung der Gebühren dieser Wallet verwendet werden soll.
 $bot_balance_disconnect_warning: Nach der Trennung verwendet diese Wallet das Projektguthaben nicht mehr zur Deckung von Gebühren. Das Guthaben verbleibt im Bot-Projekt und kann weiterhin im Bot verwendet werden.

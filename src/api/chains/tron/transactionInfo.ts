@@ -15,7 +15,8 @@ import {
   parseRawTrxTransaction,
 } from './activities';
 import {
-  getCachedWalletSponsorshipActivityLinks,
+  getCheckedWalletPrepaidTopupTransactionIds,
+  getCheckedWalletSponsorshipTransactionIds,
   loadWalletSponsorshipActivityLinks,
   reconcileWalletSponsorshipActivities,
 } from './sponsorship';
@@ -27,15 +28,15 @@ import {
  * For TRON, `txId` is a transaction hash.
  */
 export async function fetchTransactionById(
-  { network, walletAddress, ...options }: ApiFetchTransactionByIdOptions,
+  { network, walletAddress, walletAccessToken, ...options }: ApiFetchTransactionByIdOptions,
 ): Promise<ApiActivity[]> {
   const isTxId = 'txId' in options;
   const txId = isTxId ? options.txId : options.txHash;
 
   try {
     const tronWeb = getTronClient(network);
-    const sponsorshipLinksPromise = walletAddress
-      ? getWalletSponsorshipLinksForTransaction(network, walletAddress, txId)
+    const sponsorshipLinksPromise = walletAddress && walletAccessToken
+      ? getWalletSponsorshipLinksForTransaction(network, walletAddress, txId, walletAccessToken)
       : undefined;
 
     const [txResult, txInfoResult] = await Promise.all([
@@ -59,7 +60,7 @@ export async function fetchTransactionById(
     const status = getTransactionStatus(txResult, txInfoResult);
     const sponsorshipLinks = sponsorshipLinksPromise
       ? await sponsorshipLinksPromise
-      : await loadWalletSponsorshipActivityLinks(network, walletAddress, [txId]);
+      : await loadWalletSponsorshipActivityLinks(network, walletAddress, [txId], false, walletAccessToken);
 
     const directTokenActivity = parseRawTrc20ContractTransaction(walletAddress, txResult, timestamp, status);
     if (directTokenActivity) {
@@ -68,6 +69,8 @@ export async function fetchTransactionById(
         directTokenActivity.slug,
         [directTokenActivity],
         sponsorshipLinks,
+        getCheckedWalletSponsorshipTransactionIds(network, walletAddress),
+        getCheckedWalletPrepaidTopupTransactionIds(network, walletAddress),
       );
     }
 
@@ -83,7 +86,13 @@ export async function fetchTransactionById(
       if (matchingTrc20Tx) {
         const activity = parseRawTrc20Transaction(walletAddress, matchingTrc20Tx, status);
         activity.fee = fee;
-        return reconcileWalletSponsorshipActivities(activity.slug, [activity], sponsorshipLinks);
+        return reconcileWalletSponsorshipActivities(
+          activity.slug,
+          [activity],
+          sponsorshipLinks,
+          getCheckedWalletSponsorshipTransactionIds(network, walletAddress),
+          getCheckedWalletPrepaidTopupTransactionIds(network, walletAddress),
+        );
       }
     }
 
@@ -98,7 +107,13 @@ export async function fetchTransactionById(
 
     const activity = parseRawTrxTransaction(walletAddress, combinedTx);
     activity.status = status;
-    return reconcileWalletSponsorshipActivities(activity.slug, [activity], sponsorshipLinks);
+    return reconcileWalletSponsorshipActivities(
+      activity.slug,
+      [activity],
+      sponsorshipLinks,
+      getCheckedWalletSponsorshipTransactionIds(network, walletAddress),
+      getCheckedWalletPrepaidTopupTransactionIds(network, walletAddress),
+    );
   } catch (err) {
     logDebugError('fetchTransactionById', 'tron', err);
     return [];
@@ -133,10 +148,11 @@ export function getTransactionStatus(txResult: any, txInfoResult: any): ApiTrans
   return 'completed';
 }
 
-function getWalletSponsorshipLinksForTransaction(network: ApiNetwork, address: string, txId: string) {
-  const cachedLinks = getCachedWalletSponsorshipActivityLinks(network, address);
-  const hasTransactionLink = cachedLinks.some((link) => link.main_txid === txId || link.payment_txid === txId);
-  return hasTransactionLink
-    ? Promise.resolve(cachedLinks)
-    : loadWalletSponsorshipActivityLinks(network, address, [txId]);
+function getWalletSponsorshipLinksForTransaction(
+  network: ApiNetwork,
+  address: string,
+  txId: string,
+  walletAccessToken: string,
+) {
+  return loadWalletSponsorshipActivityLinks(network, address, [txId], true, walletAccessToken);
 }

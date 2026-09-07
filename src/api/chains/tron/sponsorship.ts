@@ -51,15 +51,17 @@ export type WalletSponsorshipActivityLink = {
   quote_id: string;
   main_txid: string;
   payment_txid?: string;
-  charge_sun: number | string;
+  charge_sun?: number | string;
   service_fee_sun?: number | string;
   onchain_fee_sun?: number | string;
+  purpose?: 'prepaid_topup';
 };
 
 type WalletSponsorshipActivityLinksResponse = {
   ok: true;
   links: WalletSponsorshipActivityLink[];
   checked_txids?: string[];
+  purpose_checked_txids?: string[];
 };
 
 export type WalletSponsorshipIntent = {
@@ -86,6 +88,7 @@ type StoredSponsorshipQuote = {
 type SponsorshipLinksCacheEntry = {
   links: WalletSponsorshipActivityLink[];
   checkedTxids: Set<string>;
+  prepaidTopupCheckedTxids: Set<string>;
   expiresAt: number;
 };
 
@@ -268,17 +271,25 @@ export function getCheckedWalletSponsorshipTransactionIds(network: ApiNetwork, a
   return getValidSponsorshipCacheEntry(network, address)?.checkedTxids ?? new Set<string>();
 }
 
+export function getCheckedWalletPrepaidTopupTransactionIds(network: ApiNetwork, address: string) {
+  return getValidSponsorshipCacheEntry(network, address)?.prepaidTopupCheckedTxids ?? new Set<string>();
+}
+
 export async function loadWalletSponsorshipActivityLinks(
   network: ApiNetwork,
   address: string,
   transactionIds?: string[],
+  forceRefresh = false,
+  accessToken?: string,
 ) {
-  if (!IS_LEGENDS_WALLET) return [];
+  if (!IS_LEGENDS_WALLET || !accessToken) return [];
   if (transactionIds !== undefined) {
     const cacheKey = getSponsorshipCacheKey(network, address);
     const cached = getValidSponsorshipCacheEntry(network, address);
-    const uncheckedTxids = [...new Set(transactionIds)]
-      .filter((txid) => !cached?.checkedTxids.has(txid));
+    const uniqueTxids = [...new Set(transactionIds)];
+    const uncheckedTxids = forceRefresh
+      ? uniqueTxids
+      : uniqueTxids.filter((txid) => !cached?.checkedTxids.has(txid));
     if (!uncheckedTxids.length) return getCachedWalletSponsorshipActivityLinks(network, address);
     const requestKey = `${cacheKey}:${uncheckedTxids.slice().sort().join(',')}`;
     let request = sponsorshipExactRequests.get(requestKey);
@@ -287,13 +298,21 @@ export async function loadWalletSponsorshipActivityLinks(
         network,
         'activity-links',
         { address, txids: uncheckedTxids.join(',') },
-        undefined,
+        { headers: { Authorization: `Bearer ${accessToken}` } },
         { retries: 1, timeouts: SPONSORSHIP_LINKS_TIMEOUT_MS },
-      ).then(({ links, checked_txids: checkedTxids = uncheckedTxids }) => {
+      ).then(({
+        links,
+        checked_txids: checkedTxids = uncheckedTxids,
+        purpose_checked_txids: purposeCheckedTxids = [],
+      }) => {
         const latest = getValidSponsorshipCacheEntry(network, address);
         sponsorshipLinksCache.set(cacheKey, {
           links: mergeActivityLinks(latest?.links ?? [], links ?? []),
           checkedTxids: new Set([...(latest?.checkedTxids ?? []), ...checkedTxids]),
+          prepaidTopupCheckedTxids: new Set([
+            ...(latest?.prepaidTopupCheckedTxids ?? []),
+            ...purposeCheckedTxids,
+          ]),
           expiresAt: Date.now() + SPONSORSHIP_LINKS_CACHE_MS,
         });
       }).catch(() => {
@@ -322,6 +341,10 @@ export function rememberWalletSponsorshipActivityLink(
       ...(cached?.checkedTxids ?? []),
       ...[link.main_txid, link.payment_txid].filter((txId): txId is string => Boolean(txId)),
     ]),
+    prepaidTopupCheckedTxids: new Set([
+      ...(cached?.prepaidTopupCheckedTxids ?? []),
+      ...(link.purpose === 'prepaid_topup' ? [link.main_txid] : []),
+    ]),
     expiresAt: Date.now() + SPONSORSHIP_LINKS_CACHE_MS,
   });
 }
@@ -331,6 +354,7 @@ export function reconcileWalletSponsorshipActivities(
   activities: ApiActivity[],
   links: WalletSponsorshipActivityLink[],
   checkedTxids: Set<string> = new Set<string>(),
+  prepaidTopupCheckedTxids: Set<string> = new Set<string>(),
 ): ApiActivity[] {
   const paymentIds = new Set(links.map(({ payment_txid: paymentTxId }) => paymentTxId).filter(Boolean));
   const linksByMainId = new Map(links.map((link) => [link.main_txid, link]));
@@ -340,21 +364,32 @@ export function reconcileWalletSponsorshipActivities(
     const link = linksByMainId.get(activity.id);
     if (!link || activity.kind !== 'transaction') {
       return checkedTxids.has(activity.id) && activity.kind === 'transaction'
-        ? { ...activity, extra: { ...activity.extra, walletSponsorshipChecked: true } }
+        ? {
+          ...activity,
+          extra: {
+            ...activity.extra,
+            walletSponsorshipChecked: true,
+            ...(prepaidTopupCheckedTxids.has(activity.id) && { walletPrepaidTopupChecked: true as const }),
+          },
+        }
         : activity;
     }
-    const serviceFee = BigInt(link.service_fee_sun ?? link.charge_sun);
-    const onchainFee = BigInt(link.onchain_fee_sun ?? serviceFee);
+    const serviceFeeValue = link.service_fee_sun ?? link.charge_sun;
+    const serviceFee = serviceFeeValue !== undefined ? BigInt(serviceFeeValue) : undefined;
+    const onchainFee = link.onchain_fee_sun !== undefined ? BigInt(link.onchain_fee_sun) : serviceFee;
+    const walletSponsorship = serviceFee !== undefined && onchainFee !== undefined
+      ? { serviceFee, onchainFee }
+      : undefined;
     return {
       ...activity,
-      fee: serviceFee,
+      fee: serviceFee ?? activity.fee,
       extra: {
         ...activity.extra,
         walletSponsorshipChecked: true,
-        walletSponsorship: {
-          serviceFee,
-          onchainFee,
-        },
+        ...((prepaidTopupCheckedTxids.has(activity.id) || link.purpose === 'prepaid_topup')
+          && { walletPrepaidTopupChecked: true as const }),
+        ...(walletSponsorship && { walletSponsorship }),
+        ...(link.purpose === 'prepaid_topup' && { walletPrepaidTopup: true as const }),
         reconciliation: {
           operationId: `wallet-sponsorship:${link.quote_id}`,
           sourceActionIds: [link.main_txid, link.payment_txid].filter(Boolean),
@@ -411,7 +446,9 @@ function mergeActivityLinks(
   otherLinks: WalletSponsorshipActivityLink[],
 ) {
   const result = new Map(otherLinks.map((link) => [link.quote_id, link]));
-  priorityLinks.forEach((link) => result.set(link.quote_id, link));
+  priorityLinks.forEach((link) => {
+    result.set(link.quote_id, { ...result.get(link.quote_id), ...link });
+  });
   return [...result.values()];
 }
 

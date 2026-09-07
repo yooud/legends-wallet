@@ -45,9 +45,10 @@ export function createDirectApiConnector() {
   return {
     initApi,
     callApi,
+    callApiWithThrow: callApi,
   };
 }
 
 const defaultConnector = createDirectApiConnector();
 
-export const { initApi, callApi } = defaultConnector;
+export const { initApi, callApi, callApiWithThrow } = defaultConnector;

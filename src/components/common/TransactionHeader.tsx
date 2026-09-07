@@ -21,6 +21,7 @@ import scamImg from '../../assets/scam.svg';
 
 interface OwnProps {
   isModalOpen?: boolean;
+  isViewMode?: boolean;
   transaction: ApiTransactionActivity;
   appTheme: AppTheme;
   className?: string;
@@ -31,6 +32,7 @@ interface OwnProps {
 
 function TransactionHeader({
   isModalOpen,
+  isViewMode,
   transaction,
   appTheme,
   className,
@@ -74,7 +76,9 @@ function TransactionHeader({
       )}
       <div className={buildClassName(modalStyles.title, styles.modalTitle)}>
         <div className={styles.headerTitle}>
-          {getTransactionTitle(transaction, titleTense, lang)}
+          {!isViewMode && transaction.extra?.walletPrepaidTopup
+            ? lang('$prepaid_history_topup')
+            : getTransactionTitle(transaction, titleTense, lang)}
           {isAnyPending && (
             <AnimatedIconWithPreview
               play={isModalOpen}

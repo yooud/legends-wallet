@@ -194,6 +194,7 @@ function TransactionInfo({
   const isAnyPending = transaction ? getIsActivityPendingForUser(transaction) : undefined;
   const isTransactionWithPoisoning = transaction && getIsTransactionWithPoisoning(transaction);
   const isScam = Boolean(transaction) && isScamTransaction(transaction);
+  const isWalletPrepaidTopup = Boolean(!isViewMode && transaction?.extra?.walletPrepaidTopup);
   const shouldLoadDetails = transaction?.shouldLoadDetails;
 
   const stakingState = stakingStates?.find((staking): staking is ApiToncoinStakingState => {
@@ -220,7 +221,7 @@ function TransactionInfo({
 
   function renderFee() {
     const walletSponsorship = transaction?.extra?.walletSponsorship;
-    if (walletSponsorship && token) {
+    if (walletSponsorship && token && !isViewMode) {
       return (
         <WalletSponsorshipFee
           serviceFee={walletSponsorship.serviceFee}
@@ -232,13 +233,14 @@ function TransactionInfo({
       );
     }
 
-    if (!(fee || shouldLoadDetails) || !nativeToken) {
+    const displayFee = isViewMode && walletSponsorship ? walletSponsorship.onchainFee : fee;
+    if (!(displayFee || shouldLoadDetails) || !nativeToken) {
       return undefined;
     }
 
     return (
       <TransactionFee
-        terms={{ native: fee }}
+        terms={{ native: displayFee }}
         token={nativeToken}
         precision={isAnyPending ? 'approximate' : 'exact'}
         isLoading={shouldLoadDetails}
@@ -327,7 +329,7 @@ function TransactionInfo({
       && stakingStatus === 'active';
     const buttons: TeactNode[] = [];
 
-    if (!isOurStaking && !isIncoming && !isNftTransfer && onSendClick) {
+    if (!isWalletPrepaidTopup && !isOurStaking && !isIncoming && !isNftTransfer && onSendClick) {
       buttons.push(
         <Button onClick={onSendClick} className={styles.button}>
           {lang('Repeat')}
@@ -377,7 +379,16 @@ function TransactionInfo({
 
       {isTransactionWithPoisoning && renderTransactionWithPoisoningWarning()}
 
-      {transaction && (forceShowAddress || shouldShowTransactionAddress(transaction).includes('modal')) && (
+      {isWalletPrepaidTopup ? (
+        <>
+          <div className={transferStyles.label}>{lang('Counterparty')}</div>
+          <InteractiveTextField
+            isStatic
+            text="Legends Energy"
+            className={styles.copyButtonWrapper}
+          />
+        </>
+      ) : transaction && (forceShowAddress || shouldShowTransactionAddress(transaction).includes('modal')) && (
         showBothAddresses ? (
           <>
             {fromAddress && (

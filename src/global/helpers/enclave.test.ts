@@ -1,10 +1,10 @@
 import type { GlobalState } from '../types';
 
-import { callApi } from '../../api';
+import { callApiWithThrow } from '../../api';
 import { dropEnclaveSessionHold, holdEnclaveSession, withEnclaveSessionRelease } from './enclave';
 
 jest.mock('../../api', () => ({
-  callApi: jest.fn(() => Promise.resolve()),
+  callApiWithThrow: jest.fn(() => Promise.resolve()),
 }));
 
 const global = {} as GlobalState;
@@ -15,7 +15,7 @@ function createActions() {
 
 describe('withEnclaveSessionRelease', () => {
   beforeEach(() => {
-    jest.mocked(callApi).mockClear();
+    jest.mocked(callApiWithThrow).mockClear();
   });
 
   it('gives the session back once the flow is done with it', async () => {
@@ -89,12 +89,12 @@ describe('withEnclaveSessionRelease', () => {
       { enclaveToken: 'passcode:aa' },
     );
 
-    expect(callApi).toHaveBeenCalledWith('ensureWalletPrepaidAccess', '0-testnet', 'passcode:aa');
+    expect(callApiWithThrow).toHaveBeenCalledWith('ensureWalletPrepaidAccess', '0-testnet', 'passcode:aa');
   });
 
   it('does not keep the signing flow waiting for fee access', async () => {
     let resolveAccess!: () => void;
-    jest.mocked(callApi).mockReturnValueOnce(new Promise<void>((resolve) => {
+    jest.mocked(callApiWithThrow).mockReturnValueOnce(new Promise<void>((resolve) => {
       resolveAccess = resolve;
     }));
     const actions = createActions();
@@ -136,6 +136,6 @@ describe('withEnclaveSessionRelease', () => {
       { shouldEnsureWalletPrepaidAccess: false },
     )(unlockedGlobal, actions, { enclaveToken: 'passcode:aa' });
 
-    expect(callApi).not.toHaveBeenCalled();
+    expect(callApiWithThrow).not.toHaveBeenCalled();
   });
 });

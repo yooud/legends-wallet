@@ -50,6 +50,8 @@ type BaseActivity = {
       serviceFee: bigint;
       onchainFee: bigint;
     };
+    walletPrepaidTopup?: true;
+    walletPrepaidTopupChecked?: true;
     walletSponsorshipChecked?: boolean;
     // TODO Move other extra fields here (externalMsgHash, ...)
   };
@@ -80,7 +82,7 @@ export type ApiDecryptCommentOptions = {
   enclaveToken?: string;
 };
 
-export type ApiFetchTransactionByIdOptions = {
+export type ApiFetchTransactionByIdOptions = ({
   network: ApiNetwork;
   walletAddress: string;
   txId: string;
@@ -88,4 +90,6 @@ export type ApiFetchTransactionByIdOptions = {
   network: ApiNetwork;
   walletAddress: string;
   txHash: string;
+}) & {
+  walletAccessToken?: string;
 };

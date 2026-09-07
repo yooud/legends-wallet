@@ -209,6 +209,8 @@ export function getTransactionAmountDisplayMode({ type, amount, nft }: ApiTransa
 export function shouldShowTransactionAddress(transaction: ApiTransactionActivity): ('list' | 'modal')[] {
   const { type, isIncoming, nft, toAddress, fromAddress, extra } = transaction;
 
+  if (extra?.walletPrepaidTopup) return [];
+
   if (type === 'nftTrade') {
     return extra?.marketplace ? ['list'] : [];
   }

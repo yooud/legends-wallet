@@ -81,6 +81,7 @@ function TransactionBanner({
           token={tokenIn}
           withChainIcon={withChainIcon}
           size="small"
+          className={styles.tokenIcon}
         />
       )}
       {isNftTransaction && renderNftIcon()}
@@ -107,6 +108,7 @@ function TransactionBanner({
           token={tokenOut}
           withChainIcon={withChainIcon}
           size="small"
+          className={styles.tokenIcon}
         />
       )}
     </div>

@@ -1,5 +1,11 @@
 import { ApiServerError } from '../errors';
-import { importMnemonic, validateMnemonic } from './auth';
+import {
+  importMnemonic,
+  removeAccount,
+  removeNetworkAccounts,
+  resetAccounts,
+  validateMnemonic,
+} from './auth';
 
 jest.mock('../chains', () => ({
   __esModule: true,
@@ -50,10 +56,15 @@ jest.mock('./polling', () => ({
 }));
 
 jest.mock('../common/tokens', () => ({ sendUpdateTokens: jest.fn() }));
-jest.mock('../db', () => ({ tokenRepository: {} }));
+jest.mock('../db', () => ({ tokenRepository: { clear: jest.fn() } }));
 jest.mock('../environment', () => ({ getEnvironment: jest.fn().mockReturnValue({}) }));
 jest.mock('../storages', () => ({
-  storage: { getItem: jest.fn(), setItem: jest.fn(), mutateItem: jest.fn() },
+  storage: { getItem: jest.fn(), setItem: jest.fn(), removeItem: jest.fn(), mutateItem: jest.fn() },
+}));
+jest.mock('./prepaid', () => ({
+  clearAllWalletPrepaidAccessSessions: jest.fn(),
+  clearWalletPrepaidAccessSessionsForNetwork: jest.fn(),
+  revokeWalletPrepaidAccessSession: jest.fn(),
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -65,6 +76,19 @@ const { setAccountValue, getNewAccountId } = require('../common/accounts') as {
   setAccountValue: jest.Mock;
   getNewAccountId: jest.Mock;
 };
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { fetchStoredAccounts } = require('../common/accounts') as { fetchStoredAccounts: jest.Mock };
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const prepaidMocks = require('./prepaid') as {
+  clearAllWalletPrepaidAccessSessions: jest.Mock;
+  clearWalletPrepaidAccessSessionsForNetwork: jest.Mock;
+  revokeWalletPrepaidAccessSession: jest.Mock;
+};
+const {
+  clearAllWalletPrepaidAccessSessions,
+  clearWalletPrepaidAccessSessionsForNetwork,
+  revokeWalletPrepaidAccessSession,
+} = prepaidMocks;
 
 const MNEMONIC = ['valid', 'bip39', 'phrase'];
 
@@ -119,5 +143,39 @@ describe('TRON-only mnemonic import', () => {
 
     expect(result).toEqual({ error: expect.any(String) });
     expect(setAccountValue).not.toHaveBeenCalled();
+  });
+});
+
+describe('prepaid access cleanup', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    fetchStoredAccounts.mockResolvedValue({
+      '0-mainnet': { type: 'bip39' },
+      '1-testnet': { type: 'bip39' },
+    });
+    revokeWalletPrepaidAccessSession.mockResolvedValue(undefined);
+    clearWalletPrepaidAccessSessionsForNetwork.mockResolvedValue(undefined);
+    clearAllWalletPrepaidAccessSessions.mockResolvedValue(undefined);
+  });
+
+  it('revokes the removed account session', async () => {
+    await removeAccount('0-mainnet', undefined);
+
+    expect(revokeWalletPrepaidAccessSession).toHaveBeenCalledWith('0-mainnet');
+  });
+
+  it('revokes network sessions and clears stale network entries', async () => {
+    await removeNetworkAccounts('testnet');
+
+    expect(revokeWalletPrepaidAccessSession).toHaveBeenCalledTimes(1);
+    expect(revokeWalletPrepaidAccessSession).toHaveBeenCalledWith('1-testnet');
+    expect(clearWalletPrepaidAccessSessionsForNetwork).toHaveBeenCalledWith('testnet');
+  });
+
+  it('revokes all sessions and clears stale entries on reset', async () => {
+    await resetAccounts();
+
+    expect(revokeWalletPrepaidAccessSession).toHaveBeenCalledTimes(2);
+    expect(clearAllWalletPrepaidAccessSessions).toHaveBeenCalledTimes(1);
   });
 });

@@ -54,6 +54,7 @@ import {
   selectCurrentNetwork,
   selectDefaultOffRampChain,
   selectHasPassword,
+  selectIsCurrentAccountViewMode,
   selectIsOffRampAllowed,
   selectIsOnRampAllowed,
 } from '../../selectors';
@@ -101,7 +102,9 @@ addActionHandler('openTransactionInfo', async (global, actions, payload) => {
   const txId = isTxId ? payload.txId : payload.txHash;
   let activities = payload.activities;
 
-  const account = selectCurrentAccount(getGlobal());
+  const currentGlobal = getGlobal();
+  const accountId = selectCurrentAccountId(currentGlobal);
+  const account = selectCurrentAccount(currentGlobal);
   if (!account) {
     const isTooEarly = (getGlobal() as AnyLiteral).isInited === false;
     logDebugError('openTransactionInfo', 'Account not found', isTooEarly);
@@ -118,7 +121,9 @@ addActionHandler('openTransactionInfo', async (global, actions, payload) => {
 
   const network = selectCurrentNetwork(getGlobal());
 
-  const options = isTxId ? { chain, network, txId, walletAddress } : { chain, network, txHash: txId, walletAddress };
+  const options = isTxId
+    ? { accountId, chain, network, txId, walletAddress }
+    : { accountId, chain, network, txHash: txId, walletAddress };
 
   if (!activities) {
     setGlobal(updateCurrentTransactionInfo(getGlobal(), {
@@ -728,6 +733,7 @@ addActionHandler('closePortfolio', (global, actions) => {
 });
 
 addActionHandler('openPrepaid', (global) => {
+  if (selectIsCurrentAccountViewMode(global)) return global;
   return openSection(global, 'prepaid');
 });
 
@@ -834,7 +840,7 @@ addActionHandler('switchToSettings', (global: GlobalState, actions) => {
 });
 
 addActionHandler('switchToPrepaid', (global: GlobalState, actions) => {
-  if (global.isPrepaidOpen) return;
+  if (global.isPrepaidOpen || selectIsCurrentAccountViewMode(global)) return;
   actions.closeAgent(undefined, { forceOnHeavyAnimation: true });
   actions.closeExplore(undefined, { forceOnHeavyAnimation: true });
   actions.closeSettings(undefined, { forceOnHeavyAnimation: true });

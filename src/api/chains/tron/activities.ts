@@ -11,13 +11,15 @@ import { fetchJson } from '../../../util/fetch';
 import isEmptyObject from '../../../util/isEmptyObject';
 import { buildCollectionByKey } from '../../../util/iteratees';
 import { getTokenSlugs } from './util/tokens';
-import { fetchStoredWallet } from '../../common/accounts';
+import { fetchStoredChainAccount } from '../../common/accounts';
 import { updateActivityMetadata } from '../../common/helpers';
 import { buildTokenSlug, getTokenBySlug } from '../../common/tokens';
 import { SEC } from '../../constants';
 import { ApiServerError } from '../../errors';
+import { getWalletPrepaidAccessToken } from '../../methods/prepaid';
 import { NETWORK_CONFIG } from './constants';
 import {
+  getCheckedWalletPrepaidTopupTransactionIds,
   getCheckedWalletSponsorshipTransactionIds,
   loadWalletSponsorshipActivityLinks,
   reconcileWalletSponsorshipActivities,
@@ -31,7 +33,9 @@ export async function fetchActivitySlice({
   limit,
 }: ApiFetchActivitySliceOptions): Promise<ApiActivity[]> {
   const { network } = parseAccountId(accountId);
-  const { address } = await fetchStoredWallet(accountId, 'tron');
+  const account = await fetchStoredChainAccount(accountId, 'tron');
+  const { address } = account.byChain.tron;
+  const accessToken = account.type === 'view' ? undefined : await getWalletPrepaidAccessToken(accountId);
 
   if (tokenSlug) {
     const { activities } = await getTokenActivitySlice(
@@ -41,6 +45,7 @@ export async function fetchActivitySlice({
       toTimestamp,
       fromTimestamp,
       limit,
+      accessToken,
     );
     return activities;
   } else {
@@ -50,6 +55,7 @@ export async function fetchActivitySlice({
       toTimestamp,
       fromTimestamp,
       limit,
+      accessToken,
     );
   }
 }
@@ -61,6 +67,7 @@ export async function getTokenActivitySlice(
   toTimestamp?: number,
   fromTimestamp?: number,
   limit?: number,
+  walletAccessToken?: string,
 ): Promise<{ activities: ApiActivity[]; hasMore: boolean }> {
   let activities: ApiActivity[];
   let rawCount: number;
@@ -76,13 +83,16 @@ export async function getTokenActivitySlice(
       network,
       address,
       getHistoryTransactionIds(rawTransactions),
+      false,
+      walletAccessToken,
     );
     rawCount = rawTransactions.length;
     activities = reconcileWalletSponsorshipActivities(
       slug,
       rawTransactions.map((rawTx) => parseRawTrxTransaction(address, rawTx)),
       sponsorshipLinks,
-      getCheckedWalletSponsorshipTransactionIds(network, address),
+      walletAccessToken ? getCheckedWalletSponsorshipTransactionIds(network, address) : undefined,
+      walletAccessToken ? getCheckedWalletPrepaidTopupTransactionIds(network, address) : undefined,
     )
       .filter((activity) => !activity.shouldHide);
   } else {
@@ -97,13 +107,16 @@ export async function getTokenActivitySlice(
       network,
       address,
       getHistoryTransactionIds(rawTransactions),
+      false,
+      walletAccessToken,
     );
     rawCount = rawTransactions.length;
     activities = reconcileWalletSponsorshipActivities(
       slug,
       rawTransactions.map((rawTx) => parseRawTrc20Transaction(address, rawTx)),
       sponsorshipLinks,
-      getCheckedWalletSponsorshipTransactionIds(network, address),
+      walletAccessToken ? getCheckedWalletSponsorshipTransactionIds(network, address) : undefined,
+      walletAccessToken ? getCheckedWalletPrepaidTopupTransactionIds(network, address) : undefined,
     );
   }
 
@@ -124,6 +137,7 @@ async function getAllActivitySlice(
   toTimestamp?: number,
   fromTimestamp?: number,
   limit?: number,
+  walletAccessToken?: string,
 ) {
   const tokenSlugs = getTokenSlugs(network);
   const txsBySlug: Record<string, ApiActivity[]> = {};
@@ -131,6 +145,7 @@ async function getAllActivitySlice(
   await Promise.all(tokenSlugs.map(async (slug) => {
     const { activities: txs } = await getTokenActivitySlice(
       network, address, slug, toTimestamp, fromTimestamp, limit,
+      walletAccessToken,
     );
 
     if (txs.length) {

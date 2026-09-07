@@ -6,7 +6,7 @@ import { getActions, withGlobal } from '../../../../global';
 import type { Theme } from '../../../../global/types';
 
 import { IS_FEATURE_LIMITED, NO_AGENT_AND_EXPLORE } from '../../../../config';
-import { selectCurrentAccountSettings } from '../../../../global/selectors';
+import { selectCurrentAccountSettings, selectIsCurrentAccountViewMode } from '../../../../global/selectors';
 import { ACCENT_COLORS } from '../../../../util/accentColor/constants';
 import buildClassName from '../../../../util/buildClassName';
 import buildStyle from '../../../../util/buildStyle';
@@ -33,6 +33,7 @@ interface StateProps {
   isExploreOpen?: boolean;
   isPrepaidOpen?: boolean;
   accentColorIndex?: number;
+  isViewMode: boolean;
 }
 
 type IconKey = 'iconWallet' | 'iconAgent' | 'iconExplore' | 'iconSettings' | 'iconEarn';
@@ -60,7 +61,7 @@ const PREPAID_INDEX = IS_REDUCED_NAV ? 1 : TAB_PREPAID_FULL;
 const SETTINGS_INDEX = IS_REDUCED_NAV ? 2 : TAB_SETTINGS_WITH_PREPAID_FULL;
 
 function BottomBar({
-  theme, areSettingsOpen, isAgentOpen, isExploreOpen, isPrepaidOpen, accentColorIndex,
+  theme, areSettingsOpen, isAgentOpen, isExploreOpen, isPrepaidOpen, accentColorIndex, isViewMode,
 }: StateProps) {
   const { switchToWallet, switchToAgent, switchToExplore, switchToSettings, switchToPrepaid } = getActions();
 
@@ -76,7 +77,10 @@ function BottomBar({
     });
   });
 
-  const activeIndex = getActiveIndex({ isAgentOpen, isExploreOpen, areSettingsOpen, isPrepaidOpen });
+  const activeIndex = getActiveIndex({
+    isAgentOpen, isExploreOpen, areSettingsOpen, isPrepaidOpen, isViewMode,
+  });
+  const tabCount = isViewMode ? TAB_COUNT - 1 : TAB_COUNT;
 
   const tabs: TabConfig[] = IS_REDUCED_NAV
     ? [
@@ -87,15 +91,15 @@ function BottomBar({
         activeIconKey: 'iconWalletSolid',
         onClick: switchToWallet,
       },
-      {
+      ...(!isViewMode ? [{
         index: PREPAID_INDEX,
         label: 'Prepaid',
-        iconKey: 'iconEarn',
-        activeIconKey: 'iconEarn',
+        iconKey: 'iconEarn' as const,
+        activeIconKey: 'iconEarn' as const,
         onClick: switchToPrepaid,
-      },
+      }] : []),
       {
-        index: SETTINGS_INDEX,
+        index: isViewMode ? 1 : SETTINGS_INDEX,
         label: 'Settings',
         iconKey: 'iconSettings',
         activeIconKey: 'iconSettingsSolid',
@@ -120,15 +124,15 @@ function BottomBar({
         activeIconKey: 'iconExploreSolid',
         onClick: switchToExplore,
       },
-      {
+      ...(!isViewMode ? [{
         index: PREPAID_INDEX,
         label: 'Prepaid',
-        iconKey: 'iconEarn',
-        activeIconKey: 'iconEarn',
+        iconKey: 'iconEarn' as const,
+        activeIconKey: 'iconEarn' as const,
         onClick: switchToPrepaid,
-      },
+      }] : []),
       {
-        index: SETTINGS_INDEX,
+        index: isViewMode ? 3 : SETTINGS_INDEX,
         label: 'Settings',
         iconKey: 'iconSettings',
         activeIconKey: 'iconSettingsSolid',
@@ -147,13 +151,13 @@ function BottomBar({
     renderedActiveIndex,
     pointerHandlers,
   } = useDraggablePill({
-    tabCount: TAB_COUNT,
+    tabCount,
     activeIndex,
     onCommit: switchToTabByIndex,
   });
 
   const rootStyle = buildStyle(
-    `--tab-count: ${TAB_COUNT}`,
+    `--tab-count: ${tabCount}`,
     `--active-index: ${activeIndex}`,
   );
 
@@ -198,6 +202,7 @@ export default memo(withGlobal((global): StateProps => {
     isAgentOpen,
     isExploreOpen,
     isPrepaidOpen,
+    isViewMode: selectIsCurrentAccountViewMode(global),
     accentColorIndex: selectCurrentAccountSettings(global)?.accentColorIndex,
   };
 })(BottomBar));
@@ -243,15 +248,17 @@ const TabButton = memo(({
 });
 
 function getActiveIndex({
-  isAgentOpen, isExploreOpen, areSettingsOpen, isPrepaidOpen,
-}: Pick<StateProps, 'isAgentOpen' | 'isExploreOpen' | 'areSettingsOpen' | 'isPrepaidOpen'>) {
+  isAgentOpen, isExploreOpen, areSettingsOpen, isPrepaidOpen, isViewMode,
+}: Pick<StateProps, 'isAgentOpen' | 'isExploreOpen' | 'areSettingsOpen' | 'isPrepaidOpen' | 'isViewMode'>) {
   if (IS_REDUCED_NAV) {
+    if (isViewMode) return areSettingsOpen ? 1 : TAB_WALLET;
     if (isPrepaidOpen) return PREPAID_INDEX;
     return areSettingsOpen ? SETTINGS_INDEX : TAB_WALLET;
   }
 
   if (isAgentOpen) return TAB_AGENT;
   if (isExploreOpen) return TAB_EXPLORE;
+  if (isViewMode) return areSettingsOpen ? 3 : TAB_WALLET;
   if (isPrepaidOpen) return PREPAID_INDEX;
   if (areSettingsOpen) return SETTINGS_INDEX;
 

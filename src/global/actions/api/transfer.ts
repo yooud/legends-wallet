@@ -18,7 +18,7 @@ import { getDieselTokenAmount } from '../../../util/fee/transferFee';
 import { split } from '../../../util/iteratees';
 import { getTranslation } from '../../../util/langProvider';
 import { shouldShowDomainScamWarning, shouldShowSeedPhraseScamWarning } from '../../../util/scamDetection';
-import { callApi } from '../../../api';
+import { callApi, callApiWithThrow } from '../../../api';
 import { withEnclaveSessionRelease } from '../../helpers/enclave';
 import { handleTransferResult, isErrorTransferResult, prepareTransfer } from '../../helpers/transfer';
 import { addActionHandler, getGlobal, setGlobal } from '../../index';
@@ -264,7 +264,7 @@ addActionHandler('authorizeTransferFeeAccess', async (global, actions, payload) 
   setGlobal(updateCurrentTransfer(global, { isLoading: true, error: undefined }));
 
   try {
-    await callApi('ensureWalletPrepaidAccess', accountId, payload.enclaveToken);
+    await callApiWithThrow('ensureWalletPrepaidAccess', accountId, payload.enclaveToken);
   } catch {
     actions.releaseEnclaveSession({ enclaveToken: payload.enclaveToken });
     setGlobal(updateCurrentTransfer(getGlobal(), {

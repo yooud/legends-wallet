@@ -161,6 +161,7 @@ Description Copied: Descripción copiada
 Message Copied: Mensaje copiado
 Sender: Remitente
 Recipient: Receptor
+Counterparty: Contraparte
 "%chain% Address Copied": "Dirección %chain% copiada"
 Repeat: Repetir
 Switch Account: Cambiar de monedero
@@ -1759,5 +1760,6 @@ $enclave_migration_interrupted_message: |
 Hide Unverified NFTs: Ocultar NFTs No Verificados
 Unverified: No Verificados
 Prepaid: Saldo de comisiones
+$prepaid_history_topup: Recarga del saldo de comisiones
 $bot_balance_project_help: Selecciona qué saldo de proyecto del bot se utilizará para cubrir las comisiones de esta cartera.
 $bot_balance_disconnect_warning: Al desconectar, esta cartera dejará de usar el saldo del proyecto para cubrir comisiones. Los fondos permanecerán en el saldo del proyecto del bot y seguirán disponibles en el bot.

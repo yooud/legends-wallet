@@ -30,6 +30,7 @@ import {
   getBackendDexSwapIdsDuplicatedByTonAggregates as findBackendDexSwapIdsDuplicatedByTonAggregates,
   swapReplaceActivities,
 } from '../common/swap';
+import { getWalletPrepaidAccessToken } from './prepaid';
 import { fetchSwaps } from './swap';
 
 export type ActivitySliceResult = {
@@ -336,14 +337,22 @@ export async function fetchActivityDetails(accountId: string, activity: ApiActiv
 }
 
 export async function fetchTransactionById(
-  { chain, network, walletAddress, ...restOptions }: ApiFetchTransactionByIdOptions & { chain: ApiChain },
+  {
+    accountId, chain, network, walletAddress, ...restOptions
+  }: ApiFetchTransactionByIdOptions & { accountId?: string; chain: ApiChain },
 ): Promise<ApiActivity[]> {
+  const walletAccessToken = accountId ? await getWalletPrepaidAccessToken(accountId) : undefined;
   const isTxId = 'txId' in restOptions;
   const options = isTxId
-    ? { chain, network, txId: restOptions.txId, walletAddress }
-    : { chain, network, txHash: restOptions.txHash, walletAddress };
+    ? { chain, network, txId: restOptions.txId, walletAddress, walletAccessToken }
+    : { chain, network, txHash: restOptions.txHash, walletAddress, walletAccessToken };
 
-  logDebug('fetchTransactionById', options);
+  logDebug('fetchTransactionById', {
+    chain,
+    network,
+    walletAddress,
+    ...(isTxId ? { txId: restOptions.txId } : { txHash: restOptions.txHash }),
+  });
 
   return chains[chain].fetchTransactionById(options);
 }

@@ -40,6 +40,7 @@ import NftSelectionHeader from './NftSelectionHeader';
 import styles from './Content.module.scss';
 
 const INTERSECTION_APPROXIMATION_VALUE_PX = 3 * REM;
+const ACTIVITY_TAB_REVEAL_THRESHOLD = 2.75 * REM;
 
 interface OwnProps {
   isActive?: boolean;
@@ -68,6 +69,7 @@ interface StateProps {
   };
   currentSiteCategoryId?: number;
   collectionTabs?: ApiNftCollection[];
+  hasActivities: boolean;
 }
 
 function PortraitContent({
@@ -89,6 +91,7 @@ function PortraitContent({
   currentSiteCategoryId,
   collectionTabs,
   currentTokenSlug,
+  hasActivities,
   onStakedTokenClick,
   onTabsStuck,
 }: OwnProps & StateProps) {
@@ -129,7 +132,16 @@ function PortraitContent({
     isLandscape: false,
   });
 
-  const { isScrolled } = useScrolledState();
+  const { handleScroll: handleContentScroll, isScrolled } = useScrolledState();
+  const {
+    handleScroll: handleActivityRevealScroll,
+    isScrolled: isActivityTitleRevealed,
+  } = useScrolledState(ACTIVITY_TAB_REVEAL_THRESHOLD);
+
+  const handleSlideScroll = useLastCallback((e: React.UIEvent<HTMLElement>) => {
+    handleContentScroll(e);
+    handleActivityRevealScroll(e);
+  });
 
   useContentSwipe({
     transitionRef,
@@ -187,6 +199,11 @@ function PortraitContent({
   );
 
   const activeTabId = tabs[activeTabIndex]?.id;
+  const isStandaloneActivityTab = shouldShowSeparateAssetsPanel
+    && tabs.length === 1
+    && activeTabId === ContentTab.Activity;
+  const shouldOverlayStandaloneActivityTab = isStandaloneActivityTab && hasActivities;
+  const shouldHideStandaloneActivityTab = shouldOverlayStandaloneActivityTab && !isActivityTitleRevealed;
 
   function renderHeader() {
     const isNftSelectionVisible = hasNftSelection
@@ -218,6 +235,8 @@ function PortraitContent({
         className={buildClassName(
           styles.tabsContainer,
           currentCollection && styles.tabsContainerForNftCollection,
+          shouldOverlayStandaloneActivityTab && styles.tabsContainerStandaloneActivity,
+          shouldHideStandaloneActivityTab && styles.tabsContainerHidden,
           'with-notch-on-scroll',
           isScrolled && 'is-scrolled',
         )}
@@ -249,6 +268,7 @@ function PortraitContent({
         activeNftKey={activeNftKey}
         onClickAsset={handleClickAsset}
         onStakedTokenClick={onStakedTokenClick}
+        onScroll={handleSlideScroll}
       />
     );
   }
@@ -306,6 +326,7 @@ export default memo(
           selectedNfts,
           collectionTabs,
         } = {},
+        activities,
         currentSiteCategoryId,
       } = selectCurrentAccountState(global) ?? {};
 
@@ -336,6 +357,7 @@ export default memo(
         alwaysHiddenSlugs,
         currentSiteCategoryId,
         collectionTabs,
+        hasActivities: Boolean(activities?.idsMain?.length),
       };
     },
     (global, _, stickToFirst) => stickToFirst(selectCurrentAccountId(global)),

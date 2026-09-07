@@ -5,7 +5,7 @@ import type { Theme } from '../../../../global/types';
 import { ContentTab } from '../../../../global/types';
 
 import { IS_FEATURE_LIMITED, NO_AGENT_AND_EXPLORE } from '../../../../config';
-import { selectCurrentAccountSettings } from '../../../../global/selectors';
+import { selectCurrentAccountSettings, selectIsCurrentAccountViewMode } from '../../../../global/selectors';
 import { ACCENT_COLORS } from '../../../../util/accentColor/constants';
 import buildClassName from '../../../../util/buildClassName';
 import { IS_TOUCH_ENV } from '../../../../util/windowEnvironment';
@@ -31,10 +31,11 @@ interface StateProps {
   isPrepaidOpen?: boolean;
   theme: Theme;
   accentColorIndex?: number;
+  isViewMode: boolean;
 }
 
 function LandscapeNavBar({
-  areSettingsOpen, isAgentOpen, isExploreOpen, isPrepaidOpen, theme, accentColorIndex,
+  areSettingsOpen, isAgentOpen, isExploreOpen, isPrepaidOpen, theme, accentColorIndex, isViewMode,
 }: StateProps) {
   const {
     switchToWallet, switchToAgent, switchToExplore, switchToSettings, switchToPrepaid,
@@ -85,14 +86,16 @@ function LandscapeNavBar({
           />
         </>
       )}
-      <NavButton
-        isActive={isPrepaidOpen}
-        label={lang('Prepaid')}
-        tgsUrl={stickerPaths.iconEarn}
-        previewUrl={stickerPaths.preview.iconEarn}
-        accentColor={accentColor}
-        onClick={switchToPrepaid}
-      />
+      {!isViewMode && (
+        <NavButton
+          isActive={isPrepaidOpen}
+          label={lang('Prepaid')}
+          tgsUrl={stickerPaths.iconEarn}
+          previewUrl={stickerPaths.preview.iconEarn}
+          accentColor={accentColor}
+          onClick={switchToPrepaid}
+        />
+      )}
       <NavButton
         isActive={areSettingsOpen}
         label={lang('Settings')}
@@ -113,6 +116,7 @@ export default memo(withGlobal((global): StateProps => {
     isAgentOpen,
     isExploreOpen,
     isPrepaidOpen,
+    isViewMode: selectIsCurrentAccountViewMode(global),
     theme: global.settings.theme,
     accentColorIndex: selectCurrentAccountSettings(global)?.accentColorIndex,
   };

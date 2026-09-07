@@ -13,7 +13,7 @@ import { areDeepEqual } from '../../../util/areDeepEqual';
 import isEmptyObject from '../../../util/isEmptyObject';
 import { logDebugError } from '../../../util/logs';
 import { getTokenSlugs } from './util/tokens';
-import { fetchStoredWallet } from '../../common/accounts';
+import { fetchStoredChainAccount } from '../../common/accounts';
 import { setupInactiveChainPolling } from '../../common/polling/setupInactiveChainPolling';
 import { activeWalletTiming, withDoubleCheck } from '../../common/polling/utils';
 import { WalletPolling } from '../../common/polling/walletPolling';
@@ -21,6 +21,7 @@ import { swapReplaceActivities } from '../../common/swap';
 import { buildTokenSlug } from '../../common/tokens';
 import { txCallbacks } from '../../common/txCallbacks';
 import { FIRST_TRANSACTIONS_LIMIT, SEC } from '../../constants';
+import { getWalletPrepaidAccessToken } from '../../methods/prepaid';
 import { getTokenActivitySlice, mergeActivities } from './activities';
 import { NETWORK_CONFIG } from './constants';
 import { getTrc20Balance, getWalletBalance, isTronAccountMultisig } from './wallet';
@@ -242,7 +243,9 @@ async function loadInitialActivities(
 ) {
   try {
     const { network } = parseAccountId(accountId);
-    const { address } = await fetchStoredWallet(accountId, 'tron');
+    const account = await fetchStoredChainAccount(accountId, 'tron');
+    const { address } = account.byChain.tron;
+    const accessToken = account.type === 'view' ? undefined : await getWalletPrepaidAccessToken(accountId);
     const result: ApiActivityTimestamps = {};
     const bySlug: Record<string, ApiActivity[]> = {};
     let mainHistoryHasMore = false;
@@ -250,6 +253,7 @@ async function loadInitialActivities(
     await Promise.all(tokenSlugs.map(async (slug) => {
       const slice = await getTokenActivitySlice(
         network, address, slug, undefined, undefined, FIRST_TRANSACTIONS_LIMIT,
+        accessToken,
       );
       mainHistoryHasMore ||= slice.hasMore;
 
@@ -296,7 +300,9 @@ async function loadNewActivities(
   onUpdate: OnApiUpdate,
 ): Promise<{ timestamps: ApiActivityTimestamps; hadActivities: boolean }> {
   const { network } = parseAccountId(accountId);
-  const { address } = await fetchStoredWallet(accountId, 'tron');
+  const account = await fetchStoredChainAccount(accountId, 'tron');
+  const { address } = account.byChain.tron;
+  const accessToken = account.type === 'view' ? undefined : await getWalletPrepaidAccessToken(accountId);
   const result: ApiActivityTimestamps = {};
   const bySlug: Record<string, ApiActivity[]> = {};
 
@@ -304,6 +310,7 @@ async function loadNewActivities(
     let newestActivityTimestamp = newestActivityTimestamps[slug];
     const { activities } = await getTokenActivitySlice(
       network, address, slug, undefined, newestActivityTimestamp, FIRST_TRANSACTIONS_LIMIT,
+      accessToken,
     );
 
     newestActivityTimestamp = activities[0]?.timestamp ?? newestActivityTimestamp;

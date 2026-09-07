@@ -64,6 +64,7 @@ interface OwnProps {
   noSavedAddress?: boolean;
   noExplorer?: boolean;
   withShareInMenu?: boolean;
+  isStatic?: boolean;
 }
 
 interface StateProps {
@@ -101,6 +102,7 @@ function InteractiveTextField({
   noDimming,
   withShareInMenu,
   selectedExplorerIds,
+  isStatic,
 }: OwnProps & StateProps) {
   const { showToast, addSavedAddress, openTemporaryViewAccount } = getActions();
 
@@ -270,6 +272,10 @@ function InteractiveTextField({
       renderedContent = <span className={styles.dimmedPart}>{content}</span>;
     }
 
+    if (isStatic) {
+      return <span className={textClassName}>{renderedContent}</span>;
+    }
+
     return (
       <span
         className={buildClassName(styles.button, isScam && styles.scam, textClassName)}
@@ -299,6 +305,8 @@ function InteractiveTextField({
   }
 
   function renderActions() {
+    if (isStatic) return undefined;
+
     if (shouldUseMenu) {
       const iconClassName = buildClassName(
         styles.icon,
