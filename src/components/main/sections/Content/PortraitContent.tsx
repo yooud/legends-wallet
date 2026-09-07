@@ -1,4 +1,4 @@
-import React, { memo, useRef } from '../../../../lib/teact/teact';
+import React, { memo, useRef, useState } from '../../../../lib/teact/teact';
 import { withGlobal } from '../../../../global';
 
 import type { ApiNft, ApiNftCollection, ApiStakingState } from '../../../../api/types';
@@ -40,7 +40,6 @@ import NftSelectionHeader from './NftSelectionHeader';
 import styles from './Content.module.scss';
 
 const INTERSECTION_APPROXIMATION_VALUE_PX = 3 * REM;
-const ACTIVITY_TAB_REVEAL_THRESHOLD = 2.75 * REM;
 
 interface OwnProps {
   isActive?: boolean;
@@ -133,14 +132,10 @@ function PortraitContent({
   });
 
   const { handleScroll: handleContentScroll, isScrolled } = useScrolledState();
-  const {
-    handleScroll: handleActivityRevealScroll,
-    isScrolled: isActivityTitleRevealed,
-  } = useScrolledState(ACTIVITY_TAB_REVEAL_THRESHOLD);
+  const [areTabsStuck, setAreTabsStuck] = useState(false);
 
   const handleSlideScroll = useLastCallback((e: React.UIEvent<HTMLElement>) => {
     handleContentScroll(e);
-    handleActivityRevealScroll(e);
   });
 
   useContentSwipe({
@@ -175,6 +170,7 @@ function PortraitContent({
       && Math.abs(bottom - windowSize.get().height) > INTERSECTION_APPROXIMATION_VALUE_PX;
 
     onTabsStuck?.(isStuck);
+    setAreTabsStuck(isStuck);
     requestMutation(() => {
       containerRef.current?.classList.toggle(styles.portraitContainerIsStuck, isStuck);
     });
@@ -203,7 +199,7 @@ function PortraitContent({
     && tabs.length === 1
     && activeTabId === ContentTab.Activity;
   const shouldOverlayStandaloneActivityTab = isStandaloneActivityTab && hasActivities;
-  const shouldHideStandaloneActivityTab = shouldOverlayStandaloneActivityTab && !isActivityTitleRevealed;
+  const shouldHideStandaloneActivityTab = shouldOverlayStandaloneActivityTab && !areTabsStuck;
 
   function renderHeader() {
     const isNftSelectionVisible = hasNftSelection
