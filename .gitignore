@@ -14,6 +14,7 @@ MyTonWallet-opera.zip
 .cache
 .env*
 !.env.example
+!.env.testnode.example
 .idea
 .vscode
 *.iml

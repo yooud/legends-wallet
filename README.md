@@ -12,10 +12,12 @@ This repository is a GPL-3.0 fork of [My Wallet](https://github.com/mytonwallet-
 ## Development
 
 ```bash
-cp .env.example .env
+cp .env.testnode.example .env.testnode
 npm ci
 npm run dev
 ```
+
+Development always loads `.env.testnode` and rejects production `*.legends.energy` API hosts. Production builds use `.env` explicitly through the deployment scripts.
 
 The fork defaults to `IS_TRON_ONLY=1`. Set `IS_TRON_ONLY=0` only when validating compatibility with the upstream multichain code.
 
