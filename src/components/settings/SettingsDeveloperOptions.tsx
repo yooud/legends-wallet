@@ -23,7 +23,7 @@ import { copyTextToClipboard } from '../../util/clipboard';
 import { getBuildPlatform, getFlagsValue } from '../../util/getBuildPlatform';
 import { getPlatform } from '../../util/getPlatform';
 import { mapValues } from '../../util/iteratees';
-import { getLogs } from '../../util/logs';
+import { getLogs, logDebugError } from '../../util/logs';
 import { shareFile } from '../../util/share';
 import { IS_IOS } from '../../util/windowEnvironment';
 import { callApi } from '../../api';
@@ -84,6 +84,7 @@ const SEASONAL_THEME_OVERRIDE_OPTIONS: DropdownItem<SeasonalThemeOverrideOption>
 // Also, file downloading is limited in extensions.
 const CAN_DOWNLOAD_LOGS = IS_IOS || !(IS_EXTENSION || IS_TELEGRAM_APP);
 const IS_LOGS_ONLY = APP_ENV === 'production' && IS_LEGENDS_WALLET;
+const MAX_DIAGNOSTIC_REPORT_CHARS = 500_000;
 
 function SettingsDeveloperOptions({
   isOpen,
@@ -111,6 +112,7 @@ function SettingsDeveloperOptions({
 
   const lang = useLang();
   const [hasLegacyData, setHasLegacyData] = useState(false);
+  const [isSendingLogs, setIsSendingLogs] = useState(false);
   const currentNetwork = NETWORK_OPTIONS[isTestnet ? 1 : 0].value;
 
   // Check if legacy data exists
@@ -124,6 +126,21 @@ function SettingsDeveloperOptions({
   }, [isOpen]);
 
   const canRollbackMigration = hasLegacyData && !SHOULD_CLEANUP_LEGACY_AUTH && Boolean(authTypes?.length);
+
+  function renderLogsAction() {
+    if (IS_LEGENDS_WALLET) {
+      return <span className={styles.itemTitle}>{lang(isSendingLogs ? 'Sending Logs' : 'Send Logs')}</span>;
+    }
+    if (!CAN_DOWNLOAD_LOGS) {
+      return (
+        <>
+          <span className={styles.itemTitle}>{lang('Copy Logs')}</span>
+          <i className={buildClassName(styles.iconChevronRight, 'icon-copy')} aria-hidden />
+        </>
+      );
+    }
+    return <span className={styles.itemTitle}>{lang('Download Logs')}</span>;
+  }
 
   const handleNetworkChange = useLastCallback((newNetwork: ApiNetwork) => {
     startChangingNetwork({ network: newNetwork });
@@ -143,8 +160,30 @@ function SettingsDeveloperOptions({
     });
   });
 
-  const handleDownloadLogs = useLastCallback(async () => {
-    const logsString = await getLogsString({ currentAccountId, accountsById });
+  const handleLogs = useLastCallback(async () => {
+    if (isSendingLogs) return;
+
+    if (IS_LEGENDS_WALLET) {
+      setIsSendingLogs(true);
+      try {
+        const report = await getLogsReport({ currentAccountId, accountsById });
+        await callApi('submitDiagnosticLogs', report);
+        showToast({ message: lang('Logs Sent'), icon: 'icon-check' });
+        onClose();
+      } catch (error) {
+        logDebugError('submitDiagnosticLogs', error);
+        showToast({ message: lang('Failed to Send Logs'), icon: 'icon-alert' });
+      } finally {
+        setIsSendingLogs(false);
+      }
+      return;
+    }
+
+    const logsString = JSON.stringify(
+      await getLogsReport({ currentAccountId, accountsById }),
+      undefined,
+      2,
+    );
 
     if (!CAN_DOWNLOAD_LOGS) {
       await copyTextToClipboard(logsString);
@@ -266,17 +305,11 @@ function SettingsDeveloperOptions({
       )}
 
       <div className={buildClassName(styles.settingsBlock)}>
-        <div className={buildClassName(styles.item, styles.item_small)} onClick={handleDownloadLogs}>
-          {
-            !CAN_DOWNLOAD_LOGS
-              ? (
-                <>
-                  <span className={styles.itemTitle}>{lang('Copy Logs')}</span>
-
-                  <i className={buildClassName(styles.iconChevronRight, 'icon-copy')} aria-hidden />
-                </>
-              ) : <span className={styles.itemTitle}>{lang('Download Logs')}</span>
-          }
+        <div
+          className={buildClassName(styles.item, styles.item_small)}
+          onClick={isSendingLogs ? undefined : handleLogs}
+        >
+          {renderLogsAction()}
         </div>
       </div>
 
@@ -304,7 +337,7 @@ export default memo(withGlobal<OwnProps>((global): StateProps => {
   };
 })(SettingsDeveloperOptions));
 
-async function getLogsString({
+async function getLogsReport({
   currentAccountId,
   accountsById,
 }: Partial<StateProps>) {
@@ -319,28 +352,30 @@ async function getLogsString({
   const time = new Date();
   const timezoneOffset = -time.getTimezoneOffset();
 
-  return JSON.stringify(
-    {
-      time,
-      timezone: `UTC${timezoneOffset < 0 ? '-' : '+'}${Math.abs(timezoneOffset) / 60}`,
-      environment: APP_ENV,
-      version: APP_VERSION,
-      commit: APP_COMMIT_HASH,
-      platform: getPlatform(),
-      navigatorPlatform: navigator.platform,
-      userAgent: navigator.userAgent,
-      build: getBuildPlatform(),
-      flags: getFlagsValue(),
-      currentAccountId,
-      accountsInfo,
-      logs: [
-        ...mainLogs.map((log: Log) => ({ ...log, context: 'main' })),
-        ...apiLogs.map((log: Log) => ({ ...log, context: 'api' })),
-      ]
-        .sort((a, b) => a.time - b.time)
-        .map((log) => ({ ...log, time: new Date(log.time).toISOString() })),
-    },
-    undefined,
-    2,
-  );
+  const report = {
+    time,
+    timezone: `UTC${timezoneOffset < 0 ? '-' : '+'}${Math.abs(timezoneOffset) / 60}`,
+    environment: APP_ENV,
+    version: APP_VERSION,
+    commit: APP_COMMIT_HASH,
+    platform: getPlatform(),
+    navigatorPlatform: navigator.platform,
+    userAgent: navigator.userAgent,
+    build: getBuildPlatform(),
+    flags: getFlagsValue(),
+    currentAccountId,
+    accountsInfo,
+    logs: [
+      ...mainLogs.map((log: Log) => ({ ...log, context: 'main' })),
+      ...apiLogs.map((log: Log) => ({ ...log, context: 'api' })),
+    ]
+      .sort((a, b) => a.time - b.time)
+      .map((log) => ({ ...log, time: new Date(log.time).toISOString() })),
+  };
+
+  while (report.logs.length && JSON.stringify(report).length > MAX_DIAGNOSTIC_REPORT_CHARS) {
+    report.logs.splice(0, Math.max(1, Math.ceil(report.logs.length / 10)));
+  }
+
+  return report;
 }

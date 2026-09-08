@@ -481,6 +481,10 @@ Step 2 of 2. Verification: Adım 2/2. Doğrulama
 Download Logs: Kayıtları İndir
 Copy Logs: Günlükleri Kopyala
 Logs Copied: Günlükler kopyalandı
+Send Logs: Günlükleri gönder
+Sending Logs: Günlükler gönderiliyor
+Logs Sent: Günlükler gönderildi
+Failed to Send Logs: Günlükler gönderilemedi
 Biometric setup failed.: Biyometrik kurulum başarısız oldu.
 Biometric confirmation failed.: Biyometrik onaylama başarısız oldu.
 Failed to disable biometrics.: Biyometrik onay devre dışı bırakılamadı.

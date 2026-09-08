@@ -68,6 +68,7 @@ interface OwnProps {
 }
 
 type StateProps = {
+  currentTokenSlug?: string;
   stakingState?: ApiStakingState;
   isTestnet?: boolean;
   isViewMode: boolean;
@@ -87,6 +88,7 @@ const UPDATE_SWAPS_INTERVAL = 3000; // 3 sec
 
 function Main({
   isActive,
+  currentTokenSlug,
   stakingState,
   isTestnet,
   isViewMode,
@@ -174,6 +176,7 @@ function Main({
 
           {!isViewMode && (
             <PortraitActions
+              tokenSlug={currentTokenSlug}
               containerRef={portraitContainerRef}
               isTestnet={isTestnet}
               stakingStatus={stakingStatus}
@@ -264,6 +267,7 @@ export default memo(
         : undefined;
 
       return {
+        currentTokenSlug: accountState?.currentTokenSlug,
         stakingState,
         isTestnet: global.settings.isTestnet,
         isViewMode: selectIsCurrentAccountViewMode(global),

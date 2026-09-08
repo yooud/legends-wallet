@@ -479,6 +479,10 @@ Step 2 of 2. Verification: 第 2 步（共 2 步）：验证
 Download Logs: 下载日志
 Copy Logs: 复制日志
 Logs Copied: 日志已复制
+Send Logs: 发送日志
+Sending Logs: 正在发送日志
+Logs Sent: 日志已发送
+Failed to Send Logs: 日志发送失败
 Biometric setup failed.: 生物识别设置失败。
 Biometric confirmation failed.: 生物识别确认失败。
 Failed to disable biometrics.: 无法禁用生物识别。

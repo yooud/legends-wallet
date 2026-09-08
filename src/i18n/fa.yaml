@@ -480,6 +480,10 @@ Step 2 of 2. Verification: مرحله ۲ از ۲. تأیید
 Download Logs: دانلود گزارش‌ها
 Copy Logs: کپی گزارش‌ها
 Logs Copied: گزارش‌ها کپی شدند
+Send Logs: ارسال گزارش‌ها
+Sending Logs: در حال ارسال گزارش‌ها
+Logs Sent: گزارش‌ها ارسال شدند
+Failed to Send Logs: ارسال گزارش‌ها ناموفق بود
 Biometric setup failed.: راه‌اندازی بیومتریک ناموفق بود.
 Biometric confirmation failed.: تأیید بیومتریک ناموفق بود.
 Failed to disable biometrics.: غیرفعال‌سازی بیومتریک ناموفق بود.

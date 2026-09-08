@@ -53,6 +53,7 @@ interface ActionButtonProps {
 
 interface OwnProps {
   className?: string;
+  tokenSlug?: string;
 }
 
 interface StateProps {
@@ -78,6 +79,7 @@ function TopActions({
   theme,
   accentColorIndex,
   className,
+  tokenSlug,
 }: OwnProps & StateProps) {
   const {
     startTransfer,
@@ -125,7 +127,7 @@ function TopActions({
 
   const handleSendClick = useLastCallback(() => {
     vibrate();
-    startTransfer();
+    startTransfer(tokenSlug ? { tokenSlug } : undefined);
   });
 
   const depositButton = (

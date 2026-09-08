@@ -11,7 +11,7 @@ import { pause } from '../../util/schedulers';
 import chains from '../chains';
 import { BACKEND_AUTH_SIGN_MESSAGE, buildBackendAuthToken } from '../chains/ton';
 import { fetchStoredAccounts, fetchStoredWallet, updateStoredWallet } from '../common/accounts';
-import { callBackendGet } from '../common/backend';
+import { callBackendGet, callBackendPost } from '../common/backend';
 import { hexToBytes } from '../common/utils';
 import { SEC } from '../constants';
 import { handleServerError } from '../errors';
@@ -90,6 +90,14 @@ export function ping() {
 }
 
 export { setIsAppFocused, getLogs };
+
+export function submitDiagnosticLogs(report: AnyLiteral) {
+  return callBackendPost<{ ok: true; report_id: string }>(
+    '/wallet-client/diagnostics',
+    report,
+    { timeout: 15_000 },
+  );
+}
 
 export function getLangCode() {
   return storage.getItem('langCode') as Promise<LangCode | undefined>;

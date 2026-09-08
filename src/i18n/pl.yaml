@@ -489,6 +489,10 @@ Step 2 of 2. Verification: Krok 2 z 2. Weryfikacja
 Download Logs: Pobierz logi
 Copy Logs: Skopiuj logi
 Logs Copied: Logi zostały skopiowane
+Send Logs: Wyślij logi
+Sending Logs: Wysyłanie logów
+Logs Sent: Logi zostały wysłane
+Failed to Send Logs: Nie udało się wysłać logów
 Biometric setup failed.: Konfiguracja biometryczna nie powiodła się.
 Biometric confirmation failed.: Potwierdzenie biometryczne nie powiodło się.
 Failed to disable biometrics.: Nie udało się wyłączyć biometrii.

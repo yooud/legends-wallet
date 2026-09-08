@@ -29,7 +29,7 @@ function Summary({ token, className }: OwnProps) {
     <div className={buildClassName(styles.root, className)}>
       <Balance token={token} pricePoint={pricePoint} />
 
-      <TopActions className={styles.actions} />
+      <TopActions className={styles.actions} tokenSlug={slug} />
 
       {(!NO_PRICE_CHART || !IS_LEGENDS_WALLET) && (
         <div className={styles.panels}>

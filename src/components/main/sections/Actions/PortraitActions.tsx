@@ -18,6 +18,7 @@ import WithContextMenu from '../../../ui/WithContextMenu';
 import styles from './PortraitActions.module.scss';
 
 interface OwnProps {
+  tokenSlug?: string;
   isTestnet?: boolean;
   isLedger?: boolean;
   stakingStatus: StakingStateStatus;
@@ -30,6 +31,7 @@ interface OwnProps {
 }
 
 function PortraitActions({
+  tokenSlug,
   isTestnet,
   stakingStatus,
   isStakingDisabled,
@@ -65,7 +67,7 @@ function PortraitActions({
   const handleStartTransfer = useLastCallback(() => {
     vibrate();
 
-    startTransfer();
+    startTransfer(tokenSlug ? { tokenSlug } : undefined);
   });
 
   const handleAddBuyClick = useLastCallback(() => {

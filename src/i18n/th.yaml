@@ -482,6 +482,10 @@ Step 2 of 2. Verification: ขั้นตอน 2 จาก 2. ยืนยั�
 Download Logs: ดาวน์โหลดบันทึก
 Copy Logs: คัดลอกบันทึก
 Logs Copied: บันทึกถูกคัดลอกแล้ว
+Send Logs: ส่งบันทึก
+Sending Logs: กำลังส่งบันทึก
+Logs Sent: ส่งบันทึกแล้ว
+Failed to Send Logs: ส่งบันทึกไม่สำเร็จ
 Biometric setup failed.: การตั้งค่าความปลอดภัยด้วย Biometric ล้มเหลว.
 Biometric confirmation failed.: การยืนยันด้วย Biometric ล้มเหลว.
 Failed to disable biometrics.: การปิดการใช้งาน Biometrics ล้มเหลว.

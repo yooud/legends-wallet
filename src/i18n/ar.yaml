@@ -466,6 +466,10 @@ Step 2 of 2. Verification: الخطوة 2 من 2. التحقق
 Download Logs: تحميل السجلات
 Copy Logs: نسخ السجلات
 Logs Copied: تم نسخ السجلات
+Send Logs: إرسال السجلات
+Sending Logs: جارٍ إرسال السجلات
+Logs Sent: تم إرسال السجلات
+Failed to Send Logs: تعذر إرسال السجلات
 Biometric setup failed.: فشل إعداد المقاييس الحيوية.
 Biometric confirmation failed.: فشل التأكيد البيومتري.
 Failed to disable biometrics.: فشل في تعطيل القياسات الحيوية.
