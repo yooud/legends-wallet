@@ -1,5 +1,10 @@
 import type { CardBackgroundId } from '../../global/types';
 
+import {
+  DEFAULT_CARD_BACKGROUND_ID,
+  LEGENDS_CARD_BACKGROUND_IDS,
+} from '../../util/legendsCardBackground';
+
 import boltDarkPurpleUrl from '../../assets/cards/legends/bolt-dark-purple.png';
 import boltDarkTealUrl from '../../assets/cards/legends/bolt-dark-teal.png';
 import boltPurpleUrl from '../../assets/cards/legends/bolt-purple.png';
@@ -15,18 +20,23 @@ export interface LegendsCardBackground {
   hasDarkText: boolean;
 }
 
-export const DEFAULT_CARD_BACKGROUND_ID: CardBackgroundId = 'logo-purple';
+export { DEFAULT_CARD_BACKGROUND_ID };
 
-export const LEGENDS_CARD_BACKGROUNDS: readonly LegendsCardBackground[] = [
-  { id: 'logo-purple', imageUrl: logoPurpleUrl, hasDarkText: false },
-  { id: 'texture-light', imageUrl: textureLightUrl, hasDarkText: true },
-  { id: 'bolt-purple', imageUrl: boltPurpleUrl, hasDarkText: false },
-  { id: 'bolt-dark-teal', imageUrl: boltDarkTealUrl, hasDarkText: false },
-  { id: 'logo-light', imageUrl: logoLightUrl, hasDarkText: true },
-  { id: 'bolt-dark-purple', imageUrl: boltDarkPurpleUrl, hasDarkText: false },
-  { id: 'logo-cyan', imageUrl: logoCyanUrl, hasDarkText: true },
-  { id: 'logo-black', imageUrl: logoBlackUrl, hasDarkText: false },
-];
+const BACKGROUNDS_BY_ID: Record<CardBackgroundId, Omit<LegendsCardBackground, 'id'>> = {
+  'logo-purple': { imageUrl: logoPurpleUrl, hasDarkText: false },
+  'texture-light': { imageUrl: textureLightUrl, hasDarkText: true },
+  'bolt-purple': { imageUrl: boltPurpleUrl, hasDarkText: false },
+  'bolt-dark-teal': { imageUrl: boltDarkTealUrl, hasDarkText: false },
+  'logo-light': { imageUrl: logoLightUrl, hasDarkText: true },
+  'bolt-dark-purple': { imageUrl: boltDarkPurpleUrl, hasDarkText: false },
+  'logo-cyan': { imageUrl: logoCyanUrl, hasDarkText: true },
+  'logo-black': { imageUrl: logoBlackUrl, hasDarkText: false },
+};
+
+export const LEGENDS_CARD_BACKGROUNDS: readonly LegendsCardBackground[] = LEGENDS_CARD_BACKGROUND_IDS.map((id) => ({
+  id,
+  ...BACKGROUNDS_BY_ID[id],
+}));
 
 export function getLegendsCardBackground(backgroundId?: CardBackgroundId) {
   return LEGENDS_CARD_BACKGROUNDS.find(({ id }) => id === backgroundId) ?? LEGENDS_CARD_BACKGROUNDS[0];

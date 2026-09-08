@@ -11,11 +11,12 @@ import type {
 } from '../types';
 import { AuthState } from '../types';
 
-import { POPULAR_WALLET_VERSIONS } from '../../config';
+import { IS_LEGENDS_WALLET, POPULAR_WALLET_VERSIONS } from '../../config';
 import { generateAccountTitle } from '../../util/account';
 import { getDefaultEnabledSlugs } from '../../util/chain';
 import { getIsDefaultChainDisplayConfiguration } from '../../util/chainDisplay';
 import isPartialDeepEqual from '../../util/isPartialDeepEqual';
+import { getRandomLegendsCardBackgroundId } from '../../util/legendsCardBackground';
 import { getChainBySlug } from '../../util/tokens';
 import {
   selectAccount,
@@ -107,6 +108,11 @@ export function createAccount({
     throw new Error(`Account ${accountId} already exists`);
   }
 
+  const existingSettings = global.settings.byAccountId[accountId];
+  const shouldAssignRandomBackground = IS_LEGENDS_WALLET
+    && !existingSettings?.cardBackgroundId
+    && !existingSettings?.cardBackgroundNft;
+
   return {
     ...global,
     accounts: {
@@ -116,6 +122,18 @@ export function createAccount({
         [accountId]: account,
       },
     },
+    ...(shouldAssignRandomBackground && {
+      settings: {
+        ...global.settings,
+        byAccountId: {
+          ...global.settings.byAccountId,
+          [accountId]: {
+            ...existingSettings,
+            cardBackgroundId: getRandomLegendsCardBackgroundId(),
+          },
+        },
+      },
+    }),
   };
 }
 

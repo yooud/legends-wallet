@@ -50,7 +50,7 @@ function PortraitActions({
     ? lang('Receive')
     : (!isSwapDisabled || isOnRampAllowed
       ? lang('Fund')
-      : lang('Add')
+      : lang('Top Up')
     );
   const sendButtonName = IS_FEATURE_LIMITED || isOffRampDisabled || lang.code !== 'en'
     ? lang('Send')

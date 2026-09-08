@@ -189,7 +189,7 @@
   flex-shrink: 0;
   align-self: center;
 
-  width: min(100%, 23rem);
+  width: min(100%, 24rem);
   margin-top: 0;
   padding: 0.75rem 1rem 1.5rem;
 
@@ -206,15 +206,15 @@
   }
 
   .dots {
-    gap: 0.75rem;
+    gap: 0.8125rem;
     margin-bottom: 1.5rem;
   }
 
   .dot {
     position: relative;
 
-    width: 3rem;
-    height: 3.5rem;
+    width: 3.125rem;
+    height: 3.625rem;
     border: 0.0625rem solid var(--color-separator);
     border-radius: 0.75rem;
 
@@ -270,8 +270,8 @@
   }
 
   .grid {
-    grid-template-columns: repeat(3, 4rem);
-    gap: 1rem 2rem;
+    grid-template-columns: repeat(3, 4.25rem);
+    gap: 1.125rem 2.125rem;
     justify-content: center;
     width: auto;
   }
@@ -280,11 +280,11 @@
   .minified > .button {
     transform: scale(1);
 
-    width: 4rem;
-    height: 4rem;
+    width: 4.25rem;
+    height: 4.25rem;
     border-radius: 50%;
 
-    font-size: 1.375rem;
+    font-size: 1.5rem;
     font-weight: 600;
     line-height: 1;
 
@@ -305,6 +305,10 @@
 
   .buttonDanger {
     color: var(--color-red);
+  }
+
+  @media (max-width: 30rem) and (min-height: 44rem) {
+    margin-bottom: clamp(0.75rem, 2vh, 1.5rem);
   }
 
   @media (max-height: 40rem) {

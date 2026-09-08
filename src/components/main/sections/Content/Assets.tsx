@@ -339,7 +339,7 @@ function Assets({
           isInvestorView={isInvestorViewEnabled}
           isActive={token.slug === currentTokenSlug}
           baseCurrency={baseCurrency}
-          withChainIcon={isMultichainAccount}
+          withChainIcon={isMultichainAccount || IS_LEGENDS_WALLET}
           appTheme={appTheme}
           isSensitiveDataHidden={isSensitiveDataHidden}
           areTokenNamesLocalized={areTokenNamesLocalized}

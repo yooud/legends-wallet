@@ -592,6 +592,7 @@ Are you sure you want to disable biometrics?: Czy na pewno chcesz wyłączyć bi
 Biometric confirmation failed: Potwierdzenie biometryczne nie powiodło się
 No Activity: Brak aktywności
 Fund: Doładować
+Top Up: Doładuj
 Buy with Card: Kup za pomocą karty
 Buy with Crypto: Kup za pomocą kryptowalut
 Cannot load widget: Nie można załadować widżetu
@@ -1796,6 +1797,7 @@ $enclave_migration_interrupted_message: |
 Hide Unverified NFTs: Ukryj niezweryfikowane NFT
 Unverified: Niezweryfikowane
 Prepaid: Saldo opłat
+$prepaid_unavailable: Przedpłacone pokrycie opłat jest tymczasowo niedostępne.
 $prepaid_history_topup: Doładowanie salda opłat
 $bot_balance_project_help: Wybierz saldo projektu bota, które będzie używane do pokrywania opłat tego portfela.
 $bot_balance_disconnect_warning: Po odłączeniu ten portfel przestanie używać salda projektu do pokrywania opłat. Środki pozostaną na saldzie projektu bota i nadal będą dostępne w bocie.

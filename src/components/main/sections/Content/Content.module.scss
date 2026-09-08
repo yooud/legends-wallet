@@ -236,6 +236,10 @@
 
     :global(html:not(.with-safe-area-bottom)) & {
       border-radius: 0;
+
+      &.slidesStandaloneActivity {
+        border-radius: var(--border-radius-default) var(--border-radius-default) 0 0;
+      }
     }
   }
 

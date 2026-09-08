@@ -106,7 +106,7 @@ interface StateProps {
 }
 
 const STICKER_SIZE = 180;
-const LEGENDS_PIN_STICKER_SIZE_PX = 90;
+const LEGENDS_PIN_STICKER_SIZE_PX = 96;
 const APPEAR_ANIMATION_DURATION_MS = 300;
 
 const [getHandleBiometricsSignal, setHandleBiometricsSignal] = createSignal(Date.now());

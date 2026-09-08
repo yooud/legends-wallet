@@ -569,6 +569,7 @@ Are you sure you want to disable biometrics?: هل أنت متأكد أنك تر
 Biometric confirmation failed: فشل التأكيد البيومتري
 No Activity: لا يوجد نشاط
 Fund: تمويل
+Top Up: شحن الرصيد
 Buy with Card: الشراء بالبطاقة
 Buy with Crypto: الشراء باستخدام التشفير
 Cannot load widget: لا يمكن تحميل القطعة
@@ -1776,6 +1777,7 @@ $enclave_migration_interrupted_message: |
 Hide Unverified NFTs: إخفاء NFTs غير الموثّقة
 Unverified: غير موثّقة
 Prepaid: رصيد الرسوم
+$prepaid_unavailable: تغطية الرسوم من الرصيد المدفوع مسبقًا غير متاحة مؤقتًا.
 $prepaid_history_topup: شحن رصيد الرسوم
 $bot_balance_project_help: اختر رصيد مشروع البوت الذي سيُستخدم لتغطية رسوم هذه المحفظة.
 $bot_balance_disconnect_warning: بعد قطع الاتصال، ستتوقف هذه المحفظة عن استخدام رصيد المشروع لتغطية الرسوم. ستبقى الأموال في رصيد مشروع البوت وستظل متاحة في البوت.

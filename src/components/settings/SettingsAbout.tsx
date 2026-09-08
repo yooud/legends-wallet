@@ -10,6 +10,7 @@ import {
   IS_EXTENSION,
   IS_FEATURE_LIMITED,
   IS_GRAM_WALLET,
+  IS_LEGENDS_WALLET,
   IS_MY_WALLET_BRAND,
   NO_HELP_CENTER,
 } from '../../config';
@@ -92,119 +93,123 @@ function SettingsAbout({
           </p>
         </div>
 
-        <p className={styles.blockTitle}>{lang('%app_name% Resources', { app_name: APP_NAME })}</p>
-        <div className={styles.settingsBlock}>
-          {/* The tips channel is a My Wallet channel; Air hides this row on the Gram brand too */}
-          {IS_MY_WALLET_BRAND && (
-            <a
-              href={getTelegramTipsChannelUrl(lang.code!)}
-              target="_blank"
-              rel="noreferrer"
-              className={styles.item}
-              onClick={handleUrlClick}
-            >
-              <img className={styles.menuIcon} src={videoImg} alt={lang('Watch Video about Features')} />
-              <span className={styles.itemTitle}>{lang('Watch Video about Features')}</span>
-
-              <i className={buildClassName(styles.iconChevronRight, 'icon-chevron-right')} aria-hidden />
-            </a>
-          )}
-          <a
-            href={getBlogUrl(lang.code!)}
-            target="_blank"
-            rel="noreferrer"
-            className={styles.item}
-            onClick={handleUrlClick}
-          >
-            <img className={styles.menuIcon} src={hotImg} alt={lang('Enjoy Monthly Updates in Blog')} />
-            <span className={styles.itemTitle}>{lang('Enjoy Monthly Updates in Blog')}</span>
-
-            <i className={buildClassName(styles.iconChevronRight, 'icon-chevron-right')} aria-hidden />
-          </a>
-          {!NO_HELP_CENTER && (
-            <a
-              href={getHelpCenterUrl(lang.code, 'home')}
-              target="_blank"
-              rel="noreferrer"
-              className={styles.item}
-              onClick={handleUrlClick}
-            >
-              <img className={styles.menuIcon} src={helpcenterImg} alt={lang('Learn New Things in Help Center')} />
-              <span className={styles.itemTitle}>{lang('Learn New Things in Help Center')}</span>
-
-              <i className={buildClassName(styles.iconChevronRight, 'icon-chevron-right')} aria-hidden />
-            </a>
-          )}
-        </div>
-
-        <p className={styles.blockTitle}>{lang('Frequent Questions & Answers')}</p>
-        <div className={buildClassName(styles.settingsBlock, styles.settingsBlock_text)}>
-          {IS_EXTENSION ? (
-            <>
-              <h3 className={buildClassName(activityStyles.comment, styles.heading)}>
-                <Emoji from="🥷" /> {lang('What is TON Proxy?')}
-              </h3>
-              <p className={buildClassName(styles.text, styles.textInChat)}>
-                {renderText(lang('$about_extension_description1'))}{' '}
+        {!IS_LEGENDS_WALLET && (
+          <>
+            <p className={styles.blockTitle}>{lang('%app_name% Resources', { app_name: APP_NAME })}</p>
+            <div className={styles.settingsBlock}>
+              {/* The tips channel is a My Wallet channel; Air hides this row on the Gram brand too */}
+              {IS_MY_WALLET_BRAND && (
                 <a
-                  href="https://telegra.ph/TON-Sites-TON-WWW-and-TON-Proxy-09-29-2"
+                  href={getTelegramTipsChannelUrl(lang.code!)}
                   target="_blank"
-                  rel="noopener noreferrer"
+                  rel="noreferrer"
+                  className={styles.item}
+                  onClick={handleUrlClick}
                 >
-                  {lang('More info and demo.')}
+                  <img className={styles.menuIcon} src={videoImg} alt={lang('Watch Video about Features')} />
+                  <span className={styles.itemTitle}>{lang('Watch Video about Features')}</span>
+
+                  <i className={buildClassName(styles.iconChevronRight, 'icon-chevron-right')} aria-hidden />
                 </a>
-              </p>
-            </>
-          ) : (
-            <>
+              )}
+              <a
+                href={getBlogUrl(lang.code!)}
+                target="_blank"
+                rel="noreferrer"
+                className={styles.item}
+                onClick={handleUrlClick}
+              >
+                <img className={styles.menuIcon} src={hotImg} alt={lang('Enjoy Monthly Updates in Blog')} />
+                <span className={styles.itemTitle}>{lang('Enjoy Monthly Updates in Blog')}</span>
+
+                <i className={buildClassName(styles.iconChevronRight, 'icon-chevron-right')} aria-hidden />
+              </a>
+              {!NO_HELP_CENTER && (
+                <a
+                  href={getHelpCenterUrl(lang.code, 'home')}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={styles.item}
+                  onClick={handleUrlClick}
+                >
+                  <img className={styles.menuIcon} src={helpcenterImg} alt={lang('Learn New Things in Help Center')} />
+                  <span className={styles.itemTitle}>{lang('Learn New Things in Help Center')}</span>
+
+                  <i className={buildClassName(styles.iconChevronRight, 'icon-chevron-right')} aria-hidden />
+                </a>
+              )}
+            </div>
+
+            <p className={styles.blockTitle}>{lang('Frequent Questions & Answers')}</p>
+            <div className={buildClassName(styles.settingsBlock, styles.settingsBlock_text)}>
+              {IS_EXTENSION ? (
+                <>
+                  <h3 className={buildClassName(activityStyles.comment, styles.heading)}>
+                    <Emoji from="🥷" /> {lang('What is TON Proxy?')}
+                  </h3>
+                  <p className={buildClassName(styles.text, styles.textInChat)}>
+                    {renderText(lang('$about_extension_description1'))}{' '}
+                    <a
+                      href="https://telegra.ph/TON-Sites-TON-WWW-and-TON-Proxy-09-29-2"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {lang('More info and demo.')}
+                    </a>
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h3 className={buildClassName(activityStyles.comment, activityStyles.colorIn, styles.heading)}>
+                    <Emoji from="🥷" /> {lang('What is TON Proxy?')}
+                  </h3>
+                  <p className={buildClassName(styles.text, styles.textInChat)}>
+                    {lang('$about_proxy_magic_description', {
+                      extension_link: (
+                        <a href={APP_PROMO_URL} target="_blank" rel="noreferrer">
+                          {renderText(aboutExtensionTitle)}
+                        </a>
+                      ),
+                    })}
+                  </p>
+                </>
+              )}
+              <hr className={styles.separator} />
               <h3 className={buildClassName(activityStyles.comment, activityStyles.colorIn, styles.heading)}>
-                <Emoji from="🥷" /> {lang('What is TON Proxy?')}
+                <i className={buildClassName(styles.github, 'icon-github')} aria-hidden /> {lang('Is it open source?')}
               </h3>
               <p className={buildClassName(styles.text, styles.textInChat)}>
-                {lang('$about_proxy_magic_description', {
-                  extension_link: (
-                    <a href={APP_PROMO_URL} target="_blank" rel="noreferrer">
-                      {renderText(aboutExtensionTitle)}
+                {lang('$about_wallet_github', {
+                  github_link: (
+                    <a href={APP_REPO_URL} target="_blank" rel="noreferrer">
+                      {renderText(lang('$about_github_link_text'))}
                     </a>
                   ),
                 })}
               </p>
-            </>
-          )}
-          <hr className={styles.separator} />
-          <h3 className={buildClassName(activityStyles.comment, activityStyles.colorIn, styles.heading)}>
-            <i className={buildClassName(styles.github, 'icon-github')} aria-hidden /> {lang('Is it open source?')}
-          </h3>
-          <p className={buildClassName(styles.text, styles.textInChat)}>
-            {lang('$about_wallet_github', {
-              github_link: (
-                <a href={APP_REPO_URL} target="_blank" rel="noreferrer">
-                  {renderText(lang('$about_github_link_text'))}
-                </a>
-              ),
-            })}
-          </p>
-          <hr className={styles.separator} />
-          <h3 className={buildClassName(activityStyles.comment, activityStyles.colorIn, styles.heading)}>
-            <i
-              className={buildClassName(styles.telegram, 'icon-telegram')}
-              aria-hidden
-            /> {lang('Is there a community?')}
-          </h3>
-          <p className={buildClassName(styles.text, styles.textInChat)}>
-            {lang('$about_wallet_community', {
-              community_link: (
-                <a
-                  href={getTelegramNewsChannelUrl(lang.code!)}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {renderText(lang('$about_community_link_text'))}
-                </a>
-              ),
-            })}
-          </p>
-        </div>
+              <hr className={styles.separator} />
+              <h3 className={buildClassName(activityStyles.comment, activityStyles.colorIn, styles.heading)}>
+                <i
+                  className={buildClassName(styles.telegram, 'icon-telegram')}
+                  aria-hidden
+                /> {lang('Is there a community?')}
+              </h3>
+              <p className={buildClassName(styles.text, styles.textInChat)}>
+                {lang('$about_wallet_community', {
+                  community_link: (
+                    <a
+                      href={getTelegramNewsChannelUrl(lang.code!)}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {renderText(lang('$about_community_link_text'))}
+                    </a>
+                  ),
+                })}
+              </p>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

@@ -584,6 +584,7 @@ Are you sure you want to disable biometrics?: Biyometrik korumayı devre dışı
 Biometric confirmation failed: Biyometrik doğrulama başarısız oldu
 No Activity: Etkinlik yok
 Fund: Yükleme
+Top Up: Para Yükle
 Buy with Card: Kart ile Satın Al
 Buy with Crypto: Kripto ile Satın Al
 Cannot load widget: Widget yüklenemiyor
@@ -1755,6 +1756,7 @@ $enclave_migration_interrupted_message: |
 Hide Unverified NFTs: Doğrulanmamış NFT'leri Gizle
 Unverified: Doğrulanmamış
 Prepaid: Komisyon Bakiyesi
+$prepaid_unavailable: Ön ödemeli komisyon karşılama geçici olarak kullanılamıyor.
 $prepaid_history_topup: Komisyon bakiyesi yükleme
 $bot_balance_project_help: Bu cüzdanın ücretlerini karşılamak için hangi bot projesi bakiyesinin kullanılacağını seçin.
 $bot_balance_disconnect_warning: Bağlantı kesildiğinde bu cüzdan, ücretleri karşılamak için proje bakiyesini kullanmayı bırakır. Fonlar bot projesi bakiyesinde kalır ve botta kullanılmaya devam eder.

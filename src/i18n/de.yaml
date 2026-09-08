@@ -589,6 +589,7 @@ Are you sure you want to disable biometrics?: Sind Sie sicher, dass Sie die Biom
 Biometric confirmation failed: Biometrische Bestätigung fehlgeschlagen
 No Activity: Keine aktivität
 Fund: Aufladen
+Top Up: Aufladen
 Buy with Card: Mit Karte kaufen
 Buy with Crypto: Mit Krypto kaufen
 Cannot load widget: Widget kann nicht geladen werden
@@ -1764,6 +1765,7 @@ $enclave_migration_interrupted_message: |
 Hide Unverified NFTs: Ungeprüfte NFTs ausblenden
 Unverified: Ungeprüft
 Prepaid: Gebührenguthaben
+$prepaid_unavailable: Die vorausbezahlte Gebührenabdeckung ist vorübergehend nicht verfügbar.
 $prepaid_history_topup: Aufladung des Gebührenguthabens
 $bot_balance_project_help: Wählen Sie aus, welches Bot-Projektguthaben zur Deckung der Gebühren dieser Wallet verwendet werden soll.
 $bot_balance_disconnect_warning: Nach der Trennung verwendet diese Wallet das Projektguthaben nicht mehr zur Deckung von Gebühren. Das Guthaben verbleibt im Bot-Projekt und kann weiterhin im Bot verwendet werden.

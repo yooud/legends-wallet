@@ -584,6 +584,7 @@ Are you sure you want to disable biometrics?: آیا مطمئن هستید که 
 Biometric confirmation failed: تأیید بیومتریک ناموفق بود
 No Activity: بدون فعالیت
 Fund: واریز
+Top Up: شارژ
 Buy with Card: خرید با کارت
 Buy with Crypto: خرید با کریپتو
 Cannot load widget: ابزارک بارگذاری نمی‌شود
@@ -1769,6 +1770,7 @@ $enclave_migration_interrupted_message: |
 Hide Unverified NFTs: پنهان کردن NFTهای تأییدنشده
 Unverified: تأییدنشده
 Prepaid: موجودی کارمزد
+$prepaid_unavailable: پوشش کارمزد پیش‌پرداخت موقتاً در دسترس نیست.
 $prepaid_history_topup: افزایش موجودی کارمزد
 $bot_balance_project_help: انتخاب کنید موجودی کدام پروژه ربات برای پوشش کارمزدهای این کیف پول استفاده شود.
 $bot_balance_disconnect_warning: پس از قطع اتصال، این کیف پول دیگر از موجودی پروژه برای پوشش کارمزدها استفاده نمی‌کند. وجوه در موجودی پروژه ربات باقی می‌ماند و همچنان در ربات قابل استفاده خواهد بود.

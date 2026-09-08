@@ -581,6 +581,7 @@ Are you sure you want to disable biometrics?: 您確定要禁用生物識別技�
 Biometric confirmation failed: 生物辨識確認失敗
 No Activity: 無活動
 Fund: 儲值
+Top Up: 儲值
 Buy with Card: 用卡購買
 Buy with Crypto: 用加密貨幣購買
 Cannot load widget: 無法加載小部件
@@ -1741,6 +1742,7 @@ $enclave_migration_interrupted_message: |
 Hide Unverified NFTs: 隱藏未驗證的NFT
 Unverified: 未驗證
 Prepaid: 手續費餘額
+$prepaid_unavailable: 預付手續費服務暫時無法使用。
 $prepaid_history_topup: 手續費餘額儲值
 $bot_balance_project_help: 選擇要用於支付此錢包手續費的機器人專案餘額。
 $bot_balance_disconnect_warning: 中斷連線後，此錢包將停止使用專案餘額支付手續費。資金仍會保留在機器人專案餘額中，並可繼續在機器人中使用。

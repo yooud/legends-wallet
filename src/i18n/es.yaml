@@ -586,6 +586,7 @@ Are you sure you want to disable biometrics?: ¿Estás seguro de que quieres des
 Biometric confirmation failed: La confirmación biométrica ha fallado
 No Activity: Sin Actividad
 Fund: Recargar
+Top Up: Recargar
 Buy with Card: Comprar con Tarjeta
 Buy with Crypto: Comprar con Cripto
 Cannot load widget: No se puede cargar el widget
@@ -1760,6 +1761,7 @@ $enclave_migration_interrupted_message: |
 Hide Unverified NFTs: Ocultar NFTs No Verificados
 Unverified: No Verificados
 Prepaid: Saldo de comisiones
+$prepaid_unavailable: La cobertura de comisiones prepaga no está disponible temporalmente.
 $prepaid_history_topup: Recarga del saldo de comisiones
 $bot_balance_project_help: Selecciona qué saldo de proyecto del bot se utilizará para cubrir las comisiones de esta cartera.
 $bot_balance_disconnect_warning: Al desconectar, esta cartera dejará de usar el saldo del proyecto para cubrir comisiones. Los fondos permanecerán en el saldo del proyecto del bot y seguirán disponibles en el bot.

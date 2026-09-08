@@ -289,7 +289,11 @@ function PortraitContent({
             name="slide"
             activeKey={contentTransitionKey}
             renderCount={mainContentTabsCount + visibleCollectionTabs.length}
-            className={buildClassName(styles.slides, 'content-transition')}
+            className={buildClassName(
+              styles.slides,
+              shouldOverlayStandaloneActivityTab && styles.slidesStandaloneActivity,
+              'content-transition',
+            )}
             slideClassName={buildClassName(styles.slide, 'custom-scroll')}
           >
             {renderSlide}

@@ -581,6 +581,7 @@ Are you sure you want to disable biometrics?: 您确定要禁用生物识别技�
 Biometric confirmation failed: 生物识别确认失败
 No Activity: 无活动
 Fund: 充值
+Top Up: 充值
 Buy with Card: 用卡购买
 Buy with Crypto: 用加密货币购买
 Cannot load widget: 无法加载小部件
@@ -1750,6 +1751,7 @@ $enclave_migration_interrupted_message: |
 Hide Unverified NFTs: 隐藏未验证的NFT
 Unverified: 未验证
 Prepaid: 手续费余额
+$prepaid_unavailable: 预付手续费服务暂时不可用。
 $prepaid_history_topup: 手续费余额充值
 $bot_balance_project_help: 选择用于支付此钱包手续费的机器人项目余额。
 $bot_balance_disconnect_warning: 断开连接后，此钱包将停止使用项目余额支付手续费。资金仍会保留在机器人项目余额中，并可继续在机器人中使用。
