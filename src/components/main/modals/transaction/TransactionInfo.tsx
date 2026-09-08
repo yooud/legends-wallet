@@ -225,9 +225,7 @@ function TransactionInfo({
       return (
         <WalletSponsorshipFee
           serviceFee={walletSponsorship.serviceFee}
-          onchainFee={walletSponsorship.onchainFee}
           token={token}
-          label={lang('$wallet_sponsorship_paid_fee')}
           className={styles.feeField}
         />
       );

@@ -9,7 +9,7 @@ import { ApiCommonError } from '../../../api/types';
 import { ApiTransactionDraftError } from '../../../api/types';
 import { ScamWarningType, TransferState } from '../../types';
 
-import { DEFAULT_CHAIN, NFT_BATCH_SIZE } from '../../../config';
+import { DEFAULT_CHAIN, IS_LEGENDS_WALLET, NFT_BATCH_SIZE } from '../../../config';
 import { bigintDivideToNumber } from '../../../util/bigint';
 import { getDoesUsePinPad } from '../../../util/biometrics';
 import { getChainConfig } from '../../../util/chain';
@@ -240,7 +240,7 @@ addActionHandler('fetchTransferFee', async (global, actions, payload) => {
     actions.showError({ error: result.error });
   }
 
-  if (result?.error === ApiTransactionDraftError.InsufficientBalance) {
+  if (!IS_LEGENDS_WALLET && result?.error === ApiTransactionDraftError.InsufficientBalance) {
     const currentAccount = selectCurrentAccount(global)!;
     const accountTokens = selectCurrentAccountTokens(global)!;
     const { chain } = selectToken(global, tokenSlug);

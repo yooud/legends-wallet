@@ -1,16 +1,19 @@
 .root {
+  box-sizing: border-box;
   width: 100%;
   margin: 0 0 1.25rem;
-  padding: 0.625rem 0.75rem;
-  border-radius: var(--border-radius-buttons);
+  padding: 0.875rem 0.75rem;
+  border-radius: var(--border-radius-default);
 
-  font-size: 0.875rem;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  color: var(--color-black);
 
-  background-color: var(--color-background-first);
+  background: var(--color-background-first);
 }
 
-.feeRow,
-.feeDetails {
+.feeRow {
   display: flex;
   gap: 0.5rem;
   align-items: center;
@@ -20,17 +23,11 @@
 }
 
 .feeLabel {
-  display: flex;
-  gap: 0.25rem;
-  align-items: center;
-
   min-width: 0;
 
-  color: var(--color-gray-2);
-}
-
-.helpIcon {
-  flex-shrink: 0;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  line-height: 0.875rem;
   color: var(--color-gray-2);
 }
 
@@ -38,62 +35,7 @@
   flex-shrink: 0;
 
   font-size: 1rem;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.25rem;
-  color: var(--color-text);
-}
-
-.feeDetails {
-  flex-wrap: wrap;
-  row-gap: 0;
-
-  margin-top: 0.125rem;
-
-  font-size: 0.75rem;
-  line-height: 1rem;
-}
-
-.onchainFee,
-.savings {
-  display: flex;
-  gap: 0.25rem;
-}
-
-.prepaidRow {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  gap: 0.5rem;
-  align-items: center;
-
-  margin-top: 0.5rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid var(--color-separator);
-
-  font-size: 0.75rem;
-  color: var(--color-gray-2);
-}
-
-.prepaidRow button {
-  cursor: pointer;
-
-  border: 0;
-
-  font: inherit;
-  font-weight: 700;
-  color: var(--color-accent);
-
-  background: transparent;
-}
-
-.onchainFee {
-  color: var(--color-gray-2);
-  text-align: end;
-}
-
-.savings {
-  color: var(--color-transaction-amount-green-text);
-
-  &_none {
-    color: var(--color-gray-2);
-  }
+  color: var(--color-gray-3);
 }
