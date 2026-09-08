@@ -23,10 +23,11 @@ const fetchJsonMock = jest.mocked(fetchJson);
 
 describe('TRON history requests', () => {
   const originalHistoryApiKey = NETWORK_CONFIG.mainnet.historyApiKey;
+  let historyApiKeyIndex = 0;
 
   beforeEach(() => {
     fetchJsonMock.mockReset();
-    NETWORK_CONFIG.mainnet.historyApiKey = 'test-api-key';
+    NETWORK_CONFIG.mainnet.historyApiKey = `test-api-key-${historyApiKeyIndex++}`;
   });
 
   afterAll(() => {
@@ -43,9 +44,15 @@ describe('TRON history requests', () => {
       .resolves.toEqual(transactions);
     expect(fetchJsonMock).toHaveBeenCalledTimes(2);
     expect(fetchJsonMock.mock.calls[0][2]).toEqual({
-      headers: { 'TRON-PRO-API-KEY': 'test-api-key' },
+      headers: { 'TRON-PRO-API-KEY': NETWORK_CONFIG.mainnet.historyApiKey },
     });
     expect(fetchJsonMock.mock.calls[1][2]).toBeUndefined();
+
+    fetchJsonMock.mockResolvedValueOnce({ data: transactions });
+    await expect(getTrc20Transactions('mainnet', 'AnotherAddress', { limit: 50 }))
+      .resolves.toEqual(transactions);
+    expect(fetchJsonMock).toHaveBeenCalledTimes(3);
+    expect(fetchJsonMock.mock.calls[2][2]).toBeUndefined();
   });
 
   it('does not bypass provider rate limits with an anonymous request', async () => {

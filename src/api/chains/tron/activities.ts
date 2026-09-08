@@ -25,6 +25,8 @@ import {
   reconcileWalletSponsorshipActivities,
 } from './sponsorship';
 
+const rejectedHistoryApiKeyScopes = new Set<string>();
+
 export async function fetchActivitySlice({
   accountId,
   tokenSlug,
@@ -314,9 +316,12 @@ export async function getTrc20Transactions(
   return result.data;
 }
 
-function getHistoryRequestInit(network: ApiNetwork): RequestInit | undefined {
+function getHistoryRequestInit(network: ApiNetwork, url: URL): RequestInit | undefined {
   const { historyApiKey } = NETWORK_CONFIG[network];
-  return historyApiKey ? { headers: { 'TRON-PRO-API-KEY': historyApiKey } } : undefined;
+  const scope = getHistoryApiKeyScope(network, url, historyApiKey);
+  return historyApiKey && !rejectedHistoryApiKeyScopes.has(scope)
+    ? { headers: { 'TRON-PRO-API-KEY': historyApiKey } }
+    : undefined;
 }
 
 async function fetchHistoryJson(
@@ -324,7 +329,7 @@ async function fetchHistoryJson(
   url: URL,
   queryParams: Parameters<typeof fetchJson>[1],
 ): Promise<{ data: any[] }> {
-  const requestInit = getHistoryRequestInit(network);
+  const requestInit = getHistoryRequestInit(network, url);
   const options = { bucketKey: bucketKey(url, { includePathPrefix: true }) };
 
   try {
@@ -335,8 +340,18 @@ async function fetchHistoryJson(
       && (error.statusCode === 401 || error.statusCode === 403);
     if (!isRejectedApiKey) throw error;
 
+    rejectedHistoryApiKeyScopes.add(getHistoryApiKeyScope(
+      network,
+      url,
+      NETWORK_CONFIG[network].historyApiKey,
+    ));
     return fetchJson(url.toString(), queryParams, undefined, options);
   }
+}
+
+function getHistoryApiKeyScope(network: ApiNetwork, url: URL, apiKey: string) {
+  const endpoint = url.pathname.replace(/\/v1\/accounts\/[^/]+/, '/v1/accounts/:address');
+  return `${network}:${apiKey}:${endpoint}`;
 }
 
 export function parseRawTrc20Transaction(

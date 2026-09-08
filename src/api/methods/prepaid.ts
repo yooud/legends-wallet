@@ -136,14 +136,25 @@ async function createWalletAccessProof(
 export async function fetchWalletPrepaidOverview(accountId: string): Promise<ApiWalletPrepaidOverview | undefined> {
   const { account, address } = await getTronAccount(accountId);
   if (account.type === 'view') return undefined;
+
+  return callWithWalletPrepaidAccess(accountId, address, (accessToken) => (
+    fetchPrepaidJson<ApiWalletPrepaidOverview>(accountId, 'overview', { address }, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+  ));
+}
+
+async function callWithWalletPrepaidAccess<T>(
+  accountId: string,
+  address: string,
+  request: (accessToken: string) => Promise<T>,
+): Promise<T | undefined> {
   const { session, didRefresh } = await resolvePrepaidAccessSession(accountId, address);
   if (!session) return undefined;
   let failedAccessToken = session.access_token;
 
   try {
-    return await fetchPrepaidJson<ApiWalletPrepaidOverview>(accountId, 'overview', { address }, {
-      headers: { Authorization: `Bearer ${session.access_token}` },
-    });
+    return await request(session.access_token);
   } catch (error) {
     if (!isPrepaidAccessError(error)) throw error;
     if (!didRefresh) {
@@ -151,9 +162,7 @@ export async function fetchWalletPrepaidOverview(accountId: string): Promise<Api
         const refreshedSession = await refreshPrepaidAccessSession(accountId, address, session);
         if (refreshedSession) {
           failedAccessToken = refreshedSession.access_token;
-          return await fetchPrepaidJson<ApiWalletPrepaidOverview>(accountId, 'overview', { address }, {
-            headers: { Authorization: `Bearer ${refreshedSession.access_token}` },
-          });
+          return await request(refreshedSession.access_token);
         }
       } catch (refreshError) {
         if (!isPrepaidAccessError(refreshError)) throw refreshError;
@@ -492,25 +501,23 @@ async function mutateStoredPrepaidAccessSessions(
 
 export async function setWalletPrepaidCoverageMode(
   accountId: string,
-  enclaveToken: string,
   mode: ApiWalletPrepaidCoverageMode,
 ): Promise<ApiWalletPrepaidOverview> {
-  const { address } = await getTronAccount(accountId);
-  const challenge = await fetchPrepaidJson<{
-    challenge_id: string;
-    memo: string;
-    proof_address: string;
-  }>(accountId, 'preferences/challenge', undefined, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ address, coverage_mode: mode }),
-  });
-  const proof = await createWalletProof(accountId, enclaveToken, challenge.proof_address, challenge.memo);
-  return fetchPrepaidJson<ApiWalletPrepaidOverview>(accountId, 'preferences', undefined, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ challenge_id: challenge.challenge_id, coverage_mode: mode, proof }),
-  });
+  const { account, address } = await getTronAccount(accountId);
+  if (account.type === 'view') throw new Error('UnsupportedAccountType');
+
+  const overview = await callWithWalletPrepaidAccess(accountId, address, (accessToken) => (
+    fetchPrepaidJson<ApiWalletPrepaidOverview>(accountId, 'preferences', undefined, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ address, coverage_mode: mode }),
+    })
+  ));
+  if (!overview) throw new Error('WalletPrepaidAuthorizationFailed');
+  return overview;
 }
 
 export async function topUpWalletPrepaid(

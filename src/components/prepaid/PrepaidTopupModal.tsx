@@ -8,6 +8,7 @@ import { selectAccountTokens } from '../../global/selectors';
 import buildClassName from '../../util/buildClassName';
 import { fromDecimal, toDecimal } from '../../util/decimals';
 import { stopEvent } from '../../util/domEvents';
+import { logDebugError } from '../../util/logs';
 import { callApiWithThrow } from '../../api';
 
 import useLang from '../../hooks/useLang';
@@ -56,6 +57,11 @@ function PrepaidTopupModal({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const showRequestError = useLastCallback((context: string, requestError: unknown) => {
+    logDebugError(context, requestError);
+    setError(lang('$prepaid_unavailable'));
+  });
+
   const topupTokens = useMemo(() => tokens?.filter((token) => (
     token.chain === 'tron'
     && overview?.topup_assets.some((asset) => doesTokenMatchAsset(token, asset))
@@ -87,7 +93,7 @@ function PrepaidTopupModal({
     setIsAuthorizing(false);
     setError('');
     void callApiWithThrow('fetchWalletPrepaidOverview', accountId).then(setOverview).catch((loadError) => {
-      setError(getErrorText(loadError));
+      showRequestError('Prepaid top-up overview', loadError);
     });
   }, [accountId, isOpen]);
 
@@ -135,7 +141,7 @@ function PrepaidTopupModal({
       onSuccess();
       onClose();
     } catch (topupError) {
-      setError(getErrorText(topupError));
+      showRequestError('Prepaid top-up', topupError);
     } finally {
       setIsLoading(false);
       releaseEnclaveSession({ enclaveToken });
@@ -255,10 +261,6 @@ function getIsBelowMinimum(
   if (!token.priceUsd) return false;
 
   return Number(toDecimal(amount, token.decimals)) * token.priceUsd < Number(asset.minimum_usdt);
-}
-
-function getErrorText(error: unknown) {
-  return error instanceof Error ? error.message : 'Unexpected error';
 }
 
 export default memo(withGlobal<OwnProps>((global, { accountId }): StateProps => ({

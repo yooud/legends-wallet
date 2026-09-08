@@ -23,6 +23,7 @@ import { ACCENT_COLORS } from '../../util/accentColor/constants';
 import buildClassName from '../../util/buildClassName';
 import { formatHumanDay, formatTime, getDayStartAt } from '../../util/dateFormat';
 import { fromDecimal } from '../../util/decimals';
+import { logDebugError } from '../../util/logs';
 import { shortenAddress } from '../../util/shortenAddress';
 import { callApiWithThrow } from '../../api';
 import { ANIMATED_STICKERS_PATHS } from '../ui/helpers/animatedAssets';
@@ -99,6 +100,11 @@ function Prepaid({
   const [isAuthorizing, setIsAuthorizing] = useState(false);
   const { handleScroll, isScrolled } = useScrolledState();
 
+  const showRequestError = useLastCallback((context: string, requestError: unknown) => {
+    logDebugError(context, requestError);
+    setError(lang('$prepaid_unavailable'));
+  });
+
   const cancelAuthorization = useLastCallback(() => {
     setIsAuthorizationOpen(false);
     setError('');
@@ -117,7 +123,7 @@ function Prepaid({
       setIsAuthorizationOpen(false);
       return true;
     } catch (authorizationError) {
-      setError(getErrorText(authorizationError));
+      showRequestError('Prepaid authorization', authorizationError);
       return false;
     } finally {
       setIsAuthorizing(false);
@@ -141,7 +147,7 @@ function Prepaid({
         : false;
       if (!didAuthorize) setIsAuthorizationOpen(true);
     } catch (loadError) {
-      setError(getErrorText(loadError));
+      showRequestError('Prepaid overview', loadError);
     }
   });
 
@@ -248,7 +254,7 @@ function Prepaid({
           </div>
         </section>
 
-        {error && <div className={styles.error}>{error}</div>}
+        {error && <div className={styles.notice}>{error}</div>}
         {!overview?.enabled && overview && <div className={styles.notice}>{lang('$prepaid_unavailable')}</div>}
 
         <section className={styles.activity}>
@@ -387,10 +393,6 @@ function getPrepaidActivityStatus(status: string): ApiTransactionActivity['statu
   if (status === 'completed' || status === 'credited' || status === 'refunded') return 'completed';
 
   return 'pending';
-}
-
-function getErrorText(error: unknown) {
-  return error instanceof Error ? error.message : 'Unexpected error';
 }
 
 export default memo(withGlobal<OwnProps>((global): StateProps => ({

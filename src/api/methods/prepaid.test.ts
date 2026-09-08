@@ -414,14 +414,28 @@ describe('wallet prepaid proof transactions', () => {
     expect(mutate(stored)).toBe(stored);
   });
 
-  it('uses the server-provided recipient for a preference proof', async () => {
-    mockFetchJson
-      .mockResolvedValueOnce({ challenge_id: 'challenge', memo: 'memo', proof_address: PROOF_ADDRESS })
-      .mockResolvedValueOnce({ coverage_mode: 'prepaid' });
+  it('updates preferences with the wallet access session without signing again', async () => {
+    mockStoredValues.walletPrepaidAccessSessions = {
+      [`testnet:${PRIMARY_ADDRESS}`]: {
+        access_token: 'preferences-access-token',
+        expires_at: Math.floor(Date.now() / 1000) + 30 * 86_400,
+      },
+    };
+    mockFetchJson.mockResolvedValueOnce({ coverage_mode: 'prepaid' });
 
-    await setWalletPrepaidCoverageMode(PRIMARY_ACCOUNT_ID, 'token', 'prepaid');
+    await setWalletPrepaidCoverageMode(PRIMARY_ACCOUNT_ID, 'prepaid');
 
-    expect(mockSendTrx).toHaveBeenCalledWith(PROOF_ADDRESS, 1, PRIMARY_ADDRESS);
+    expect(mockFetchJson.mock.calls[0][0]).toContain('/wallet-prepaid/preferences');
+    expect(mockFetchJson.mock.calls[0][2].headers).toEqual({
+      Authorization: 'Bearer preferences-access-token',
+      'Content-Type': 'application/json',
+    });
+    expect(mockFetchJson.mock.calls[0][2].body).toBe(JSON.stringify({
+      address: PRIMARY_ADDRESS,
+      coverage_mode: 'prepaid',
+    }));
+    expect(mockSendTrx).not.toHaveBeenCalled();
+    expect(mockSign).not.toHaveBeenCalled();
   });
 
   it('sends an API key only in the integration challenge header and signs a local proof', async () => {

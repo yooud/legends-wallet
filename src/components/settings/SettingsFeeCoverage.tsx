@@ -17,6 +17,7 @@ import {
   selectNetworkAccounts,
 } from '../../global/selectors';
 import buildClassName from '../../util/buildClassName';
+import { logDebugError } from '../../util/logs';
 import { shortenAddress } from '../../util/shortenAddress';
 import { getTelegramApp } from '../../util/telegram';
 import { callApiWithThrow } from '../../api';
@@ -81,7 +82,6 @@ function SettingsFeeCoverage({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [isAuthorizationOpen, setIsAuthorizationOpen] = useState(false);
-  const [pendingMode, setPendingMode] = useState<ApiWalletPrepaidCoverageMode>();
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [candidateAccountId, setCandidateAccountId] = useState('');
   const [isIntegrationModalOpen, setIsIntegrationModalOpen] = useState(false);
@@ -91,6 +91,11 @@ function SettingsFeeCoverage({
   const [integrationProjects, setIntegrationProjects] = useState<ApiWalletBalanceIntegrationProject[]>();
   const [apiKey, setApiKey] = useState('');
   const { isScrolled, handleScroll } = useScrolledState();
+
+  const showRequestError = useLastCallback((context: string, requestError: unknown) => {
+    logDebugError(context, requestError);
+    setError(lang('$prepaid_unavailable'));
+  });
 
   const cancelOverviewAuthorization = useLastCallback(() => {
     setIsAuthorizationOpen(false);
@@ -110,7 +115,7 @@ function SettingsFeeCoverage({
       setIsAuthorizationOpen(false);
       return true;
     } catch (authorizationError) {
-      setError(authorizationError instanceof Error ? authorizationError.message : 'Unable to authorize wallet');
+      showRequestError('Fee coverage authorization', authorizationError);
       return false;
     } finally {
       setIsLoading(false);
@@ -134,7 +139,7 @@ function SettingsFeeCoverage({
         : false;
       if (!didAuthorize) setIsAuthorizationOpen(true);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Unable to load fee coverage settings');
+      showRequestError('Fee coverage overview', loadError);
     }
   });
 
@@ -161,27 +166,19 @@ function SettingsFeeCoverage({
     {},
   ), [accounts]);
 
-  const selectMode = useLastCallback((mode: ApiWalletPrepaidCoverageMode) => {
-    if (!accountId || isLoading || overview?.coverage_mode === mode) return;
-    setError('');
-    setPendingMode(mode);
-  });
-
-  const authorizeMode = useLastCallback(async (enclaveToken: string) => {
-    if (!accountId || !pendingMode || isLoading) {
-      releaseEnclaveSession({ enclaveToken });
-      return;
-    }
+  const selectMode = useLastCallback(async (mode: ApiWalletPrepaidCoverageMode) => {
+    if (!accountId || !overview || isLoading || overview.coverage_mode === mode) return;
+    const previousOverview = overview;
+    setOverview({ ...overview, coverage_mode: mode });
     setIsLoading(true);
     setError('');
     try {
-      setOverview(await callApiWithThrow('setWalletPrepaidCoverageMode', accountId, enclaveToken, pendingMode));
-      setPendingMode(undefined);
+      setOverview(await callApiWithThrow('setWalletPrepaidCoverageMode', accountId, mode));
     } catch (updateError) {
-      setError(updateError instanceof Error ? updateError.message : 'Unable to update fee coverage mode');
+      setOverview(previousOverview);
+      showRequestError('Fee coverage mode', updateError);
     } finally {
       setIsLoading(false);
-      releaseEnclaveSession({ enclaveToken });
     }
   });
 
@@ -211,7 +208,7 @@ function SettingsFeeCoverage({
       setOverview(result);
       closeLinkModal();
     } catch (linkError) {
-      setError(linkError instanceof Error ? linkError.message : 'Unable to link wallet');
+      showRequestError('Fee coverage wallet link', linkError);
       setCandidateAccountId('');
     } finally {
       setIsLoading(false);
@@ -243,7 +240,7 @@ function SettingsFeeCoverage({
         setIntegrationAuth(auth);
       }
     } catch (projectError) {
-      setError(projectError instanceof Error ? projectError.message : 'Unable to load bot projects');
+      showRequestError('Fee coverage bot projects', projectError);
     } finally {
       setIsLoading(false);
     }
@@ -282,7 +279,10 @@ function SettingsFeeCoverage({
       setOverview(await callApiWithThrow('connectWalletBotBalance', accountId, enclaveToken, integrationAuth));
       closeIntegrationModal();
     } catch (integrationError) {
-      const currentOverview = await callApiWithThrow('fetchWalletPrepaidOverview', accountId).catch(() => undefined);
+      const currentOverview = await callApiWithThrow('fetchWalletPrepaidOverview', accountId).catch((recoveryError) => {
+        logDebugError('Fee coverage bot integration recovery', recoveryError);
+        return undefined;
+      });
       if (currentOverview) {
         setOverview(currentOverview);
       }
@@ -291,7 +291,7 @@ function SettingsFeeCoverage({
         return;
       }
       cancelIntegrationAuthorization();
-      setError(integrationError instanceof Error ? integrationError.message : 'Unable to connect bot balance');
+      showRequestError('Fee coverage bot integration', integrationError);
     } finally {
       setIsLoading(false);
       releaseEnclaveSession({ enclaveToken });
@@ -310,7 +310,7 @@ function SettingsFeeCoverage({
       setIsDisconnectModalOpen(false);
       setIsDisconnectConfirmed(false);
     } catch (disconnectError) {
-      setError(disconnectError instanceof Error ? disconnectError.message : 'Unable to disconnect bot balance');
+      showRequestError('Fee coverage bot disconnect', disconnectError);
     } finally {
       setIsLoading(false);
       releaseEnclaveSession({ enclaveToken });
@@ -443,29 +443,10 @@ function SettingsFeeCoverage({
           </>
         )}
 
-        {error && !pendingMode && !isLinkModalOpen && !isIntegrationModalOpen && !isDisconnectModalOpen && (
+        {error && !isLinkModalOpen && !isIntegrationModalOpen && !isDisconnectModalOpen && (
           <p className={localStyles.error}>{error}</p>
         )}
       </div>
-
-      <Modal
-        isOpen={Boolean(pendingMode)}
-        title={lang('Fee Coverage')}
-        hasCloseButton
-        onClose={() => setPendingMode(undefined)}
-      >
-        <PasswordForm
-          isActive={Boolean(pendingMode)}
-          isLoading={isLoading}
-          operationType="passcode"
-          error={error}
-          submitLabel={lang('Confirm')}
-          noAutoConfirm
-          onAuthorize={authorizeMode}
-          onCancel={() => setPendingMode(undefined)}
-          onUpdate={() => setError('')}
-        />
-      </Modal>
 
       <Modal
         isOpen={isAuthorizationOpen}
