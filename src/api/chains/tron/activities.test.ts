@@ -55,6 +55,21 @@ describe('TRON history requests', () => {
     expect(fetchJsonMock.mock.calls[2][2]).toBeUndefined();
   });
 
+  it('retries without the API key when TronGrid reports rejected settings in a successful response', async () => {
+    const transactions = [{ transaction_id: 'tx-1' }];
+    fetchJsonMock
+      .mockResolvedValueOnce({ Error: 'invalid request due to settings' })
+      .mockResolvedValueOnce({ data: transactions });
+
+    await expect(getTrc20Transactions('mainnet', 'TAddress', { limit: 50 }))
+      .resolves.toEqual(transactions);
+    expect(fetchJsonMock).toHaveBeenCalledTimes(2);
+    expect(fetchJsonMock.mock.calls[0][2]).toEqual({
+      headers: { 'TRON-PRO-API-KEY': NETWORK_CONFIG.mainnet.historyApiKey },
+    });
+    expect(fetchJsonMock.mock.calls[1][2]).toBeUndefined();
+  });
+
   it('does not bypass provider rate limits with an anonymous request', async () => {
     const error = new ApiServerError('rate limit exceeded', 429);
     fetchJsonMock.mockRejectedValueOnce(error);

@@ -85,6 +85,59 @@ describe('apiUpdate activity reconciliation bridge', () => {
     setGlobal(buildGlobal([makePendingCexSwap()]));
   });
 
+  it('reconciles a cached local transaction when initial history already contains its confirmation', async () => {
+    const confirmedActivity = makeRawReceive({
+      id: 'confirmed-hash',
+      externalMsgHashNorm: undefined,
+    });
+    const localActivity = makeRawReceive({
+      id: 'confirmed-hash::local',
+      status: 'pendingTrusted',
+      externalMsgHashNorm: undefined,
+    });
+    setGlobal(buildGlobal([localActivity]));
+    (callApi as jest.Mock).mockImplementation((method: string) => {
+      if (method === 'reconcileActivityUpdate') {
+        return Promise.resolve({
+          confirmedActivities: [confirmedActivity],
+          pendingActivities: [],
+          patch: {
+            accountId: ACCOUNT_ID,
+            upsert: [confirmedActivity],
+            removeIds: [localActivity.id],
+            replacedIds: { [localActivity.id]: confirmedActivity.id },
+          },
+        });
+      }
+      return Promise.resolve([]);
+    });
+
+    await (getActions().apiUpdate({
+      type: 'initialActivities',
+      accountId: ACCOUNT_ID,
+      mainActivities: [confirmedActivity],
+      mainHistoryHasMore: false,
+      bySlug: { toncoin: [confirmedActivity] },
+      chain: 'ton',
+    }) as unknown as Promise<void>);
+
+    const activities = getAccountActivities();
+    expect(callApi).toHaveBeenCalledWith(
+      'reconcileActivityUpdate',
+      ACCOUNT_ID,
+      [localActivity],
+      [confirmedActivity],
+      [],
+      expect.objectContaining({
+        contextActivities: expect.arrayContaining([localActivity, confirmedActivity]),
+      }),
+    );
+    expect(activities.byId[localActivity.id]).toBeUndefined();
+    expect(activities.byId[confirmedActivity.id]).toEqual(expect.objectContaining({ status: 'completed' }));
+    expect(activities.idsMain).toContain(confirmedActivity.id);
+    expect(activities.idsMain).not.toContain(localActivity.id);
+  });
+
   it('hides incoming raw receive in the same committed state when forced refresh returns matching hash', async () => {
     const rawReceive = makeRawReceive();
     const completedSwap = makePendingCexSwap({

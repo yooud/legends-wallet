@@ -1,7 +1,7 @@
 import type { ApiActivity, ApiChain, ApiSwapActivity, ApiSwapHistoryItem } from '../types';
 import type { WalletOperationIntent } from './activities/reconciler/types';
 
-import { SWAP_API_VERSION, TONCOIN } from '../../config';
+import { IS_LEGENDS_WALLET, SWAP_API_VERSION, TONCOIN } from '../../config';
 import { parseAccountId } from '../../util/account';
 import { buildBackendSwapId, getActivityTokenSlugs, parseTxId } from '../../util/activities';
 import { mergeSortedActivities, sortActivities } from '../../util/activities/order';
@@ -171,6 +171,8 @@ export async function swapReplaceActivities(
   isToNow?: boolean,
   options: { incompleteTonTraceIds?: readonly string[] } = {},
 ): Promise<ApiActivity[]> {
+  if (IS_LEGENDS_WALLET) return activities;
+
   // Both projections ask the same question of the intent store, and on the native platforms every read of it crosses
   // the bridge, so one read serves the whole pass.
   const intents = activities.length && parseAccountId(accountId).network !== 'testnet'

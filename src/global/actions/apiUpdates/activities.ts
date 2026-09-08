@@ -58,18 +58,51 @@ addActionHandler('apiUpdate', async (global, actions, update) => {
 
       updatePoisoningCacheFromActivities(mainActivities);
 
-      const currentActivities = Object.values(selectAccountState(global, accountId)?.activities?.byId ?? {});
-      const duplicateIds = await callApi(
-        'getBackendDexSwapIdsDuplicatedByTonAggregates',
-        accountId,
-        [...currentActivities, ...mainActivities],
-      );
-      global = getGlobal();
-      global = addInitialActivities(global, accountId, mainActivities, bySlug, chain, mainHistoryHasMore);
-      if (duplicateIds?.length) {
-        global = applyActivitiesPatch(global, accountId, { upsert: [], removeIds: duplicateIds });
-      }
-      setGlobal(global);
+      await runActivityUpdateInOrder(accountId, async () => {
+        global = getGlobal();
+        let currentActivities = Object.values(selectAccountState(global, accountId)?.activities?.byId ?? {});
+        const previousActivities = [
+          ...selectLocalActivitiesSlow(global, accountId),
+          ...selectPendingActivitiesSlow(global, accountId, chain),
+        ];
+        const reconciliation = previousActivities.length
+          ? await callApi(
+            'reconcileActivityUpdate',
+            accountId,
+            previousActivities,
+            mainActivities,
+            [],
+            { contextActivities: [...currentActivities, ...mainActivities] },
+          )
+          : undefined;
+
+        global = getGlobal();
+        currentActivities = Object.values(selectAccountState(global, accountId)?.activities?.byId ?? {});
+        const duplicateIds = await callApi(
+          'getBackendDexSwapIdsDuplicatedByTonAggregates',
+          accountId,
+          [...currentActivities, ...mainActivities, ...(reconciliation?.patch.upsert ?? [])],
+        );
+
+        global = getGlobal();
+        global = addInitialActivities(global, accountId, mainActivities, bySlug, chain, mainHistoryHasMore);
+        if (reconciliation?.pendingActivities) {
+          global = replacePendingActivities(global, accountId, chain, reconciliation.pendingActivities);
+        }
+        if (reconciliation) {
+          const replacedIds = reconciliation.patch.replacedIds ?? {};
+          global = applyActivitiesPatch(global, accountId, reconciliation.patch);
+          global = replaceCurrentTransferId(global, replacedIds);
+          global = replaceCurrentDomainLinkingId(global, replacedIds);
+          global = replaceCurrentDomainRenewalId(global, replacedIds);
+          global = replaceCurrentSwapId(global, replacedIds);
+          global = replaceCurrentActivityId(global, accountId, replacedIds);
+        }
+        if (duplicateIds?.length) {
+          global = applyActivitiesPatch(global, accountId, { upsert: [], removeIds: duplicateIds });
+        }
+        setGlobal(global);
+      });
 
       void preloadTopTokenHistory(accountId, chain);
       break;

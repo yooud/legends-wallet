@@ -333,11 +333,15 @@ async function fetchHistoryJson(
   const options = { bucketKey: bucketKey(url, { includePathPrefix: true }) };
 
   try {
-    return await fetchJson(url.toString(), queryParams, requestInit, options);
+    return await requestHistoryJson(url, queryParams, requestInit, options);
   } catch (error) {
     const isRejectedApiKey = requestInit
       && error instanceof ApiServerError
-      && (error.statusCode === 401 || error.statusCode === 403);
+      && (
+        error.statusCode === 401
+        || error.statusCode === 403
+        || error.message.toLowerCase().includes('invalid request due to settings')
+      );
     if (!isRejectedApiKey) throw error;
 
     rejectedHistoryApiKeyScopes.add(getHistoryApiKeyScope(
@@ -345,8 +349,27 @@ async function fetchHistoryJson(
       url,
       NETWORK_CONFIG[network].historyApiKey,
     ));
-    return fetchJson(url.toString(), queryParams, undefined, options);
+    return requestHistoryJson(url, queryParams, undefined, options);
   }
+}
+
+async function requestHistoryJson(
+  url: URL,
+  queryParams: Parameters<typeof fetchJson>[1],
+  requestInit: RequestInit | undefined,
+  options: Parameters<typeof fetchJson>[3],
+): Promise<{ data: any[] }> {
+  const result = await fetchJson<{ data?: any[]; Error?: unknown; error?: unknown }>(
+    url.toString(), queryParams, requestInit, options,
+  );
+  if (Array.isArray(result.data)) return { data: result.data };
+
+  const providerError = typeof result.Error === 'string'
+    ? result.Error
+    : typeof result.error === 'string'
+      ? result.error
+      : 'TRON history returned an invalid response';
+  throw new ApiServerError(providerError, 502);
 }
 
 function getHistoryApiKeyScope(network: ApiNetwork, url: URL, apiKey: string) {
