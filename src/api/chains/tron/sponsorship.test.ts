@@ -287,5 +287,11 @@ describe('TRON wallet sponsorship', () => {
     expect(getWalletSponsorshipDisplayError(
       new ApiServerError('authorization required', 401, 'wallet_access_required'),
     )).toBe('$wallet_prepaid_authorization_required');
+    expect(getWalletSponsorshipDisplayError(
+      new ApiServerError('insufficient token balance', 409, 'insufficient_balance'),
+    )).toBe('InsufficientBalance');
+    expect(getWalletSponsorshipDisplayError(
+      new ApiServerError('invalid transaction', 400, 'validation_error'),
+    )).toBeUndefined();
   });
 });

@@ -158,11 +158,7 @@ addActionHandler('submitTransferInitial', async (global, actions, payload) => {
   if (!result || 'error' in result) {
     setGlobal(global);
 
-    if (result?.error === ApiTransactionDraftError.InsufficientBalance && !isNftTransfer) {
-      actions.showDialog({ message: 'The network fee has slightly changed, try sending again.' });
-    } else {
-      actions.showError({ error: result?.error });
-    }
+    actions.showError({ error: result?.error });
 
     return;
   }

@@ -244,6 +244,13 @@ export async function submitWalletSponsoredTransfer(
 }
 
 export function getWalletSponsorshipDisplayError(error: ApiServerError) {
+  const normalizedMessage = error.message.toLowerCase();
+
+  if (error.code === 'insufficient_balance'
+    || normalizedMessage.includes('insufficient token balance')
+    || normalizedMessage.includes('insufficient trx balance')) {
+    return ApiTransactionDraftError.InsufficientBalance;
+  }
   if (error.code === 'wallet_access_required' || error.statusCode === 401) {
     return ApiTransactionDraftError.WalletPrepaidAuthorizationRequired;
   }
@@ -254,10 +261,12 @@ export function getWalletSponsorshipDisplayError(error: ApiServerError) {
     || error.message.includes('wallet sponsorship is not configured')) {
     return ApiTransactionDraftError.WalletSponsorshipUnavailable;
   }
-  if (error.code === 'validation_error'
-    || error.code === 'quote_expired'
+  if (error.code === 'quote_expired'
     || error.code === 'quote_not_found'
-    || error.code === 'resource_conditions_changed') {
+    || error.code === 'resource_conditions_changed'
+    || normalizedMessage.includes('resource conditions changed')
+    || normalizedMessage.includes('sponsorship quote has expired')
+    || normalizedMessage.includes('sponsorship quote was not found')) {
     return ApiTransactionDraftError.WalletSponsorshipQuoteChanged;
   }
   return undefined;

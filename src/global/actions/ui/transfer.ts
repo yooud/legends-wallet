@@ -1,7 +1,7 @@
 import { TransferState } from '../../types';
 
-import { DEFAULT_TRANSFER_TOKEN_SLUG } from '../../../config';
-import { findChainConfig } from '../../../util/chain';
+import { DEFAULT_TRANSFER_TOKEN_SLUG, IS_LEGENDS_WALLET } from '../../../config';
+import { findChainConfig, getChainConfig } from '../../../util/chain';
 import { fromDecimal, toDecimal } from '../../../util/decimals';
 import { getChainBySlug } from '../../../util/tokens';
 import { addActionHandler, setGlobal } from '../../index';
@@ -14,7 +14,11 @@ addActionHandler('startTransfer', (global, actions, payload) => {
   const isCurrentTokenSupported = Boolean(
     currentTokenSlug && findChainConfig(getChainBySlug(currentTokenSlug)),
   );
+  const legendsDefaultTokenSlug = IS_LEGENDS_WALLET
+    ? getChainConfig('tron').usdtSlug[global.settings.isTestnet ? 'testnet' : 'mainnet']
+    : undefined;
   const tokenSlug = requestedTokenSlug
+    ?? legendsDefaultTokenSlug
     ?? (isCurrentTokenSupported ? currentTokenSlug : DEFAULT_TRANSFER_TOKEN_SLUG);
 
   const nftTokenSlug = Symbol('nft');

@@ -57,17 +57,21 @@ export async function checkTransactionDraft(
     }
 
     result.resolvedAddress = toAddress;
+    const { address } = await fetchStoredWallet(accountId, 'tron');
+    const [trxBalance, tokenBalance, bandwidth, { energyUnitFee, bandwidthUnitFee }] = await Promise.all([
+      getWalletBalance(network, address),
+      tokenAddress && amount !== undefined ? getTrc20Balance(network, tokenAddress, address) : undefined,
+      tronWeb.trx.getBandwidth(address),
+      getChainParameters(network),
+    ]);
+
+    if (amount !== undefined && tokenBalance !== undefined && tokenBalance < amount) {
+      return { ...result, error: ApiTransactionDraftError.InsufficientBalance };
+    }
     if (tokenAddress && amount !== undefined
       && isWalletSponsoredToken(network, tokenAddress) && !prepaidAccessToken) {
       return { ...result, error: ApiTransactionDraftError.WalletPrepaidAuthorizationRequired };
     }
-
-    const { address } = await fetchStoredWallet(accountId, 'tron');
-    const [trxBalance, bandwidth, { energyUnitFee, bandwidthUnitFee }] = await Promise.all([
-      getWalletBalance(network, address),
-      tronWeb.trx.getBandwidth(address),
-      getChainParameters(network),
-    ]);
 
     let fee: bigint;
     let realFee: bigint;
@@ -142,8 +146,6 @@ export async function checkTransactionDraft(
       result.error = ApiTransactionDraftError.InsufficientBalance;
     }
 
-    // todo: Check that the amount ≤ the token balance (in case of a token transfer)
-
     return result;
   } catch (err) {
     logDebugError('tron:checkTransactionDraft', err);
@@ -179,6 +181,13 @@ export async function submitGasfullTransfer(
 
     const { address } = account.byChain.tron;
 
+    if (tokenAddress) {
+      const tokenBalance = await getTrc20Balance(network, tokenAddress, address);
+      if (tokenBalance < amount) {
+        return { error: ApiTransactionError.InsufficientBalance };
+      }
+    }
+
     if (!noFeeCheck) {
       const trxBalance = await getWalletBalance(network, address);
       const trxAmount = tokenAddress ? fee : fee + amount;
@@ -187,8 +196,6 @@ export async function submitGasfullTransfer(
       if (!isEnoughTrx) {
         return { error: ApiTransactionError.InsufficientBalance };
       }
-
-      // todo: Check that the amount ≤ the token balance (in case of a token transfer)
     }
 
     const privateKey = await fetchPrivateKeyString(accountId, enclaveToken, account);
