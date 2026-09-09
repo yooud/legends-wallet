@@ -1,13 +1,25 @@
-import { DEFAULT_PRICE_CURRENCY, IS_EXTENSION } from '../../../config';
+import {
+  DEFAULT_PRICE_CURRENCY, IS_EXTENSION, IS_LEGENDS_WALLET, IS_TELEGRAM_APP,
+} from '../../../config';
 import { logDebug } from '../../../util/logs';
+import { generateUuidV7 } from '../../../util/random';
+import { getTelegramApp } from '../../../util/telegram';
 import { IS_ELECTRON } from '../../../util/windowEnvironment';
 import { callApi, initApi } from '../../../api';
 import { removeTemporaryAccount } from '../../helpers/auth';
 import { addActionHandler, getGlobal, setGlobal } from '../../index';
 import { selectNewestActivityTimestamps } from '../../selectors';
 
+let telegramMiniAppLaunchId: string | undefined;
+
+function getTelegramMiniAppLaunchId() {
+  telegramMiniAppLaunchId ||= generateUuidV7();
+  return telegramMiniAppLaunchId;
+}
+
 addActionHandler('initApi', async (global, actions) => {
   logDebug('initApi action called');
+  const telegramInitData = IS_LEGENDS_WALLET && IS_TELEGRAM_APP ? getTelegramApp()?.initData : undefined;
   const accountIds = global.accounts?.byId
     ? Object.keys(global.accounts.byId).filter((accountId) => accountId !== global.currentTemporaryViewAccountId)
     : [];
@@ -17,6 +29,8 @@ addActionHandler('initApi', async (global, actions) => {
     isAndroidApp: false,
     langCode: global.settings.langCode,
     referrer: new URLSearchParams(window.location.search).get('r') ?? undefined,
+    telegramInitData: telegramInitData || undefined,
+    telegramMiniAppLaunchId: telegramInitData ? getTelegramMiniAppLaunchId() : undefined,
     accountIds,
   });
 

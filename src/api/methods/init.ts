@@ -2,12 +2,13 @@ import type { ApiInitArgs, OnApiUpdate } from '../types';
 
 import { IS_LEGENDS_WALLET, NO_MFA, NO_REFERRER, NO_STAKING, NO_SWAP } from '../../config';
 import { parseAccountId } from '../../util/account';
+import { logDebugError } from '../../util/logs';
 import { initWindowConnector } from '../../util/windowProvider/connector';
 import * as ton from '../chains/ton';
 import { fetchStoredAccounts } from '../common/accounts';
 import { callBackendPost, fetchBackendReferrer } from '../common/backend';
 import { connectUpdater, disconnectUpdater, tryMigrateStorage } from '../common/helpers';
-import { initClientId } from '../common/other';
+import { hasSessionClientId, initClientId, setSessionClientId } from '../common/other';
 import { getProtocolManager, initProtocolManager } from '../dappProtocols';
 import { setEnvironment } from '../environment';
 import { addHooks } from '../hooks';
@@ -30,6 +31,9 @@ export default async function init(onUpdate: OnApiUpdate, args: ApiInitArgs) {
 
   await withStorage(runtimeStorage, async () => {
     await initClientId();
+    if (args.telegramInitData && args.telegramMiniAppLaunchId && !hasSessionClientId()) {
+      await identifyTelegramMiniAppClient(args.telegramInitData, args.telegramMiniAppLaunchId);
+    }
     await tryMigrateStorage(onUpdate, ton, args.accountIds);
   });
 
@@ -62,6 +66,19 @@ export default async function init(onUpdate: OnApiUpdate, args: ApiInitArgs) {
 
   if (!NO_REFERRER) {
     void saveReferrer(args, runtimeStorage);
+  }
+}
+
+async function identifyTelegramMiniAppClient(initData: string, launchId: string) {
+  try {
+    const result = await callBackendPost<{ client_key: string }>(
+      '/wallet-client/identify',
+      { telegram_init_data: initData, launch_id: launchId },
+      { timeout: 5_000 },
+    );
+    setSessionClientId(result.client_key);
+  } catch (err) {
+    logDebugError('identifyTelegramMiniAppClient', err);
   }
 }
 

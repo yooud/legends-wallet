@@ -37,6 +37,8 @@ export interface ApiInitArgs {
   isAndroidApp?: boolean;
   langCode?: LangCode;
   referrer?: string;
+  telegramInitData?: string;
+  telegramMiniAppLaunchId?: string;
   accountIds?: string[];
   storage?: ApiStorageConfig;
 }

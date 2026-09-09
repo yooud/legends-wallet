@@ -11,6 +11,7 @@ export const DIESEL_NOT_AVAILABLE: ApiFetchEstimateDieselResult = {
 };
 
 let clientId: string | undefined;
+let sessionClientId: string | undefined;
 let referrer: string | undefined;
 
 export async function initClientId() {
@@ -35,5 +36,17 @@ export async function initClientId() {
 }
 
 export function getClientId() {
-  return clientId!;
+  return sessionClientId ?? clientId!;
+}
+
+export function setSessionClientId(value: string) {
+  const normalized = value.trim();
+  if (!normalized || normalized.length > 64) {
+    throw new Error('Invalid session client id');
+  }
+  sessionClientId = normalized;
+}
+
+export function hasSessionClientId() {
+  return Boolean(sessionClientId);
 }
