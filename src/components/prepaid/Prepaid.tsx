@@ -11,7 +11,7 @@ import type {
 } from '../../api/types';
 import type { Theme } from '../../global/types';
 
-import { TRX } from '../../config';
+import { ANIMATED_STICKER_BIG_SIZE_PX, TRX } from '../../config';
 import {
   selectCurrentAccountId,
   selectCurrentAccountSettings,
@@ -38,6 +38,7 @@ import useScrolledState from '../../hooks/useScrolledState';
 import BackHeader from '../common/BackHeader';
 import { ActionButton } from '../main/sections/Actions/TopActions';
 import Activity from '../main/sections/Content/Activity';
+import AnimatedIconWithPreview from '../ui/AnimatedIconWithPreview';
 import Modal from '../ui/Modal';
 import PasswordForm from '../ui/PasswordForm';
 import PrepaidTopupModal from './PrepaidTopupModal';
@@ -238,7 +239,9 @@ function Prepaid({
             </strong>
             {overview?.integration && (
               <span className={styles.reserved}>
-                {lang('Bot Balance')} · {overview.integration.project_name}
+                {lang('Bot Balance')}
+                {overview.integration.has_multiple_projects !== false
+                  && ` · ${overview.integration.project_name}`}
               </span>
             )}
             {Number(overview?.reserved_trx || 0) > 0 && (
@@ -304,6 +307,15 @@ function Prepaid({
               </div>
             )) : (
               <div className={activitiesStyles.emptyList}>
+                <AnimatedIconWithPreview
+                  play={isActive}
+                  tgsUrl={ANIMATED_STICKERS_PATHS.hello}
+                  previewUrl={ANIMATED_STICKERS_PATHS.helloPreview}
+                  size={ANIMATED_STICKER_BIG_SIZE_PX}
+                  className={activitiesStyles.sticker}
+                  noLoop={false}
+                  nonInteractive
+                />
                 <p className={activitiesStyles.emptyListTitle}>{lang('No Activity')}</p>
               </div>
             )}

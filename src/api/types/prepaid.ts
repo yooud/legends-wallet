@@ -27,6 +27,7 @@ export type ApiWalletBalanceIntegration = {
   id: string;
   auth_method: 'api_key' | 'telegram_mini_app';
   project_name: string;
+  has_multiple_projects?: boolean;
   bot_username?: string | null;
   balance_trx: string;
   reserved_trx: string;

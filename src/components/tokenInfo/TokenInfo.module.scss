@@ -36,12 +36,10 @@
 
 .activity {
   display: flex;
-  flex-basis: 0;
   flex-direction: column;
   flex-grow: 1;
   flex-shrink: 0;
 
-  min-height: 0;
   border-radius: var(--border-radius-default);
 
   background: var(--color-background-first);
