@@ -132,7 +132,13 @@ export function onTelegramHomeScreenAdded(callback: NoneToVoidFunction) {
 }
 
 function isTelegramHomeScreenSupported() {
-  return Boolean(webApp && isInsideTelegram() && compareVersions(webApp.version, '9.0') >= 0);
+  return Boolean(
+    webApp
+    && isInsideTelegram()
+    && compareVersions(webApp.version, '8.0') >= 0
+    && typeof webApp.checkHomeScreenStatus === 'function'
+    && typeof webApp.addToHomeScreen === 'function',
+  );
 }
 
 export function getTelegramAppAsync(): Promise<WebApp | undefined> {

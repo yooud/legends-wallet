@@ -202,7 +202,9 @@ function Settings({
   const [withAllWalletVersions, markWithAllWalletVersions] = useFlag();
 
   const [isLogOutModalOpened, openLogOutModal, closeLogOutModal] = useFlag();
-  const [telegramHomeScreenStatus, setTelegramHomeScreenStatus] = useState<HomeScreenStatus>();
+  const [telegramHomeScreenStatus, setTelegramHomeScreenStatus] = useState<HomeScreenStatus>(
+    IS_TELEGRAM_APP ? 'unknown' : 'unsupported',
+  );
   const isInitialScreen = renderingKey === SettingsState.Initial;
 
   const { isScrolled, handleScroll: handleContentScroll } = useScrolledState();
