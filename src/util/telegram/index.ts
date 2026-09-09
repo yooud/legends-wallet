@@ -51,6 +51,14 @@ export function getTelegramBiometricDiagnostics(): TelegramBiometricDiagnostics 
   };
 }
 
+export function getIsTelegramBiometricTokenMissing() {
+  const biometricManager = webApp?.BiometricManager;
+
+  return biometricManager?.isInited === true
+    && biometricManager.isBiometricAvailable === true
+    && biometricManager.isBiometricTokenSaved === false;
+}
+
 function syncTelegramBiometricState(source: string) {
   const diagnostics = getTelegramBiometricDiagnostics();
   const {
@@ -220,6 +228,11 @@ function updateFullscreenState() {
     getActions().closeFullscreen();
     enableTelegramMiniAppSwipeToClose();
   }
+
+  requestAnimationFrame(() => {
+    updateSafeAreaProperties();
+    updateSizes();
+  });
 }
 
 function onFullscreenFailed(params: { error: 'UNSUPPORTED' | 'ALREADY_FULLSCREEN' }) {

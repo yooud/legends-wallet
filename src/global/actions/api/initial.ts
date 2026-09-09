@@ -19,7 +19,10 @@ function getTelegramMiniAppLaunchId() {
 
 addActionHandler('initApi', async (global, actions) => {
   logDebug('initApi action called');
-  const telegramInitData = IS_LEGENDS_WALLET && IS_TELEGRAM_APP ? getTelegramApp()?.initData : undefined;
+  const rawTelegramInitData = IS_LEGENDS_WALLET && IS_TELEGRAM_APP ? getTelegramApp()?.initData : undefined;
+  const telegramInitData = typeof rawTelegramInitData === 'string'
+    ? rawTelegramInitData.trim() || undefined
+    : undefined;
   const accountIds = global.accounts?.byId
     ? Object.keys(global.accounts.byId).filter((accountId) => accountId !== global.currentTemporaryViewAccountId)
     : [];

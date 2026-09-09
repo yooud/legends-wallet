@@ -108,7 +108,7 @@ $createSubwalletPaddingBottom: 1rem;
   }
 
   :global(html.is-mobile-telegram-app.is-fullscreen) & {
-    padding-top: calc(var(--tg-safe-area-inset-top) + var(--header-title-height));
+    padding-top: calc(var(--safe-area-top) + var(--header-title-height));
 
     @include mixins.respond-below(xs) {
       &:global(.with-notch-on-scroll) {
@@ -249,10 +249,6 @@ $createSubwalletPaddingBottom: 1rem;
 
   @include mixins.respond-below(xs) {
     padding-top: calc(var(--header-padding-top) + var(--header-title-height) + var(--header-padding-bottom) + 1.1875rem);
-
-    :global(html.is-mobile-telegram-app.is-fullscreen) &:not(.noTitle) {
-      padding-top: 0.75rem;
-    }
   }
 
   @include mixins.respond-above(xs) {

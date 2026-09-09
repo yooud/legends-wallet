@@ -32,6 +32,7 @@ import { logDebug, logDebugError } from '../../util/logs';
 import { toNativeDigits } from '../../util/nativeDigits';
 import { pause } from '../../util/schedulers';
 import { createSignal } from '../../util/signals';
+import { getIsTelegramBiometricTokenMissing } from '../../util/telegram';
 import { enclave, type LegacyAuthConfig } from '../../enclave';
 import { ANIMATED_STICKERS_PATHS } from './helpers/animatedAssets';
 
@@ -196,8 +197,10 @@ function PasswordForm({
   const [inputValue, setInputValue] = useState<string>('');
   const [localError, setLocalError] = useState<string>('');
   const [isLegacyPasswordMode, setIsLegacyPasswordMode] = useState(false);
+  const [isBiometricFallbackForced, setIsBiometricFallbackForced] = useState(false);
   const { isSmallHeight, isPortrait } = useDeviceScreen();
   const doesUsePinPad = getDoesUsePinPad();
+  const canAttemptBiometrics = isBiometricAuthEnabled && !isBiometricFallbackForced;
   const withAutoConfirm = useCanAutoConfirm(enclaveSessionValidUntil, noAutoConfirm || doesUsePinPad);
   const canArmAutoConfirm = !doesUsePinPad
     && !isBiometricAuthEnabledProp
@@ -264,6 +267,7 @@ function PasswordForm({
       setLocalError('');
       setInputValue('');
       setIsLegacyPasswordMode(false);
+      setIsBiometricFallbackForced(getIsTelegramBiometricTokenMissing());
       clearMigrationFailure();
       isAuthorizingRef.current = false;
     }
@@ -286,6 +290,9 @@ function PasswordForm({
     }
 
     const password = pin ?? inputValue;
+    const shouldRepairTelegramBiometrics = isBiometricAuthEnabled
+      && Boolean(hasPasscodeAuth)
+      && getIsTelegramBiometricTokenMissing();
 
     if (isBiometricAuthEnabled && hasPasscodeAuth) {
       logDebug('[PasswordForm][biometrics] passcode fallback selected', { operationType });
@@ -313,22 +320,68 @@ function PasswordForm({
     }
 
     // Normal authorization
-    const enclaveSession = await enclave.authorize(
+    logDebug('[PasswordForm][passcode] authorization started', {
+      operationType,
+      isLegacyPasswordMode,
+      shouldRepairTelegramBiometrics,
+    });
+
+    let enclaveSession = await enclave.authorize(
       'passcode',
       isLongSession,
       password,
-      usageCount,
+      shouldRepairTelegramBiometrics ? 1 : usageCount,
     );
 
     if (!enclaveSession) {
       isAuthorizingRef.current = false;
+      logDebugError('[PasswordForm][passcode] authorization rejected', {
+        operationType,
+        isLegacyPasswordMode,
+      });
       const errorMessage = 'Wrong password, please try again.';
       setLocalError(errorMessage);
       onError?.(errorMessage);
       return;
     }
 
+    if (shouldRepairTelegramBiometrics) {
+      try {
+        logDebug('[PasswordForm][biometrics] token repair started', { operationType });
+        const repairedSession = await enclave.migrateAuth(
+          enclaveSession.token,
+          'biometric',
+          undefined,
+          false,
+          usageCount,
+        );
+        if (!repairedSession) {
+          throw new Error('Failed to restore Telegram biometric credentials');
+        }
+
+        enclaveSession = repairedSession;
+        logDebug('[PasswordForm][biometrics] token repair succeeded', { operationType });
+      } catch (err) {
+        logDebugError('[PasswordForm][biometrics] token repair failed', {
+          operationType,
+          error: err,
+        });
+        enclaveSession = await enclave.authorize('passcode', isLongSession, password, usageCount);
+        if (!enclaveSession) {
+          isAuthorizingRef.current = false;
+          const errorMessage = 'Something went wrong.';
+          setLocalError(errorMessage);
+          onError?.(errorMessage);
+          return;
+        }
+      }
+    }
+
     setEnclaveSession(enclaveSession);
+    logDebug('[PasswordForm][passcode] authorization succeeded', {
+      operationType,
+      repairedBiometrics: shouldRepairTelegramBiometrics,
+    });
     handleAuthorized(enclaveSession.token);
   });
 
@@ -339,6 +392,16 @@ function PasswordForm({
 
     try {
       setLocalError('');
+      if (getIsTelegramBiometricTokenMissing()) {
+        isAuthorizingRef.current = false;
+        setIsBiometricFallbackForced(true);
+        logDebug('[PasswordForm][biometrics] missing token fallback selected', {
+          operationType,
+          hasPasscodeFallback: Boolean(hasPasscodeAuth),
+        });
+        return;
+      }
+
       logDebug('[PasswordForm][biometrics] authorization started', {
         operationType,
         hasPasscodeFallback: Boolean(hasPasscodeAuth),
@@ -395,7 +458,7 @@ function PasswordForm({
   useEffect(() => {
     if (
       !isActive
-      || !isBiometricAuthEnabled
+      || !canAttemptBiometrics
       || withAutoConfirm
     ) {
       return;
@@ -413,7 +476,7 @@ function PasswordForm({
     }
   }, [
     forceBiometricsInMain, handleBiometrics, handleLegacyBiometricsMigration, isActive,
-    isBiometricAuthEnabled, withAutoConfirm, shouldMigrate, hasLegacyBiometrics, legacyAuthConfig,
+    canAttemptBiometrics, withAutoConfirm, shouldMigrate, hasLegacyBiometrics, legacyAuthConfig,
   ]);
 
   useEffectOnce(() => {
@@ -427,7 +490,7 @@ function PasswordForm({
     });
   });
 
-  useFocusAfterAnimation(inputRef, !isActive || isBiometricAuthEnabled);
+  useFocusAfterAnimation(inputRef, !isActive || (canAttemptBiometrics && !isLegacyPasswordMode));
 
   useToggleClass({ className: 'is-password-form-visible', isActive });
 
@@ -510,7 +573,7 @@ function PasswordForm({
             {cancelLabel || lang('Cancel')}
           </Button>
         )}
-        {isBiometricAuthEnabled && (Boolean(localError) || hasMigrationFailed) && (
+        {canAttemptBiometrics && !isLegacyPasswordMode && (Boolean(localError) || hasMigrationFailed) && (
           <Button
             isPrimary
             isLoading={isLoading}
@@ -524,7 +587,7 @@ function PasswordForm({
             {lang('Try Again')}
           </Button>
         )}
-        {(!isBiometricAuthEnabled || withAutoConfirm) && (
+        {(!canAttemptBiometrics || isLegacyPasswordMode || withAutoConfirm) && (
           <Button
             isPrimary
             isLoading={isLoading}
@@ -558,7 +621,7 @@ function PasswordForm({
     const hasError = Boolean(localError || error);
     const title = pinPadHeading || getPinPadTitle();
     const actionName = lang(
-      !isBiometricAuthEnabled
+      !canAttemptBiometrics
         ? 'Enter code'
         : getIsFaceIdAvailable()
           ? 'Enter code or use Face ID'
@@ -623,7 +686,7 @@ function PasswordForm({
               </Button>
             ) : undefined}
             className={pinPadClassName}
-            onBiometricsClick={isBiometricAuthEnabled
+            onBiometricsClick={canAttemptBiometrics
               ? (shouldMigrate && hasLegacyBiometrics ? handleLegacyBiometricsMigration : handleBiometrics)
               : undefined}
             onLogOutClick={operationType === 'unlock' ? openLogOutModal : undefined}
@@ -707,7 +770,9 @@ function PasswordForm({
 
       {children}
 
-      {!withAutoConfirm && (isBiometricAuthEnabled ? renderBiometricPrompt() : renderPasswordForm())}
+      {!withAutoConfirm && (canAttemptBiometrics && !isLegacyPasswordMode
+        ? renderBiometricPrompt()
+        : renderPasswordForm())}
 
       {operationType === 'unlock' && (
         <div className={buildClassName(styles.logOutWrapper, !shouldSuggestLogout && styles.logOutWrapperHidden)}>

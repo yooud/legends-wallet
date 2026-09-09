@@ -955,7 +955,7 @@ function Settings({
       <Transition
         ref={transitionRef}
         name={resolveSlideTransitionName()}
-        className={buildClassName(isInsideModal ? modalStyles.transition : styles.transitionContainer, 'custom-scroll')}
+        className={isInsideModal ? modalStyles.transition : styles.transitionContainer}
         activeKey={renderingKey}
         slideClassName={buildClassName(isInsideModal && modalStyles.transitionSlide)}
         withSwipeControl

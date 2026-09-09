@@ -39,7 +39,11 @@ export function getClientId() {
   return sessionClientId ?? clientId!;
 }
 
-export function setSessionClientId(value: string) {
+export function setSessionClientId(value: unknown) {
+  if (typeof value !== 'string') {
+    throw new Error('Invalid session client id');
+  }
+
   const normalized = value.trim();
   if (!normalized || normalized.length > 64) {
     throw new Error('Invalid session client id');

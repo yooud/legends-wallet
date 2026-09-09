@@ -70,15 +70,24 @@ export default async function init(onUpdate: OnApiUpdate, args: ApiInitArgs) {
 }
 
 async function identifyTelegramMiniAppClient(initData: string, launchId: string) {
+  const normalizedInitData = initData.trim();
+  if (!normalizedInitData) return;
+
   try {
-    const result = await callBackendPost<{ client_key: string }>(
+    const result = await callBackendPost<{ client_key?: unknown }>(
       '/wallet-client/identify',
-      { telegram_init_data: initData, launch_id: launchId },
+      { telegram_init_data: normalizedInitData, launch_id: launchId },
       { timeout: 5_000 },
     );
+    if (typeof result.client_key !== 'string') {
+      throw new Error('Wallet API did not return a Telegram Mini App client id');
+    }
     setSessionClientId(result.client_key);
   } catch (err) {
-    logDebugError('identifyTelegramMiniAppClient', err);
+    logDebugError('identifyTelegramMiniAppClient', {
+      error: err,
+      initDataLength: normalizedInitData.length,
+    });
   }
 }
 
