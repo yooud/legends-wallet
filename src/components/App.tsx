@@ -309,7 +309,12 @@ function App({
         shouldCleanup={!withBottomBar}
         className={styles.transitionContainer}
         slideClassName={
-          buildClassName(styles.appSlide, withBottomBar && styles.appSlide_fastTransition, 'custom-scroll')
+          buildClassName(
+            styles.appSlide,
+            styles.appRootSlide,
+            withBottomBar && styles.appSlide_fastTransition,
+            'custom-scroll',
+          )
         }
       >
         {renderContent}

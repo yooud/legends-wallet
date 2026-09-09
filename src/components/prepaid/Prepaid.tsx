@@ -212,7 +212,7 @@ function Prepaid({
   if (isViewMode) {
     return (
       <div className={styles.root}>
-        <BackHeader title={lang('Prepaid')} onBackClick={closePrepaid} />
+        <BackHeader title={lang('Prepaid')} withBackButton={false} onBackClick={closePrepaid} />
         <div className={styles.unavailable}>
           {lang('$prepaid_watch_only_unavailable')}
         </div>
@@ -222,7 +222,13 @@ function Prepaid({
 
   return (
     <div className={styles.root}>
-      <BackHeader title={lang('Prepaid')} withNotchOnScroll isScrolled={isScrolled} onBackClick={closePrepaid} />
+      <BackHeader
+        title={lang('Prepaid')}
+        withBackButton={false}
+        withNotchOnScroll
+        isScrolled={isScrolled}
+        onBackClick={closePrepaid}
+      />
       <div className={buildClassName(styles.body, 'custom-scroll')} onScroll={handleScroll}>
         <section className={styles.summary}>
           <div className={styles.balanceSection}>

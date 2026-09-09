@@ -32,6 +32,14 @@
   }
 }
 
+// Only the outer app slide is locked. Main uses another `.appSlide` as its actual scroll container.
+.appRootSlide {
+  :global(html.with-bottombar) & {
+    overflow: hidden;
+    min-height: 0;
+  }
+}
+
 .appSlide.appSlideTransparent {
   background: transparent !important;
   transition: background-color 150ms;

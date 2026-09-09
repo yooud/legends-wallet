@@ -9,8 +9,13 @@
 .slide {
   display: flex;
   flex-direction: column;
+
   height: 100%;
   min-height: 0;
+
+  // The incoming slide fades in on top of the outgoing one, so it has to cover the whole column -
+  // otherwise the wallet widgets stay visible next to a narrower panel until the animation ends
+  background-color: var(--color-app-background);
 }
 
 .standaloneWrapper {
