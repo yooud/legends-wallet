@@ -28,6 +28,7 @@ import buildClassName from '../../util/buildClassName';
 import captureKeyboardListeners from '../../util/captureKeyboardListeners';
 import { stopEvent } from '../../util/domEvents';
 import { getTranslation } from '../../util/langProvider';
+import { logDebug, logDebugError } from '../../util/logs';
 import { toNativeDigits } from '../../util/nativeDigits';
 import { pause } from '../../util/schedulers';
 import { createSignal } from '../../util/signals';
@@ -99,6 +100,7 @@ interface StateProps {
   isAutoConfirmEnabled?: boolean;
   enclaveSessionValidUntil?: number;
   isBiometricAuthEnabled: boolean;
+  hasPasscodeAuth?: boolean;
   shouldMigrate?: boolean;
   hasLegacyBiometrics?: boolean;
   legacyAuthConfig?: LegacyAuthConfig;
@@ -167,6 +169,7 @@ function PasswordForm({
   enclaveSessionValidUntil,
   noAutoConfirm,
   shouldMigrate,
+  hasPasscodeAuth,
   hasLegacyBiometrics,
   legacyAuthConfig,
   authUsageCountRequest,
@@ -201,7 +204,9 @@ function PasswordForm({
     && operationType !== 'turnOnBiometrics';
   const isLongSession = canArmAutoConfirm && Boolean(isAutoConfirmEnabled);
   const isSubmitDisabled = !inputValue.length && !withAutoConfirm;
-  const canUsePinPad = doesUsePinPad && !isLegacyPasswordMode && !isBiometricAuthEnabled;
+  const canUsePinPad = doesUsePinPad
+    && !isLegacyPasswordMode
+    && (!isBiometricAuthEnabled || hasPasscodeAuth);
   const canUseLegacyPassword = IS_LEGENDS_WALLET && !isPasswordNumeric;
   const [isLogOutModalOpened, openLogOutModal, closeLogOutModal] = useFlag(false);
   // The biometric screen offers its retry only while something failed, and the dialog paths clear the
@@ -282,6 +287,10 @@ function PasswordForm({
 
     const password = pin ?? inputValue;
 
+    if (isBiometricAuthEnabled && hasPasscodeAuth) {
+      logDebug('[PasswordForm][biometrics] passcode fallback selected', { operationType });
+    }
+
     // Migration from legacy auth to Enclave
     if (shouldMigrate) {
       migrateLegacyAuth({
@@ -330,8 +339,13 @@ function PasswordForm({
 
     try {
       setLocalError('');
+      logDebug('[PasswordForm][biometrics] authorization started', {
+        operationType,
+        hasPasscodeFallback: Boolean(hasPasscodeAuth),
+        usageCount,
+      });
 
-      const enclaveSession = await enclave.authorize('biometric', false, undefined, usageCount);
+      const enclaveSession = await enclave.authorizeOrThrow('biometric', false, undefined, usageCount);
       if (!enclaveSession) {
         isAuthorizingRef.current = false;
         const errorMessage = 'Biometric confirmation failed';
@@ -341,10 +355,16 @@ function PasswordForm({
       }
 
       setEnclaveSession(enclaveSession);
+      logDebug('[PasswordForm][biometrics] authorization succeeded', { operationType });
       handleAuthorized(enclaveSession.token);
     } catch (err: any) {
       isAuthorizingRef.current = false;
-      const errorMessage = err.message || lang('Something went wrong.');
+      logDebugError('[PasswordForm][biometrics] authorization failed', {
+        operationType,
+        hasPasscodeFallback: Boolean(hasPasscodeAuth),
+        error: err,
+      });
+      const errorMessage = 'Biometric confirmation failed';
       setLocalError(errorMessage);
       onError?.(errorMessage);
     }
@@ -747,6 +767,7 @@ export default memo(withGlobal<OwnProps>((global): StateProps => {
     isAutoConfirmEnabled,
     enclaveSessionValidUntil,
     isBiometricAuthEnabled,
+    hasPasscodeAuth: global.authTypes?.includes('passcode'),
     shouldMigrate,
     hasLegacyBiometrics,
     legacyAuthConfig,

@@ -1,11 +1,31 @@
 import type { BiometricRequestAccessParams } from '@twa-dev/types';
 
 import { APP_NAME } from '../../config';
-import { getTelegramApp } from '../../util/telegram';
+import { logDebug, logDebugError } from '../../util/logs';
+import { getTelegramApp, getTelegramBiometricDiagnostics } from '../../util/telegram';
+
+function getBiometricManager() {
+  const biometricManager = getTelegramApp()?.BiometricManager;
+  if (!biometricManager) {
+    logDebugError('[telegram][biometrics] manager unavailable during authorization',
+      getTelegramBiometricDiagnostics());
+    throw new Error('Telegram BiometricManager is unavailable');
+  }
+
+  return biometricManager;
+}
 
 function requestBiometricAccess(options: BiometricRequestAccessParams) {
   return new Promise((resolve, reject) => {
-    getTelegramApp()!.BiometricManager.requestAccess(options, (accessGranted) => {
+    const biometricManager = getBiometricManager();
+    logDebug('[telegram][biometrics] access requested', getTelegramBiometricDiagnostics());
+
+    biometricManager.requestAccess(options, (accessGranted) => {
+      logDebug('[telegram][biometrics] access result', {
+        accessGranted,
+        ...getTelegramBiometricDiagnostics(),
+      });
+
       if (accessGranted) {
         resolve(accessGranted);
       } else {
@@ -16,7 +36,8 @@ function requestBiometricAccess(options: BiometricRequestAccessParams) {
 }
 
 export async function setBiometricCredentials(password: string) {
-  const biometricManager = getTelegramApp()!.BiometricManager;
+  const biometricManager = getBiometricManager();
+  logDebug('[telegram][biometrics] token setup started', getTelegramBiometricDiagnostics());
 
   if (!biometricManager.isAccessGranted) {
     const isAccessGranted = await requestBiometricAccess({ reason: APP_NAME });
@@ -27,6 +48,11 @@ export async function setBiometricCredentials(password: string) {
 
   return new Promise<void>((resolve, reject) => {
     biometricManager.updateBiometricToken(password, (isUpdated) => {
+      logDebug('[telegram][biometrics] token setup result', {
+        isUpdated,
+        ...getTelegramBiometricDiagnostics(),
+      });
+
       if (isUpdated) {
         resolve();
       } else {
@@ -37,10 +63,16 @@ export async function setBiometricCredentials(password: string) {
 }
 
 export function clearBiometricCredentials() {
-  const biometricManager = getTelegramApp()!.BiometricManager;
+  const biometricManager = getBiometricManager();
+  logDebug('[telegram][biometrics] token removal started', getTelegramBiometricDiagnostics());
 
   return new Promise<void>((resolve, reject) => {
     biometricManager.updateBiometricToken('', (isUpdated) => {
+      logDebug('[telegram][biometrics] token removal result', {
+        isUpdated,
+        ...getTelegramBiometricDiagnostics(),
+      });
+
       if (isUpdated) {
         resolve();
       } else {
@@ -51,7 +83,12 @@ export function clearBiometricCredentials() {
 }
 
 export async function verifyIdentity() {
-  const biometricManager = getTelegramApp()!.BiometricManager;
+  const biometricManager = getBiometricManager();
+  logDebug('[telegram][biometrics] authentication started', getTelegramBiometricDiagnostics());
+
+  if (!biometricManager.isBiometricAvailable) {
+    throw new Error('Telegram biometrics are unavailable on this device');
+  }
 
   if (!biometricManager.isAccessGranted) {
     const isAccessGranted = await requestBiometricAccess({ reason: APP_NAME });
@@ -60,13 +97,28 @@ export async function verifyIdentity() {
     }
   }
 
+  // Telegram explicitly requires a saved token before authenticate(). Permission can remain granted
+  // after the secure token was lost due to a client reinstall, device change or biometric reset.
+  if (!biometricManager.isBiometricTokenSaved) {
+    throw new Error('Telegram biometric token is not saved on this device');
+  }
+
   return new Promise<{ success: boolean; token: string }>((resolve, reject) => {
     biometricManager.authenticate(
       { reason: '' },
       // @ts-ignore Wrong type signature https://github.com/twa-dev/types/pull/12
       (success: boolean, token: string) => {
-        if (success) {
+        const hasToken = typeof token === 'string' && token.length > 0;
+        logDebug('[telegram][biometrics] authentication result', {
+          success,
+          hasToken,
+          ...getTelegramBiometricDiagnostics(),
+        });
+
+        if (success && hasToken) {
           resolve({ success, token });
+        } else if (success) {
+          reject(new Error('Telegram biometric authentication returned an empty token'));
         } else {
           reject(new Error('Biometric authentication failed. Please try again.'));
         }

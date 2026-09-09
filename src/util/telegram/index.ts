@@ -5,7 +5,7 @@ import type { GlobalState } from '../../global/types';
 
 import compareVersions from '../compareVersions';
 import { mapValues } from '../iteratees';
-import { logDebugError } from '../logs';
+import { logDebug, logDebugError } from '../logs';
 import safeExec from '../safeExec';
 import { getIsMobileTelegramApp } from '../windowEnvironment';
 import { updateSizes } from '../windowSize';
@@ -22,6 +22,47 @@ let hasBiometrics = false;
 let isFaceIdAvailable = false;
 let isTouchIdAvailable = false;
 let disableSwipeRequests = 0;
+
+export interface TelegramBiometricDiagnostics {
+  managerAvailable: boolean;
+  platform?: string;
+  webAppVersion?: string;
+  isInited?: boolean;
+  isBiometricAvailable?: boolean;
+  biometricType?: string;
+  isAccessRequested?: boolean;
+  isAccessGranted?: boolean;
+  isBiometricTokenSaved?: boolean;
+}
+
+export function getTelegramBiometricDiagnostics(): TelegramBiometricDiagnostics {
+  const biometricManager = webApp?.BiometricManager;
+
+  return {
+    managerAvailable: Boolean(biometricManager),
+    platform: webApp?.platform,
+    webAppVersion: webApp?.version,
+    isInited: biometricManager?.isInited,
+    isBiometricAvailable: biometricManager?.isBiometricAvailable,
+    biometricType: biometricManager?.biometricType,
+    isAccessRequested: biometricManager?.isAccessRequested,
+    isAccessGranted: biometricManager?.isAccessGranted,
+    isBiometricTokenSaved: biometricManager?.isBiometricTokenSaved,
+  };
+}
+
+function syncTelegramBiometricState(source: string) {
+  const diagnostics = getTelegramBiometricDiagnostics();
+  const {
+    isBiometricAvailable, biometricType, isAccessGranted, isAccessRequested,
+  } = diagnostics;
+
+  hasBiometrics = Boolean(isBiometricAvailable && (isAccessGranted || !isAccessRequested));
+  isFaceIdAvailable = webApp?.platform === 'ios' && biometricType === 'face';
+  isTouchIdAvailable = webApp?.platform === 'ios' && biometricType === 'finger';
+
+  logDebug('[telegram][biometrics] state', { source, ...diagnostics });
+}
 
 export function initTelegramApp(onBeforeReady?: NoneToVoidFunction) {
   webApp = window.Telegram?.WebApp;
@@ -64,20 +105,22 @@ export function initTelegramWithGlobal(global: GlobalState) {
 
 export function initTelegramAppBiometric() {
   const biometricManager = webApp?.BiometricManager;
-  if (!biometricManager || isBiometricInited) return;
+  if (!biometricManager) {
+    logDebugError('[telegram][biometrics] manager unavailable', getTelegramBiometricDiagnostics());
+    return;
+  }
+  if (isBiometricInited) return;
 
   isBiometricInited = true;
-  biometricManager.init(() => {
-    const {
-      isBiometricAvailable, biometricType, isAccessGranted, isAccessRequested,
-    } = biometricManager;
+  logDebug('[telegram][biometrics] initializing', getTelegramBiometricDiagnostics());
 
-    hasBiometrics = isBiometricAvailable && (isAccessGranted || !isAccessRequested);
-    if (webApp!.platform === 'ios') {
-      isFaceIdAvailable = biometricType === 'face';
-      isTouchIdAvailable = biometricType === 'finger';
-    }
+  // The bundled SDK types omit Bot API 7.2 biometric events, but Telegram emits this whenever
+  // permission or token state changes. Keeping the cached capability in sync also prevents stale UI.
+  (webApp as any).onEvent('biometricManagerUpdated', () => {
+    syncTelegramBiometricState('manager-updated');
   });
+
+  biometricManager.init(() => syncTelegramBiometricState('initialized'));
 }
 
 export function getIsTelegramBiometricAuthSupported() {
