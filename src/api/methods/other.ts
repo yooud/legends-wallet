@@ -1,6 +1,7 @@
 import nacl from 'tweetnacl';
 
 import type { LangCode, Theme } from '../../global/types';
+import type { WalletTelemetryPayload } from '../../util/walletTelemetry';
 import type { StorageKey } from '../storages/types';
 import type { ApiAnyDisplayError, ApiBaseCurrency, ApiChain } from '../types';
 
@@ -96,6 +97,14 @@ export function submitDiagnosticLogs(report: AnyLiteral) {
     '/wallet-client/diagnostics',
     report,
     { timeout: 15_000 },
+  );
+}
+
+export function submitWalletTelemetry(payload: WalletTelemetryPayload) {
+  return callBackendPost<{ ok: true; session_id: string; accepted: number }>(
+    '/wallet-client/telemetry',
+    payload,
+    { timeout: 10_000 },
   );
 }
 

@@ -171,6 +171,7 @@ function PinPad({
     <div className={buildClassName(
       styles.root,
       IS_LEGENDS_WALLET && styles.rootLegends,
+      IS_LEGENDS_WALLET && 'rr-block',
       className,
       SWIPE_DISABLED_CLASS_NAME,
     )}

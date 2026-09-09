@@ -667,7 +667,12 @@ function PasswordForm({
   }
 
   return (
-    <div className={buildClassName(modalStyles.transitionContent, containerClassName)}>
+    <div className={buildClassName(
+      modalStyles.transitionContent,
+      IS_LEGENDS_WALLET && 'rr-block',
+      containerClassName,
+    )}
+    >
       {!noAnimatedIcon && (
         <AnimatedIconWithPreview
           tgsUrl={ANIMATED_STICKERS_PATHS.holdTon}

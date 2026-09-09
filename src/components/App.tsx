@@ -2,7 +2,15 @@ import React, { memo, useEffect, useLayoutEffect } from '../lib/teact/teact';
 import { getActions, withGlobal } from '../global';
 
 import type { Theme } from '../global/types';
-import { AppState } from '../global/types';
+import {
+  AppState,
+  AuthState,
+  ContentTab,
+  SettingsState,
+  SwapState,
+  TransactionInfoState,
+  TransferState,
+} from '../global/types';
 
 import {
   APP_NAME,
@@ -26,6 +34,7 @@ import { MINUTE } from '../util/dateFormat';
 import { closeThisTab } from '../util/ledger/tab';
 import { resolveRender } from '../util/renderPromise';
 import resolveSlideTransitionName from '../util/resolveSlideTransitionName';
+import { trackWalletScreen } from '../util/walletTelemetry';
 import {
   IS_ELECTRON, IS_LEDGER_EXTENSION_TAB, IS_LINUX,
 } from '../util/windowEnvironment';
@@ -101,6 +110,13 @@ interface StateProps {
   theme: Theme;
   accentColorIndex?: number;
   isAppReady?: boolean;
+  authState: AuthState;
+  activeContentTab?: ContentTab;
+  transferState: TransferState;
+  swapState: SwapState;
+  settingsState: SettingsState;
+  transactionInfoState: TransactionInfoState;
+  isAppLockActive?: boolean;
 }
 
 const APP_STATES_WITH_BOTTOM_BAR = new Set([
@@ -130,6 +146,13 @@ function App({
   theme,
   accentColorIndex,
   isAppReady,
+  authState,
+  activeContentTab,
+  transferState,
+  swapState,
+  settingsState,
+  transactionInfoState,
+  isAppLockActive,
 }: StateProps) {
   const {
     closeBackupWalletModal,
@@ -155,6 +178,18 @@ function App({
     isPortrait,
     appState,
   });
+  const telemetryScreen = resolveTelemetryScreen({
+    renderingKey,
+    areSettingsOpen,
+    currentTokenSlug,
+    authState,
+    activeContentTab,
+    transferState,
+    swapState,
+    settingsState,
+    transactionInfoState,
+    isAppLockActive,
+  });
   const withBottomBar = isPortrait && (!IS_EXPLORER || isAppReady) && APP_STATES_WITH_BOTTOM_BAR.has(renderingKey);
   // Screens sharing the bottom bar are sibling tabs, so they cross-fade into each other. Upstream
   // token screens slide in, while Legends keeps the shared shell fixed during that transition.
@@ -174,6 +209,10 @@ function App({
   useEffect(() => {
     document.documentElement.classList.toggle('with-bottombar', withBottomBar);
   }, [withBottomBar]);
+
+  useEffect(() => {
+    if (IS_LEGENDS_WALLET) trackWalletScreen(telemetryScreen);
+  }, [telemetryScreen]);
 
   useEffect(() => {
     updateSizes();
@@ -320,6 +359,7 @@ function App({
 }
 
 export default memo(withGlobal((global): StateProps => {
+  const accountState = selectCurrentAccountState(global);
   return {
     appState: global.appState,
     accountId: selectCurrentAccountId(global),
@@ -330,14 +370,62 @@ export default memo(withGlobal((global): StateProps => {
     isExploreOpen: global.isExploreOpen,
     isPortfolioOpen: global.isPortfolioOpen,
     isPrepaidOpen: global.isPrepaidOpen,
-    currentTokenSlug: selectCurrentAccountState(global)?.currentTokenSlug,
+    currentTokenSlug: accountState?.currentTokenSlug,
     areSettingsOpen: global.areSettingsOpen,
     isFullscreen: Boolean(global.isFullscreen),
     theme: global.settings.theme,
     accentColorIndex: selectCurrentAccountSettings(global)?.accentColorIndex,
-    isAppReady: selectCurrentAccountState(global)?.isAppReady,
+    isAppReady: accountState?.isAppReady,
+    authState: global.auth.state,
+    activeContentTab: accountState?.activeContentTab,
+    transferState: global.currentTransfer.state,
+    swapState: global.currentSwap.state,
+    settingsState: global.settings.state,
+    transactionInfoState: global.currentTransactionInfo.state,
+    isAppLockActive: global.isAppLockActive,
   };
 })(App));
+
+function resolveTelemetryScreen({
+  renderingKey,
+  areSettingsOpen,
+  currentTokenSlug,
+  authState,
+  activeContentTab,
+  transferState,
+  swapState,
+  settingsState,
+  transactionInfoState,
+  isAppLockActive,
+}: Pick<
+  StateProps,
+  | 'areSettingsOpen'
+  | 'currentTokenSlug'
+  | 'authState'
+  | 'activeContentTab'
+  | 'transferState'
+  | 'swapState'
+  | 'settingsState'
+  | 'transactionInfoState'
+  | 'isAppLockActive'
+> & { renderingKey: AppState }) {
+  if (isAppLockActive) return 'AppLock';
+  if (transactionInfoState !== TransactionInfoState.None) {
+    const stateName = transactionInfoState === TransactionInfoState.Loading
+      ? 'Loading'
+      : transactionInfoState === TransactionInfoState.ActivityList ? 'List' : 'Detail';
+    return `TransactionInfo.${stateName}`;
+  }
+  if (transferState !== TransferState.None) return `Transfer.${TransferState[transferState]}`;
+  if (swapState !== SwapState.None) return `Swap.${SwapState[swapState]}`;
+  if (renderingKey === AppState.Auth) return `Auth.${AuthState[authState]}`;
+  if (renderingKey === AppState.Settings || areSettingsOpen) return `Settings.${SettingsState[settingsState]}`;
+  if (currentTokenSlug) return 'TokenInfo';
+  if (renderingKey === AppState.Main && activeContentTab !== undefined) {
+    return `Main.${ContentTab[activeContentTab]}`;
+  }
+  return AppState[renderingKey];
+}
 
 function resolveRenderingKey({
   isInactive,

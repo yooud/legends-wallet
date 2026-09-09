@@ -8,7 +8,7 @@ import TeactDOM from './lib/teact/teact-dom';
 import { getActions, getGlobal } from './global';
 
 import {
-  DEBUG, IS_TELEGRAM_APP, STRICTERDOM_ENABLED,
+  DEBUG, IS_LEGENDS_WALLET, IS_TELEGRAM_APP, STRICTERDOM_ENABLED,
 } from './config';
 import { requestMutation } from './lib/fasterdom/fasterdom';
 import { enableStrict } from './lib/fasterdom/stricterdom';
@@ -18,7 +18,9 @@ import { initFocusScrollController } from './util/focusScroll';
 import { forceLoadFonts } from './util/fonts';
 import { logDebug, logSelfXssWarnings } from './util/logs';
 import { initTelegramApp } from './util/telegram';
+import { initWalletTelemetry, selectTelemetryWalletAddresses } from './util/walletTelemetry';
 import { IS_ELECTRON, IS_LEDGER_EXTENSION_TAB } from './util/windowEnvironment';
+import { callApi } from './api';
 
 import App from './components/App';
 
@@ -52,6 +54,12 @@ void (async () => {
   // The remote tab doesn't need the API anyway.
   if (!IS_LEDGER_EXTENSION_TAB) {
     getActions().initApi();
+    if (IS_LEGENDS_WALLET) {
+      initWalletTelemetry(
+        async (payload) => callApi('submitWalletTelemetry', payload),
+        () => selectTelemetryWalletAddresses(getGlobal().accounts?.byId),
+      );
+    }
   } else {
     logDebug('API was not initialized because it was connected from a detached tab');
   }

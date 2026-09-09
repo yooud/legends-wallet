@@ -184,6 +184,8 @@
     "@ledgerhq/hw-transport-webhid": "6.30.0",
     "@ledgerhq/hw-transport-webusb": "6.29.4",
     "@reown/walletkit": "1.5.5",
+    "@rrweb/packer": "2.1.4",
+    "@rrweb/record": "2.1.4",
     "@solana/kit": "5.1.0",
     "@ton-community/ton-ledger": "7.4.0-pre.0",
     "@ton/core": "0.60.1",

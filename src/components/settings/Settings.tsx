@@ -1,3 +1,4 @@
+import type { HomeScreenStatus } from '@twa-dev/types';
 import React, { memo, useEffect, useMemo, useRef, useState } from '../../lib/teact/teact';
 import { getActions, withGlobal } from '../../global';
 
@@ -17,6 +18,7 @@ import {
   IS_FEATURE_LIMITED,
   IS_LEGENDS_WALLET,
   IS_MY_WALLET_BRAND,
+  IS_TELEGRAM_APP,
   LANG_LIST,
   MW_CARDS_WEBSITE,
   NO_APP_INSTALL_PROMO,
@@ -50,6 +52,11 @@ import { MEMO_EMPTY_ARRAY } from '../../util/memo';
 import { openUrl } from '../../util/openUrl';
 import resolveSlideTransitionName from '../../util/resolveSlideTransitionName';
 import { captureControlledSwipe } from '../../util/swipeController';
+import {
+  addTelegramAppToHomeScreen,
+  checkTelegramHomeScreenStatus,
+  onTelegramHomeScreenAdded,
+} from '../../util/telegram';
 import useTelegramMiniAppSwipeToClose from '../../util/telegram/hooks/useTelegramMiniAppSwipeToClose';
 import { getTelegramTipsChannelUrl } from '../../util/url';
 import {
@@ -195,6 +202,7 @@ function Settings({
   const [withAllWalletVersions, markWithAllWalletVersions] = useFlag();
 
   const [isLogOutModalOpened, openLogOutModal, closeLogOutModal] = useFlag();
+  const [telegramHomeScreenStatus, setTelegramHomeScreenStatus] = useState<HomeScreenStatus>();
   const isInitialScreen = renderingKey === SettingsState.Initial;
 
   const { isScrolled, handleScroll: handleContentScroll } = useScrolledState();
@@ -343,6 +351,26 @@ function Settings({
   function handleClickInstallOnMobile() {
     void openUrl(`${APP_INSTALL_URL}mobile`, { isExternal: true });
   }
+
+  const handleAddToHomeScreen = useLastCallback(() => {
+    addTelegramAppToHomeScreen();
+  });
+
+  useEffect(() => {
+    if (!IS_TELEGRAM_APP) return undefined;
+    let isAlive = true;
+    void checkTelegramHomeScreenStatus().then((status) => {
+      if (isAlive) setTelegramHomeScreenStatus(status);
+    });
+    const unsubscribe = onTelegramHomeScreenAdded(() => {
+      if (isAlive) setTelegramHomeScreenStatus('added');
+    });
+
+    return () => {
+      isAlive = false;
+      unsubscribe?.();
+    };
+  }, []);
 
   const handleLedgerConnected = useLastCallback(() => {
     setSettingsState({ state: SettingsState.LedgerSelectWallets });
@@ -509,6 +537,16 @@ function Settings({
                   <span className={styles.itemSubtitle}>{lang('Performance, insights and P&L')}</span>
                 </div>
 
+                <i className={buildClassName(styles.iconChevronRight, 'icon-chevron-right')} aria-hidden />
+              </div>
+            </div>
+          )}
+
+          {IS_TELEGRAM_APP && ['unknown', 'missed'].includes(telegramHomeScreenStatus ?? '') && (
+            <div className={styles.block}>
+              <div className={buildClassName(styles.item, styles.itemMenu)} onClick={handleAddToHomeScreen}>
+                <img className={styles.menuIcon} src={installAppImg} alt={lang('Add to Home Screen')} />
+                <span className={styles.itemTitle}>{lang('Add to Home Screen')}</span>
                 <i className={buildClassName(styles.iconChevronRight, 'icon-chevron-right')} aria-hidden />
               </div>
             </div>

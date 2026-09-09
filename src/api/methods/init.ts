@@ -4,7 +4,7 @@ import { IS_LEGENDS_WALLET, NO_MFA, NO_REFERRER, NO_STAKING, NO_SWAP } from '../
 import { parseAccountId } from '../../util/account';
 import { initWindowConnector } from '../../util/windowProvider/connector';
 import * as ton from '../chains/ton';
-import { fetchStoredChainAccount } from '../common/accounts';
+import { fetchStoredAccounts } from '../common/accounts';
 import { callBackendPost, fetchBackendReferrer } from '../common/backend';
 import { connectUpdater, disconnectUpdater, tryMigrateStorage } from '../common/helpers';
 import { initClientId } from '../common/other';
@@ -66,8 +66,10 @@ export default async function init(onUpdate: OnApiUpdate, args: ApiInitArgs) {
 }
 
 async function identifyWalletAccounts(accountIds: string[] | undefined) {
+  const accounts = await fetchStoredAccounts();
   await Promise.allSettled((accountIds ?? []).map(async (accountId) => {
-    const account = await fetchStoredChainAccount(accountId, 'tron');
+    const account = accounts[accountId];
+    if (!account?.byChain.tron || account.type === 'view') return;
     const { network } = parseAccountId(accountId);
     await callBackendPost<{ ok: true }>(
       `${network === 'testnet' ? '/testnet' : ''}/wallet-client/identify`,

@@ -9,6 +9,7 @@ import type {
 import { logDebugApi, logDebugError } from '../../../util/logs';
 import { createConnector, createExtensionConnector } from '../../../util/PostMessageConnector';
 import { pause } from '../../../util/schedulers';
+import { trackWalletApiOperation } from '../../../util/walletTelemetry';
 import { IS_IOS } from '../../../util/windowEnvironment';
 import { createWindowProvider, createWindowProviderForExtension } from '../../../util/windowProvider';
 import { POPUP_PORT } from '../extension/config';
@@ -66,6 +67,7 @@ export async function callApi<T extends keyof AllMethods>(
 
   await initPromise!;
 
+  const startedAt = Date.now();
   try {
     const result = await (connector.request({
       name: fnName,
@@ -73,12 +75,15 @@ export async function callApi<T extends keyof AllMethods>(
     }) as Promise<MethodResponseWithMaybePrefix<T>>);
 
     logDebugApi(`callApi: ${fnName}`, args, result);
+    const outcome = result && typeof result === 'object' && 'error' in result ? 'error' : 'success';
+    trackWalletApiOperation(String(fnName), outcome, Date.now() - startedAt);
 
     return result;
   } catch (err) {
     // Callers treat `undefined` as a transport failure, so record the swallowed cause for support logs.
     // Args are deliberately not logged: they may carry sensitive payloads.
     logDebugError(`callApi: ${fnName}`, err);
+    trackWalletApiOperation(String(fnName), 'error', Date.now() - startedAt);
     return undefined;
   }
 }

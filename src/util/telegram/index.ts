@@ -1,8 +1,9 @@
-import type { Telegram, WebApp } from '@twa-dev/types';
+import type { HomeScreenStatus, Telegram, WebApp } from '@twa-dev/types';
 import { getActions } from '../../global';
 
 import type { GlobalState } from '../../global/types';
 
+import compareVersions from '../compareVersions';
 import { mapValues } from '../iteratees';
 import { logDebugError } from '../logs';
 import safeExec from '../safeExec';
@@ -108,6 +109,30 @@ export function isInsideTelegram() {
   const { platform } = getTelegramApp() || {};
 
   return platform && platform !== 'unknown';
+}
+
+export function checkTelegramHomeScreenStatus(): Promise<HomeScreenStatus> {
+  if (!isTelegramHomeScreenSupported()) return Promise.resolve('unsupported');
+
+  return new Promise((resolve) => {
+    webApp!.checkHomeScreenStatus(resolve);
+  });
+}
+
+export function addTelegramAppToHomeScreen() {
+  if (!isTelegramHomeScreenSupported()) return false;
+  webApp!.addToHomeScreen();
+  return true;
+}
+
+export function onTelegramHomeScreenAdded(callback: NoneToVoidFunction) {
+  if (!isTelegramHomeScreenSupported()) return undefined;
+  webApp!.onEvent('homeScreenAdded', callback);
+  return () => webApp?.offEvent('homeScreenAdded', callback);
+}
+
+function isTelegramHomeScreenSupported() {
+  return Boolean(webApp && isInsideTelegram() && compareVersions(webApp.version, '9.0') >= 0);
 }
 
 export function getTelegramAppAsync(): Promise<WebApp | undefined> {

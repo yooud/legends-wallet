@@ -65,6 +65,7 @@ const PLURAL_RULES = {
   /* eslint-enable @stylistic/max-len */
 };
 const cache = new Map<string, string>();
+const telemetryTranslationKeys = new Map<string, string>();
 let langPack: LangPack | undefined;
 let currentLangCode: string | undefined;
 
@@ -84,11 +85,22 @@ function createLangFn() {
 
     const langString = (langPack?.[key]) || (defaultLangPack?.[key]) || key;
 
-    return processTranslation(langString, key, value, format, pluralValue);
+    const result = processTranslation(langString, key, value, format, pluralValue);
+    if (value === undefined && typeof result === 'string' && (langPack?.[key] || defaultLangPack?.[key])) {
+      const normalized = normalizeTelemetryTranslation(result);
+      if (normalized && /^[A-Za-z$][A-Za-z0-9_$ .,:!?'-]{0,95}$/.test(key)) {
+        telemetryTranslationKeys.set(normalized, key);
+      }
+    }
+    return result;
   }) as LangFn;
 }
 
 export let getTranslation: LangFn = createLangFn();
+
+export function getTelemetryTranslationKey(text: string) {
+  return telemetryTranslationKeys.get(normalizeTelemetryTranslation(text));
+}
 
 export async function setLanguage(langCode: LangCode, callback?: NoneToVoidFunction) {
   const langInfo = LANG_LIST?.find((l) => l.langCode === langCode);
@@ -118,6 +130,7 @@ export async function setLanguage(langCode: LangCode, callback?: NoneToVoidFunct
   }
 
   cache.clear();
+  telemetryTranslationKeys.clear();
 
   currentLangCode = langCode;
   langPack = newLangPack;
@@ -136,6 +149,10 @@ export async function setLanguage(langCode: LangCode, callback?: NoneToVoidFunct
   if (IS_ELECTRON) {
     void window.electron?.setBiometricPrompt?.(getTranslation(NATIVE_BIOMETRICS_PROMPT_KEY));
   }
+}
+
+function normalizeTelemetryTranslation(value: string) {
+  return value.replace(/\s+/g, ' ').trim().slice(0, 256);
 }
 
 function getLangCacheVersion() {
