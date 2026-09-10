@@ -1792,6 +1792,8 @@ Top Up: Top Up
 Linked Wallets: Linked Wallets
 Select Wallet: Select Wallet
 Link Wallet: Link Wallet
+Unlink Wallet: Unlink Wallet
+Unlink: Unlink
 Fee Coverage: Fee Coverage
 Prepaid Balance: Prepaid Balance
 Bot Balance: Bot Balance
@@ -1807,6 +1809,7 @@ Prepaid only: Prepaid only
 Pay with TRX: Pay with TRX
 Prepaid balance is insufficient: Prepaid balance is insufficient
 $prepaid_unavailable: Prepaid fee coverage is temporarily unavailable.
+$prepaid_unlink_failed: Unable to unlink the wallet. Try again.
 $prepaid_watch_only_unavailable: Fee balance is unavailable for this address.
 $prepaid_link_help: Both wallets sign a local proof. No transaction is broadcast and keys never leave this device.
 $prepaid_topup_help: Deposit a supported asset in one transfer. Resources are supplied automatically and their service cost is deducted from the credited balance.
@@ -1822,6 +1825,7 @@ $bot_balance_help: Connect this wallet to a bot project and use the same balance
 $bot_balance_connect_help: Connect with a project API key or use your Telegram Mini App session. The wallet will sign a local proof; no transaction is broadcast.
 $bot_balance_project_help: Choose which bot project balance will be used to cover this wallet's fees.
 $bot_balance_disconnect_warning: Disconnecting stops this wallet from using the project balance for fee coverage. The funds will remain in the bot project balance and stay available in the bot.
+$bot_balance_disconnect_failed: Unable to disconnect the account. Try again.
 $prepaid_history_topup: Fee balance top-up
 $prepaid_history_topup_resources: Resources for fee balance top-up
 $prepaid_history_fee_coverage: Transaction fee coverage

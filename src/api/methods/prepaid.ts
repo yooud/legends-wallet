@@ -661,6 +661,35 @@ export async function linkWalletPrepaidAccounts(
   });
 }
 
+export async function unlinkWalletPrepaidAccount(
+  accountId: string,
+  enclaveToken: string,
+) {
+  const { address, account } = await getTronAccount(accountId);
+  if (account.type === 'view' || account.type === 'ledger') return { error: 'UnsupportedAccountType' };
+  const challenge = await fetchPrepaidJson<{
+    challenge_id: string;
+    memo: string;
+  }>(accountId, 'unlink/challenge', undefined, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ address }),
+  });
+  const tronWeb = getTronClient(parseAccountId(accountId).network);
+  const initial = await tronWeb.transactionBuilder.sendTrx(address, 1, address);
+  const withMemo = await tronWeb.transactionBuilder.addUpdateData(initial, challenge.memo, 'utf8');
+  const extended = await ensureSponsoredTransactionTtl(tronWeb, withMemo);
+  const privateKey = await fetchPrivateKeyString(accountId, enclaveToken, account);
+  if (!privateKey) throw new Error('InvalidPassword');
+  const proof = await tronWeb.trx.sign(extended, privateKey);
+
+  return fetchPrepaidJson<ApiWalletPrepaidOverview>(accountId, 'unlink/complete', undefined, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ challenge_id: challenge.challenge_id, proof }),
+  });
+}
+
 export async function connectWalletBotBalance(
   accountId: string,
   enclaveToken: string,

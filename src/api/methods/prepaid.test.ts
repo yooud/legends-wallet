@@ -11,6 +11,7 @@ import {
   resetPrepaidAccessCacheForTests,
   revokeWalletPrepaidAccessSession,
   setWalletPrepaidCoverageMode,
+  unlinkWalletPrepaidAccount,
 } from './prepaid';
 
 const PRIMARY_ACCOUNT_ID = '0-testnet';
@@ -121,6 +122,19 @@ describe('wallet prepaid proof transactions', () => {
 
     expect(mockSendTrx).toHaveBeenNthCalledWith(1, CANDIDATE_ADDRESS, 1, PRIMARY_ADDRESS);
     expect(mockSendTrx).toHaveBeenNthCalledWith(2, PRIMARY_ADDRESS, 1, CANDIDATE_ADDRESS);
+  });
+
+  it('uses the unlink endpoints with a proof from the current wallet only', async () => {
+    mockFetchJson
+      .mockResolvedValueOnce({ challenge_id: 'challenge', memo: 'memo' })
+      .mockResolvedValueOnce({ coverage_mode: 'auto' });
+
+    await unlinkWalletPrepaidAccount(PRIMARY_ACCOUNT_ID, 'token');
+
+    expect(mockFetchJson.mock.calls[0][0]).toContain('/unlink/challenge');
+    expect(mockFetchJson.mock.calls[1][0]).toContain('/unlink/complete');
+    expect(mockSendTrx).toHaveBeenCalledTimes(1);
+    expect(mockSendTrx).toHaveBeenCalledWith(PRIMARY_ADDRESS, 1, PRIMARY_ADDRESS);
   });
 
   it('signs an access challenge and uses its bearer token for the overview', async () => {

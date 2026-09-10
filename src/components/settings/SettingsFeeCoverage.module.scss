@@ -18,6 +18,12 @@
   opacity: 0.55;
 }
 
+.unlinkLabel {
+  grid-area: action;
+  margin-left: 0.75rem;
+  color: var(--color-red);
+}
+
 .tooltip {
   max-width: 15rem;
 

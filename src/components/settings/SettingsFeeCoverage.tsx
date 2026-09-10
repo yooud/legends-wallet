@@ -8,8 +8,10 @@ import type {
   ApiWalletPrepaidOverview,
 } from '../../api/types';
 import type { Account } from '../../global/types';
+import { ApiCommonError } from '../../api/types';
 
 import { IS_TELEGRAM_APP } from '../../config';
+import { errorCodeToMessage } from '../../global/helpers/errors';
 import {
   selectCurrentAccountId,
   selectEnclaveToken,
@@ -84,6 +86,7 @@ function SettingsFeeCoverage({
   const [isAuthorizationOpen, setIsAuthorizationOpen] = useState(false);
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [candidateAccountId, setCandidateAccountId] = useState('');
+  const [isUnlinkModalOpen, setIsUnlinkModalOpen] = useState(false);
   const [isIntegrationModalOpen, setIsIntegrationModalOpen] = useState(false);
   const [isDisconnectModalOpen, setIsDisconnectModalOpen] = useState(false);
   const [isDisconnectConfirmed, setIsDisconnectConfirmed] = useState(false);
@@ -92,9 +95,18 @@ function SettingsFeeCoverage({
   const [apiKey, setApiKey] = useState('');
   const { isScrolled, handleScroll } = useScrolledState();
 
-  const showRequestError = useLastCallback((context: string, requestError: unknown) => {
+  const showRequestError = useLastCallback((
+    context: string,
+    requestError: unknown,
+    fallbackMessage = '$prepaid_unavailable',
+  ) => {
     logDebugError(context, requestError);
-    setError(lang('$prepaid_unavailable'));
+    const errorCode = requestError instanceof Error ? requestError.message : undefined;
+    setError(lang(
+      errorCode === ApiCommonError.InvalidPassword
+        ? errorCodeToMessage(ApiCommonError.InvalidPassword)
+        : fallbackMessage,
+    ));
   });
 
   const cancelOverviewAuthorization = useLastCallback(() => {
@@ -165,6 +177,13 @@ function SettingsFeeCoverage({
     },
     {},
   ), [accounts]);
+  const currentAddress = accountId ? accounts?.[accountId]?.byChain.tron?.address : undefined;
+  const canUnlinkCurrentWallet = useMemo(() => {
+    const currentAddressInfo = overview?.addresses.find((item) => item.address === currentAddress);
+    if (!currentAddressInfo) return false;
+    return currentAddressInfo.role === 'linked'
+      || (currentAddressInfo.role === 'owner' && (overview?.addresses.length ?? 0) > 1);
+  }, [currentAddress, overview]);
 
   const selectMode = useLastCallback(async (mode: ApiWalletPrepaidCoverageMode) => {
     if (!accountId || !overview || isLoading || overview.coverage_mode === mode) return;
@@ -210,6 +229,33 @@ function SettingsFeeCoverage({
     } catch (linkError) {
       showRequestError('Fee coverage wallet link', linkError);
       setCandidateAccountId('');
+    } finally {
+      setIsLoading(false);
+      releaseEnclaveSession({ enclaveToken });
+    }
+  });
+
+  const closeUnlinkModal = useLastCallback(() => {
+    setIsUnlinkModalOpen(false);
+    setError('');
+  });
+
+  const authorizeUnlink = useLastCallback(async (enclaveToken: string) => {
+    if (!accountId || isLoading) {
+      releaseEnclaveSession({ enclaveToken });
+      return;
+    }
+    setIsLoading(true);
+    setError('');
+    try {
+      const result = await callApiWithThrow(
+        'unlinkWalletPrepaidAccount', accountId, enclaveToken,
+      );
+      if (result && 'error' in result) throw new Error(result.error);
+      setOverview(result);
+      closeUnlinkModal();
+    } catch (unlinkError) {
+      showRequestError('Fee coverage wallet unlink', unlinkError, '$prepaid_unlink_failed');
     } finally {
       setIsLoading(false);
       releaseEnclaveSession({ enclaveToken });
@@ -310,7 +356,7 @@ function SettingsFeeCoverage({
       setIsDisconnectModalOpen(false);
       setIsDisconnectConfirmed(false);
     } catch (disconnectError) {
-      showRequestError('Fee coverage bot disconnect', disconnectError);
+      showRequestError('Fee coverage bot disconnect', disconnectError, '$bot_balance_disconnect_failed');
     } finally {
       setIsLoading(false);
       releaseEnclaveSession({ enclaveToken });
@@ -410,18 +456,41 @@ function SettingsFeeCoverage({
             <div className={styles.block}>
               {overview.addresses.map((item) => {
                 const account = accountByAddress[item.address];
+                const canUnlink = canUnlinkCurrentWallet && item.address === currentAddress;
+                const content = (
+                  <div className={styles.itemContent}>
+                    <span className={styles.itemTitle}>
+                      {account?.title || lang(item.role === 'owner' ? 'Current Wallet' : 'Linked Wallet')}
+                    </span>
+                    <span className={styles.itemSubtitle}>{shortenAddress(item.address, 7)}</span>
+                  </div>
+                );
+
+                if (!canUnlink) {
+                  return (
+                    <div
+                      className={buildClassName(styles.item, styles.item_small, styles.item_nonInteractive)}
+                      key={item.address}
+                    >
+                      {content}
+                    </div>
+                  );
+                }
+
                 return (
-                  <div
-                    className={buildClassName(styles.item, styles.item_small, styles.item_nonInteractive)}
+                  <button
+                    type="button"
+                    className={buildClassName(styles.item, styles.item_small, localStyles.option)}
+                    disabled={isLoading}
+                    onClick={() => {
+                      setError('');
+                      setIsUnlinkModalOpen(true);
+                    }}
                     key={item.address}
                   >
-                    <div className={styles.itemContent}>
-                      <span className={styles.itemTitle}>
-                        {account?.title || lang(item.role === 'owner' ? 'Current Wallet' : 'Linked Wallet')}
-                      </span>
-                      <span className={styles.itemSubtitle}>{shortenAddress(item.address, 7)}</span>
-                    </div>
-                  </div>
+                    {content}
+                    <span className={localStyles.unlinkLabel}>{lang('Unlink')}</span>
+                  </button>
                 );
               })}
               {candidates.length > 0 && (
@@ -443,7 +512,7 @@ function SettingsFeeCoverage({
           </>
         )}
 
-        {error && !isLinkModalOpen && !isIntegrationModalOpen && !isDisconnectModalOpen && (
+        {error && !isLinkModalOpen && !isUnlinkModalOpen && !isIntegrationModalOpen && !isDisconnectModalOpen && (
           <p className={localStyles.error}>{error}</p>
         )}
       </div>
@@ -620,6 +689,25 @@ function SettingsFeeCoverage({
             </div>
           </>
         )}
+      </Modal>
+
+      <Modal
+        isOpen={isUnlinkModalOpen}
+        title={lang('Unlink Wallet')}
+        hasCloseButton
+        onClose={closeUnlinkModal}
+      >
+        <PasswordForm
+          isActive={isUnlinkModalOpen}
+          isLoading={isLoading}
+          operationType="passcode"
+          error={error}
+          submitLabel={lang('Unlink')}
+          noAutoConfirm
+          onAuthorize={authorizeUnlink}
+          onCancel={closeUnlinkModal}
+          onUpdate={() => setError('')}
+        />
       </Modal>
     </div>
   );
