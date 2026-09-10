@@ -153,6 +153,10 @@ function AccountSelector({
             items={WALLET_CONTEXT_MENU_ITEMS}
             withBackdrop
             shouldSelectOnTouchEnd
+            layout={{
+              isCenteredHorizontally: false,
+              shouldAvoidNegativePosition: true,
+            }}
             onItemClick={handleMenuItemClick}
           >
             {(menuProps) => renderAccountTitle(menuProps)}
