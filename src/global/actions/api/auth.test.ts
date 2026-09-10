@@ -172,6 +172,45 @@ describe('add-account routing', () => {
     },
   );
 
+  it('establishes Fee Balance access when a discovered TRON subwallet is selected', async () => {
+    const subwalletAccountId = '1-tron-mainnet';
+    (callApi as jest.Mock).mockImplementation((method: string) => (
+      method === 'addSubWallet'
+        ? Promise.resolve({ isNew: false, accountId: subwalletAccountId })
+        : Promise.resolve(true)
+    ));
+    (callApiWithThrow as jest.Mock).mockResolvedValue(true);
+    const actions = {
+      releaseEnclaveSession: jest.fn(),
+      showToast: jest.fn(),
+      switchAccount: jest.fn(),
+    };
+
+    await run('addSubWallet', makeGlobal({
+      currentAccountId: ACCOUNT_ID,
+      accounts: {
+        byId: {
+          [ACCOUNT_ID]: {
+            title: 'Wallet',
+            type: 'mnemonic',
+            byChain: { tron: { address: 'TVpWp3GMyNY8Zemo3JHogbWq4o4eDLa5r8' } },
+          },
+          [subwalletAccountId]: {
+            title: 'Wallet 1.1',
+            type: 'mnemonic',
+            byChain: { tron: { address: 'TFc6qM7q2XKqWvxQMjJ8qZP7JZazH5ffzK' } },
+          },
+        },
+      },
+    }), actions, {
+      group: { byChain: { tron: { wallet: { address: 'TFc6qM7q2XKqWvxQMjJ8qZP7JZazH5ffzK' } } } },
+      enclaveToken: 'passcode:aa',
+    });
+
+    expect(callApiWithThrow).toHaveBeenCalledWith('ensureWalletPrepaidAccess', subwalletAccountId, 'passcode:aa');
+    expect(actions.switchAccount).toHaveBeenCalledWith({ accountId: subwalletAccountId });
+  });
+
   it('does not keep subwallet creation waiting for fee access', async () => {
     let resolveAccess!: () => void;
     (callApi as jest.Mock).mockImplementation((method: string) => {

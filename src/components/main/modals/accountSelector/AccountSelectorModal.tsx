@@ -8,6 +8,7 @@ import type { Account, AccountSettings, GlobalState } from '../../../../global/t
 import { AccountSelectorState } from '../../../../global/types';
 import { SettingsState } from '../../../../global/types';
 
+import { IS_TELEGRAM_APP } from '../../../../config';
 import {
   selectCurrentAccountId,
   selectEnclaveToken,
@@ -22,6 +23,7 @@ import { captureEvents, SwipeDirection } from '../../../../util/captureEvents';
 import { getChainsSupportingLedger } from '../../../../util/chain';
 import { vibrate } from '../../../../util/haptics';
 import { disableSwipeToClose, enableSwipeToClose } from '../../../../util/modalSwipeManager';
+import { suspendTelegramBackButton } from '../../../../util/telegram/backButtonManager';
 import { IS_LEDGER_SUPPORTED, IS_TOUCH_ENV } from '../../../../util/windowEnvironment';
 import { buildTabs, getCurrentTabIndex } from './helpers/tabsHelper';
 import { AccountTab, DEFAULT_TAB, OPEN_CONTEXT_MENU_CLASS_NAME } from './constants';
@@ -137,6 +139,11 @@ function AccountSelectorModal({
   const [isAddingSubwallet, setIsAddingSubwallet] = useState<boolean>(false);
   const [previousViewMode, setPreviousViewMode] = useState<AccountSelectorState>(initialRenderingKey);
   const [shouldReturnToStartScreen, setShouldReturnToStartScreen] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!IS_TELEGRAM_APP || !isOpen) return undefined;
+    return suspendTelegramBackButton();
+  }, [isOpen]);
 
   const hasOtherWalletVersions = useMemo(() => (
     (accountWalletVersions?.filter((v) => v.lastTxId || v.version === 'W5').length ?? 0) > 1

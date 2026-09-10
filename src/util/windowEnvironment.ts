@@ -5,6 +5,7 @@ import {
 } from '../config';
 import { requestForcedReflow } from '../lib/fasterdom/fasterdom';
 import { DETACHED_TAB_URL } from './ledger/tab';
+import compareVersions from './compareVersions';
 import { getPlatform } from './getPlatform';
 
 const TELEGRAM_MOBILE_PLATFORM = new Set(['android', 'android_x', 'ios']);
@@ -63,9 +64,11 @@ export const IS_DAPP_SUPPORTED = IS_EXTENSION || IS_ELECTRON;
 export const IS_VIEW_TRANSITION_SUPPORTED = typeof document.startViewTransition === 'function';
 
 // Note: As of 01-10-2025, Firefox extensions require `clipboardRead` permission in manifest to read data
-// Note: As of 22-02-2023, clipboard functionality is only available to the Telegram partners
-// https://github.com/Telegram-Mini-Apps/telegram-apps/issues/609#issuecomment-2571435311
-export const IS_CLIPBOARDS_SUPPORTED = !(IS_TELEGRAM_APP || IS_FIREFOX_EXTENSION) && getIsClipboardReadTextSupported();
+// Telegram Mini Apps expose their own consented clipboard reader since Bot API 6.4. Older clients
+// use the browser Clipboard API when it is available instead of logging an unsupported method call.
+export const IS_CLIPBOARDS_SUPPORTED = !IS_FIREFOX_EXTENSION && (
+  (IS_TELEGRAM_APP && getIsTelegramClipboardReadTextSupported()) || getIsClipboardReadTextSupported()
+);
 
 export const REM = parseInt(getComputedStyle(document.documentElement).fontSize, 10);
 export const STICKY_CARD_INTERSECTION_THRESHOLD = -3 * REM;
@@ -88,6 +91,15 @@ export function setScrollbarWidthProperty() {
 
 export function getIsMobileTelegramApp() {
   return IS_TELEGRAM_APP && TELEGRAM_MOBILE_PLATFORM.has(window.Telegram?.WebApp.platform ?? '');
+}
+
+export function getIsTelegramClipboardReadTextSupported() {
+  const telegramApp = window.Telegram?.WebApp;
+  return Boolean(
+    telegramApp
+    && compareVersions(telegramApp.version, '6.4') >= 0
+    && typeof telegramApp.readTextFromClipboard === 'function',
+  );
 }
 
 function getIsClipboardReadTextSupported() {

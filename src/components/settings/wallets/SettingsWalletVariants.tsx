@@ -440,14 +440,17 @@ function SettingsWalletVariants({
     _e: React.SyntheticEvent<HTMLDivElement | HTMLAnchorElement>,
     group: ApiGroupedWalletVariant,
   ) => {
-    addSubWallet({ group });
+    addSubWallet({ group, enclaveToken: enclaveToken ?? selectEnclaveToken(getGlobal()) });
     closeSettings();
   });
 
   const handleAddAllFoundSubwallets = useLastCallback(() => {
     if (!groups.length) return;
 
-    addAllFoundSubwallets({ foundSubwallets: groups });
+    addAllFoundSubwallets({
+      foundSubwallets: groups,
+      enclaveToken: enclaveToken ?? selectEnclaveToken(getGlobal()),
+    });
     closeSettings();
   });
 

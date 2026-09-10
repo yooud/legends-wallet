@@ -435,7 +435,11 @@ function AddressInput({
       <Input
         id={inputId}
         ref={ref}
-        className={buildClassName(isStatic && styles.inputStatic, withButton && styles.inputWithIcon)}
+        className={buildClassName(
+          isStatic && styles.inputStatic,
+          withButton && styles.inputWithIcon,
+          withQrButton && withPasteButton && styles.inputWithTwoIcons,
+        )}
         isRequired
         isStatic={isStatic}
         isDisabled={isReadonly}

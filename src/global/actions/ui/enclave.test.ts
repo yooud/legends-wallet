@@ -3,6 +3,7 @@ import './enclave';
 import type { GlobalState } from '../../types';
 
 import { enclave } from '../../../enclave';
+import { ensureCurrentWalletPrepaidAccessInBackground } from '../../helpers/enclave';
 import { addActionHandler } from '../../index';
 
 jest.mock('../../index', () => ({
@@ -14,6 +15,10 @@ jest.mock('../../index', () => ({
 
 jest.mock('../../../enclave', () => ({
   enclave: { releaseSession: jest.fn() },
+}));
+
+jest.mock('../../helpers/enclave', () => ({
+  ensureCurrentWalletPrepaidAccessInBackground: jest.fn(),
 }));
 
 type ActionHandler = (global: GlobalState, actions: AnyLiteral, payload?: AnyLiteral) => GlobalState;
@@ -53,5 +58,26 @@ describe('releaseEnclaveSession', () => {
     const result = release({ enclaveSession }, 'passcode:aa');
 
     expect(result.enclaveSession).toBe(enclaveSession);
+  });
+});
+
+describe('setEnclaveSession', () => {
+  beforeEach(() => (ensureCurrentWalletPrepaidAccessInBackground as jest.Mock).mockClear());
+
+  it('establishes Fee Balance access as soon as a TRON wallet is unlocked', () => {
+    const actions = { releaseEnclaveSession: jest.fn() };
+    const enclaveSession = { token: 'passcode:aa' };
+    const global = {
+      currentAccountId: '0-tron-mainnet',
+      accounts: {
+        byId: {
+          '0-tron-mainnet': { byChain: { tron: { address: 'TVpWp3GMyNY8Zemo3JHogbWq4o4eDLa5r8' } } },
+        },
+      },
+    } as unknown as GlobalState;
+
+    const result = getHandler('setEnclaveSession')(global, actions, enclaveSession);
+
+    expect(ensureCurrentWalletPrepaidAccessInBackground).toHaveBeenCalledWith(actions, result, 'passcode:aa');
   });
 });

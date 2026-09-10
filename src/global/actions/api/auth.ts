@@ -51,6 +51,7 @@ import {
 } from '../../helpers/auth';
 import {
   dropEnclaveSessionHold,
+  ensureCurrentWalletPrepaidAccessInBackground,
   ensureWalletPrepaidAccessInBackground,
   holdEnclaveSession,
   tryEnsureWalletPrepaidAccess,
@@ -1104,7 +1105,7 @@ addActionHandler('upgradeMultichainAccounts', async (global, actions, { enclaveT
   }
 });
 
-addActionHandler('addSubWallet', async (global, actions, { group }) => {
+addActionHandler('addSubWallet', withEnclaveSessionRelease(async (global, actions, { group, enclaveToken }) => {
   const accountId = selectCurrentAccountId(global)!;
 
   const partialByChain = Object.fromEntries(
@@ -1131,6 +1132,9 @@ addActionHandler('addSubWallet', async (global, actions, { group }) => {
   }
 
   if (!result.isNew) {
+    if (enclaveToken && selectAccount(global, result.accountId)?.byChain.tron) {
+      ensureWalletPrepaidAccessInBackground(actions, result.accountId, enclaveToken);
+    }
     actions.switchAccount({ accountId: result.accountId });
     actions.showToast({
       message: getTranslation('Subwallet Switched'),
@@ -1166,15 +1170,23 @@ addActionHandler('addSubWallet', async (global, actions, { group }) => {
     void actions.tryAddNotificationAccount({ accountId: result.accountId });
   }
 
+  if (enclaveToken && result.byChain.tron) {
+    ensureWalletPrepaidAccessInBackground(actions, result.accountId, enclaveToken);
+  }
+
   actions.showToast({
     message: getTranslation('Subwallet Added'),
     icon: 'icon-subwallet-added',
     action: 'openRenameWallet',
     actionText: getTranslation('Set Name'),
   });
-});
+}, { shouldEnsureWalletPrepaidAccess: false }));
 
-addActionHandler('addAllFoundSubwallets', async (global, actions, { foundSubwallets }) => {
+addActionHandler('addAllFoundSubwallets', withEnclaveSessionRelease(async (
+  global,
+  actions,
+  { foundSubwallets, enclaveToken },
+) => {
   const accountId = selectCurrentAccountId(global)!;
 
   const partialByChainList = foundSubwallets.map((group) => Object.fromEntries(
@@ -1242,6 +1254,13 @@ addActionHandler('addAllFoundSubwallets', async (global, actions, { foundSubwall
 
   const lastEntry = results.at(-1);
 
+  const lastEntryHasTronWallet = lastEntry && (lastEntry.isNew
+    ? Boolean(lastEntry.byChain.tron)
+    : Boolean(selectAccount(getGlobal(), lastEntry.accountId)?.byChain.tron));
+  if (lastEntry && enclaveToken && lastEntryHasTronWallet) {
+    ensureWalletPrepaidAccessInBackground(actions, lastEntry.accountId, enclaveToken);
+  }
+
   if (lastEntry?.isNew) {
     actions.showToast({
       message: getTranslation('Subwallet Added'),
@@ -1257,7 +1276,7 @@ addActionHandler('addAllFoundSubwallets', async (global, actions, { foundSubwall
       actionText: getTranslation('Set Name'),
     });
   }
-});
+}, { shouldEnsureWalletPrepaidAccess: false }));
 
 addActionHandler('setIsAuthLoading', (global, actions, { isLoading }) => {
   global = updateAuth(global, { isLoading });
@@ -1466,6 +1485,7 @@ addActionHandler('migrateLegacyAuth', async (global, actions, payload: {
     global = markAccounts(global, privateKeyAccountIds, { isPrivateKeyBased: true });
     global = markUnreadableAccounts(global, 'migrateLegacyAuth', unreadableAccountIds);
     setGlobal(global);
+    ensureCurrentWalletPrepaidAccessInBackground(actions, global, session.token);
 
     token = session.token;
 
@@ -1558,6 +1578,7 @@ addActionHandler('migrateLegacyBiometricAuth', async (global, actions, payload: 
     global = markAccounts(global, privateKeyAccountIds, { isPrivateKeyBased: true });
     global = markUnreadableAccounts(global, 'migrateLegacyBiometricAuth', unreadableAccountIds);
     setGlobal(global);
+    ensureCurrentWalletPrepaidAccessInBackground(actions, global, session.token);
 
     token = session.token;
 

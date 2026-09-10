@@ -11,6 +11,7 @@ const runDebounce = debounce((cb) => cb(), 300, false);
 const callbacks: CallbackEntry[] = [];
 let isGlobalHandlerAttached = false;
 let uniqueId = 0;
+let suspendCount = 0;
 
 function getNextId() {
   uniqueId += 1;
@@ -20,11 +21,11 @@ function getNextId() {
 function updateBackButtonState() {
   const backButton = getTelegramApp()!.BackButton;
 
-  if (callbacks.length > 0 && !isGlobalHandlerAttached) {
+  if (callbacks.length > 0 && !suspendCount && !isGlobalHandlerAttached) {
     backButton.show();
     backButton.onClick(handleBackButtonClick);
     isGlobalHandlerAttached = true;
-  } else if (!callbacks.length && isGlobalHandlerAttached) {
+  } else if ((!callbacks.length || suspendCount) && isGlobalHandlerAttached) {
     backButton.hide();
     backButton.offClick(handleBackButtonClick);
     isGlobalHandlerAttached = false;
@@ -44,6 +45,23 @@ export function unregisterCallback(id: number) {
     callbacks.splice(index, 1);
     runDebounce(updateBackButtonState);
   }
+}
+
+/**
+ * A full-screen picker has its own close affordance. Keep Telegram's native BackButton out of its
+ * hit area without unregistering the navigation handlers that need to resume after the picker closes.
+ */
+export function suspendTelegramBackButton() {
+  suspendCount += 1;
+  updateBackButtonState();
+
+  let isReleased = false;
+  return () => {
+    if (isReleased) return;
+    isReleased = true;
+    suspendCount = Math.max(0, suspendCount - 1);
+    updateBackButtonState();
+  };
 }
 
 function handleBackButtonClick() {

@@ -65,6 +65,23 @@ export function ensureWalletPrepaidAccessInBackground(
 }
 
 /**
+ * A decrypted Enclave session is the earliest point at which fee access can be refreshed without
+ * another prompt. View-only and non-TRON wallets intentionally do not request an access session.
+ */
+export function ensureCurrentWalletPrepaidAccessInBackground(
+  actions: Actions,
+  global: GlobalState,
+  enclaveToken: string,
+) {
+  if (!IS_LEGENDS_WALLET) return;
+
+  const accountId = global.currentAccountId;
+  if (!accountId || !global.accounts?.byId?.[accountId]?.byChain.tron) return;
+
+  ensureWalletPrepaidAccessInBackground(actions, accountId, enclaveToken);
+}
+
+/**
  * Wraps an operation that authorizes so the secret reads it does not take are given back once the
  * last flow on that session is done, however it ended. A flow has to name its budget before it
  * starts and can only name the largest it might need, an operation that fails before it signs takes

@@ -1285,8 +1285,8 @@ export interface ActionPayloads {
   resetApiSettings: { areAllDisabled?: boolean } | undefined;
   checkAppVersion: undefined;
   importAccountByVersion: { version: ApiTonWalletVersion; isTestnetSubwalletId?: boolean };
-  addSubWallet: { group: ApiGroupedWalletVariant };
-  addAllFoundSubwallets: { foundSubwallets: ApiGroupedWalletVariant[] };
+  addSubWallet: { group: ApiGroupedWalletVariant; enclaveToken?: string };
+  addAllFoundSubwallets: { foundSubwallets: ApiGroupedWalletVariant[]; enclaveToken?: string };
   createSubWallet: { enclaveToken: string };
   upgradeMultichainAccounts: { enclaveToken: string };
   importViewAccount: { addressByChain: ApiImportAddressByChain };

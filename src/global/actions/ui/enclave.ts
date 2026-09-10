@@ -1,8 +1,15 @@
 import { enclave } from '../../../enclave';
+import { ensureCurrentWalletPrepaidAccessInBackground } from '../../helpers/enclave';
 import { addActionHandler } from '../../index';
 
 addActionHandler('setEnclaveSession', (global, actions, enclaveSession) => {
-  return { ...global, enclaveSession };
+  const nextGlobal = { ...global, enclaveSession };
+
+  // PasswordForm calls this for passcode and biometric unlocks. Start the fee-access proof while
+  // that decryption is still authorized, rather than deferring it to the Fee Balance screen.
+  ensureCurrentWalletPrepaidAccessInBackground(actions, nextGlobal, enclaveSession.token);
+
+  return nextGlobal;
 });
 
 /**
