@@ -31,6 +31,16 @@ describe('isScamTransaction', () => {
     const activity = makeMockTransactionActivity({ isIncoming: false, nft: makeNft() });
     expect(isScamTransaction(activity)).toBe(false);
   });
+
+  it('does not mark a verified prepaid top-up as scam', () => {
+    const activity = makeMockTransactionActivity({
+      isIncoming: true,
+      metadata: { isScam: true },
+      extra: { walletPrepaidTopup: true },
+    });
+
+    expect(isScamTransaction(activity)).toBe(false);
+  });
 });
 
 describe('getIsHiddenNftActivity', () => {

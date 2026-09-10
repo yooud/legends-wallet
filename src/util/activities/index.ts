@@ -161,6 +161,10 @@ export function getTransactionTitle(
 }
 
 export function isScamTransaction(transaction: ApiTransaction) {
+  // The backend associates prepaid top-ups with an exact signed on-chain transaction.
+  // Do not apply generic sender/poisoning heuristics to that verified service operation.
+  if ((transaction as ApiTransactionActivity).extra?.walletPrepaidTopup) return false;
+
   return Boolean(transaction.metadata?.isScam)
     || Boolean(transaction.nft?.isScam)
     || getIsTransactionWithPoisoning(transaction);
