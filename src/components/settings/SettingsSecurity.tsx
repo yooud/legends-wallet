@@ -533,7 +533,7 @@ function SettingsSecurity({
       <Transition
         direction={previousSlide === SLIDES.password && currentSlide === SLIDES.settings ? -1 : 'auto'}
         name={resolveSlideTransitionName()}
-        className={buildClassName(modalStyles.transition, styles.securityTransition, 'custom-scroll')}
+        className={buildClassName(modalStyles.transition, 'custom-scroll')}
         slideClassName={buildClassName(styles.slide, isInsideModal && modalStyles.transitionSlide)}
         activeKey={currentSlide}
         nextKey={nextKey}

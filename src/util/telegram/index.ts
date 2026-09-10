@@ -22,6 +22,7 @@ let hasBiometrics = false;
 let isFaceIdAvailable = false;
 let isTouchIdAvailable = false;
 let disableSwipeRequests = 0;
+let lastSafeAreaSignature = '';
 
 export interface TelegramBiometricDiagnostics {
   managerAvailable: boolean;
@@ -218,6 +219,18 @@ function updateSafeAreaProperties() {
   document.documentElement.style.setProperty('--safe-area-left', `${left + contentLeft}px`);
   document.documentElement.style.setProperty('--safe-area-right', `${right + contentRight}px`);
   document.documentElement.style.setProperty('--safe-area-bottom', `${bottom + contentBottom}px`);
+
+  const signature = [top, right, bottom, left, contentTop, contentRight, contentBottom, contentLeft].join(':');
+  if (signature !== lastSafeAreaSignature) {
+    lastSafeAreaSignature = signature;
+    logDebug('[telegram][safe-area] updated', {
+      safeAreaInset: { top, right, bottom, left },
+      contentSafeAreaInset: {
+        top: contentTop, right: contentRight, bottom: contentBottom, left: contentLeft,
+      },
+      isFullscreen: webApp!.isFullscreen,
+    });
+  }
 }
 
 function updateFullscreenState() {
@@ -242,6 +255,11 @@ function onFullscreenFailed(params: { error: 'UNSUPPORTED' | 'ALREADY_FULLSCREEN
   if (params.error === 'ALREADY_FULLSCREEN') {
     getActions().openFullscreen();
     disableTelegramMiniAppSwipeToClose();
+
+    requestAnimationFrame(() => {
+      updateSafeAreaProperties();
+      updateSizes();
+    });
   }
 }
 

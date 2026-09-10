@@ -11,6 +11,7 @@ import type { Account } from '../../global/types';
 import { ApiCommonError } from '../../api/types';
 
 import { IS_TELEGRAM_APP } from '../../config';
+import { dropEnclaveSessionHold, holdEnclaveSession } from '../../global/helpers/enclave';
 import { errorCodeToMessage } from '../../global/helpers/errors';
 import {
   selectCurrentAccountId,
@@ -116,8 +117,9 @@ function SettingsFeeCoverage({
   });
 
   const authorizeOverview = useLastCallback(async (token: string, shouldRelease = true) => {
+    if (shouldRelease) holdEnclaveSession(token);
     if (!accountId || isLoading) {
-      if (shouldRelease) releaseEnclaveSession({ enclaveToken: token });
+      if (shouldRelease && dropEnclaveSessionHold(token)) releaseEnclaveSession({ enclaveToken: token });
       return false;
     }
     setIsLoading(true);
@@ -131,7 +133,7 @@ function SettingsFeeCoverage({
       return false;
     } finally {
       setIsLoading(false);
-      if (shouldRelease) releaseEnclaveSession({ enclaveToken: token });
+      if (shouldRelease && dropEnclaveSessionHold(token)) releaseEnclaveSession({ enclaveToken: token });
     }
   });
 
@@ -213,8 +215,9 @@ function SettingsFeeCoverage({
   });
 
   const authorizeLink = useLastCallback(async (enclaveToken: string) => {
+    holdEnclaveSession(enclaveToken);
     if (!accountId || !candidateAccountId || isLoading) {
-      releaseEnclaveSession({ enclaveToken });
+      if (dropEnclaveSessionHold(enclaveToken)) releaseEnclaveSession({ enclaveToken });
       return;
     }
     setIsLoading(true);
@@ -231,7 +234,7 @@ function SettingsFeeCoverage({
       setCandidateAccountId('');
     } finally {
       setIsLoading(false);
-      releaseEnclaveSession({ enclaveToken });
+      if (dropEnclaveSessionHold(enclaveToken)) releaseEnclaveSession({ enclaveToken });
     }
   });
 
@@ -241,8 +244,9 @@ function SettingsFeeCoverage({
   });
 
   const authorizeUnlink = useLastCallback(async (enclaveToken: string) => {
+    holdEnclaveSession(enclaveToken);
     if (!accountId || isLoading) {
-      releaseEnclaveSession({ enclaveToken });
+      if (dropEnclaveSessionHold(enclaveToken)) releaseEnclaveSession({ enclaveToken });
       return;
     }
     setIsLoading(true);
@@ -258,7 +262,7 @@ function SettingsFeeCoverage({
       showRequestError('Fee coverage wallet unlink', unlinkError, '$prepaid_unlink_failed');
     } finally {
       setIsLoading(false);
-      releaseEnclaveSession({ enclaveToken });
+      if (dropEnclaveSessionHold(enclaveToken)) releaseEnclaveSession({ enclaveToken });
     }
   });
 
@@ -315,8 +319,9 @@ function SettingsFeeCoverage({
   });
 
   const authorizeIntegration = useLastCallback(async (enclaveToken: string) => {
+    holdEnclaveSession(enclaveToken);
     if (!accountId || !integrationAuth || isLoading) {
-      releaseEnclaveSession({ enclaveToken });
+      if (dropEnclaveSessionHold(enclaveToken)) releaseEnclaveSession({ enclaveToken });
       return;
     }
     setIsLoading(true);
@@ -340,13 +345,14 @@ function SettingsFeeCoverage({
       showRequestError('Fee coverage bot integration', integrationError);
     } finally {
       setIsLoading(false);
-      releaseEnclaveSession({ enclaveToken });
+      if (dropEnclaveSessionHold(enclaveToken)) releaseEnclaveSession({ enclaveToken });
     }
   });
 
   const authorizeDisconnect = useLastCallback(async (enclaveToken: string) => {
+    holdEnclaveSession(enclaveToken);
     if (!accountId || isLoading) {
-      releaseEnclaveSession({ enclaveToken });
+      if (dropEnclaveSessionHold(enclaveToken)) releaseEnclaveSession({ enclaveToken });
       return;
     }
     setIsLoading(true);
@@ -359,7 +365,7 @@ function SettingsFeeCoverage({
       showRequestError('Fee coverage bot disconnect', disconnectError, '$bot_balance_disconnect_failed');
     } finally {
       setIsLoading(false);
-      releaseEnclaveSession({ enclaveToken });
+      if (dropEnclaveSessionHold(enclaveToken)) releaseEnclaveSession({ enclaveToken });
     }
   });
 

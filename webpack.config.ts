@@ -171,6 +171,7 @@ const CSP = `
   connect-src 'self' blob: ${cspConnectSrcHosts} ${cspConnectSrcExtra};
   script-src 'self' 'wasm-unsafe-eval' ${cspScriptSrcExtra};
   style-src 'self' https://fonts.googleapis.com/;
+  ${IS_TELEGRAM_APP ? 'style-src-attr \'unsafe-inline\';' : ''}
   img-src 'self' data: blob: https: ${cspImageSrcHosts};
   media-src 'self' data: https://static.mytonwallet.org/;
   object-src 'none';

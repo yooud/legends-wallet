@@ -1,7 +1,12 @@
 import type { GlobalState } from '../types';
 
 import { callApiWithThrow } from '../../api';
-import { dropEnclaveSessionHold, holdEnclaveSession, withEnclaveSessionRelease } from './enclave';
+import {
+  dropEnclaveSessionHold,
+  ensureWalletPrepaidAccessInBackground,
+  holdEnclaveSession,
+  withEnclaveSessionRelease,
+} from './enclave';
 
 jest.mock('../../api', () => ({
   callApiWithThrow: jest.fn(() => Promise.resolve()),
@@ -118,6 +123,24 @@ describe('withEnclaveSessionRelease', () => {
     await Promise.resolve();
     await Promise.resolve();
     expect(actions.releaseEnclaveSession).toHaveBeenCalledWith({ enclaveToken: 'passcode:aa' });
+  });
+
+  it('keeps a session alive while a direct signing flow still holds it', async () => {
+    let resolveAccess!: () => void;
+    jest.mocked(callApiWithThrow).mockReturnValueOnce(new Promise<void>((resolve) => {
+      resolveAccess = resolve;
+    }));
+    const actions = createActions();
+    const enclaveToken = 'passcode:aa';
+
+    ensureWalletPrepaidAccessInBackground(actions, '0-testnet', enclaveToken);
+    holdEnclaveSession(enclaveToken);
+    resolveAccess();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(actions.releaseEnclaveSession).not.toHaveBeenCalled();
+    expect(dropEnclaveSessionHold(enclaveToken)).toBe(true);
   });
 
   it('can leave prepaid access to a handler that creates a different account', async () => {

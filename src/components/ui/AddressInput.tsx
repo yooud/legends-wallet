@@ -126,6 +126,8 @@ function AddressInput({
 
   const addressBookTimeoutRef = useRef<number>();
   const isAddressBookSelectionRef = useRef<boolean>(false);
+  const ownInputRef = useRef<HTMLInputElement | HTMLTextAreaElement>();
+  const inputRef = ref || ownInputRef;
 
   const [addressForDeletion, setAddressForDeletion] = useState<string | undefined>();
   const [chainForDeletion, setChainForDeletion] = useState<ApiChain | undefined>();
@@ -133,7 +135,7 @@ function AddressInput({
 
   const [isAddressBookOpen, openAddressBook, closeAddressBook] = useFlag();
   const [isFocused, markFocused, unmarkFocused] = useFlag();
-  const [shouldRenderPasteButton, setShouldRenderPasteButton] = useState(IS_CLIPBOARDS_SUPPORTED);
+  const shouldRenderPasteButton = IS_CLIPBOARDS_SUPPORTED;
   const isQrScannerSupported = useQrScannerSupport();
   const inputId = useUniqueId('address-');
 
@@ -254,7 +256,7 @@ function AddressInput({
       }
     } catch (err: any) {
       showToast({ message: lang('Error reading clipboard') });
-      setShouldRenderPasteButton(false);
+      inputRef.current?.focus();
     }
   });
 
@@ -434,7 +436,7 @@ function AddressInput({
     <>
       <Input
         id={inputId}
-        ref={ref}
+        ref={inputRef}
         className={buildClassName(
           isStatic && styles.inputStatic,
           withButton && styles.inputWithIcon,
