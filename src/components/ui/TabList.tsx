@@ -40,12 +40,14 @@ const TAB_SCROLL_THRESHOLD_PX = 16;
 // Should match duration from `--slide-transition` CSS variable
 const SCROLL_DURATION = IS_IOS ? 450 : IS_ANDROID ? 400 : 300;
 const CLIP_PATH_CONTAINER_CLASS_NAME = 'clip-path-container';
+const CLIP_PATH_EASING = IS_ANDROID ? 'cubic-bezier(0.16, 1, 0.3, 1)' : 'cubic-bezier(0.25, 1, 0.5, 1)';
 
 function TabList({
   isActive, tabs, activeTab, className, overlayClassName, onSwitchTab, onActiveTabClick,
 }: OwnProps) {
   const lang = useLang();
   const containerRef = useRef<HTMLDivElement>();
+  const clipPathAnimationRef = useRef<Animation>();
   const { width: appWidth } = useWindowSize();
 
   const fullClassName = buildClassName(
@@ -67,8 +69,17 @@ function TabList({
 
     if (container && activeTabElement) {
       const clipPath = calculateClipPath(activeTabElement, container);
+      const previousClipPath = clipPathAnimationRef.current ? getComputedStyle(container).clipPath : clipPath;
       requestMutation(() => {
-        container.style.clipPath = clipPath;
+        clipPathAnimationRef.current?.cancel();
+        clipPathAnimationRef.current = container.animate(
+          [{ clipPath: previousClipPath }, { clipPath }],
+          {
+            duration: previousClipPath === clipPath ? 0 : SCROLL_DURATION,
+            easing: CLIP_PATH_EASING,
+            fill: 'forwards',
+          },
+        );
       });
     }
     // When the following dependencies change, `clipPath` must be updated

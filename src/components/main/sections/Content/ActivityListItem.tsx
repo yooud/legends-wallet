@@ -19,12 +19,11 @@ function ActivityListItem({
   withAnimation,
   children,
 }: OwnProps) {
-  const { ref: animationRef } = useListItemAnimation(styles, withAnimation, topOffset);
+  const { ref: animationRef } = useListItemAnimation(withAnimation, topOffset);
 
   return (
     <div
       ref={animationRef}
-      style={`top: ${topOffset}rem`}
       className={buildClassName('ListItem', styles.listItem)}
     >
       {children}

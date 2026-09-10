@@ -23,12 +23,11 @@ function TokenListItem({
   isWidget,
   children,
 }: OwnProps) {
-  const { ref: animationRef } = useListItemAnimation(styles, withAnimation, topOffset, shouldFadeInPlace);
+  const { ref: animationRef } = useListItemAnimation(withAnimation, topOffset, shouldFadeInPlace);
 
   return (
     <div
       ref={isWidget ? undefined : animationRef}
-      style={isWidget ? undefined : `top: ${topOffset}rem`}
       className={buildClassName('token-list-item', isWidget ? styles.listItemCompact : styles.listItem)}
     >
       {children}

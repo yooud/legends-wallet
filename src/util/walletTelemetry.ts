@@ -5,6 +5,7 @@ import type { eventWithTime } from '@rrweb/types';
 import type { Account } from '../global/types';
 
 import { APP_COMMIT_HASH, IS_TELEGRAM_APP } from '../config';
+import { suppressStrict } from '../lib/fasterdom/stricterdom';
 import { getTelemetryTranslationKey } from './langProvider';
 
 export type WalletTelemetryEvent = {
@@ -236,7 +237,7 @@ function updateReplayRecording() {
   }
   if (stopReplayRecording) return;
 
-  stopReplayRecording = record({
+  stopReplayRecording = suppressStrict(() => record({
     emit: handleReplayEvent,
     blockSelector: '.rr-block, [data-telemetry-block]',
     maskTextSelector: '*',
@@ -253,7 +254,7 @@ function updateReplayRecording() {
       scroll: 150,
       input: 'last',
     },
-  });
+  }));
 }
 
 function handleReplayEvent(event: eventWithTime) {
