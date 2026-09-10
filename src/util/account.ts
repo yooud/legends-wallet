@@ -1,7 +1,7 @@
 import type { AccountIdParsed, ApiNetwork } from '../api/types';
 import type { Account, AccountType } from '../global/types';
 
-import { APP_NAME, IS_MY_WALLET_BRAND } from '../config';
+import { APP_NAME, IS_LEGENDS_WALLET, IS_MY_WALLET_BRAND } from '../config';
 import { escapeStringRegexp } from './regex';
 import { shortenAddress } from './shortenAddress';
 
@@ -48,7 +48,8 @@ export function generateAccountTitle(params: {
 
   // Handle first account special case
   if (accountAmount === 0) {
-    return isMainnet ? APP_NAME : `Testnet ${APP_NAME}`;
+    const title = IS_LEGENDS_WALLET ? 'Wallet' : APP_NAME;
+    return isMainnet ? title : `Testnet ${title}`;
   }
 
   // Count wallets by type

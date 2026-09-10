@@ -6,6 +6,23 @@ import { LEGENDS_CARD_BACKGROUND_IDS } from '../../util/legendsCardBackground';
 import { createAccount, updateTokens } from './misc';
 
 describe('createAccount', () => {
+  it('uses a neutral title for the first Legends wallet', () => {
+    const global = {
+      accounts: { byId: {} },
+      settings: { byAccountId: {} },
+    } as unknown as GlobalState;
+
+    const updated = createAccount({
+      global,
+      accountId: 'mainnet-first-wallet',
+      type: 'mnemonic',
+      byChain: {},
+      network: 'mainnet',
+    });
+
+    expect(updated.accounts?.byId['mainnet-first-wallet'].title).toBe('Wallet');
+  });
+
   it('assigns and persists a random Legends card background for a new account', () => {
     const random = jest.spyOn(Math, 'random').mockReturnValue(0.75);
     const global = {
