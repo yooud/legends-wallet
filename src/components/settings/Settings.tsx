@@ -772,21 +772,19 @@ function Settings({
             </>
           )}
 
-          {!isPortrait && (
-            <div className={styles.block}>
-              <div className={buildClassName(styles.item, styles.itemMenu, styles.item_red)} onClick={openLogOutModal}>
-                <img
-                  className={styles.menuIcon}
-                  src={exitImg}
-                  alt={lang('Exit')}
-                />
-                <span className={styles.itemTitle}>
-                  {lang('Exit')}
-                </span>
-                <i className={buildClassName(styles.iconChevronRight, 'icon-chevron-right')} aria-hidden />
-              </div>
+          <div className={styles.block}>
+            <div className={buildClassName(styles.item, styles.itemMenu, styles.item_red)} onClick={openLogOutModal}>
+              <img
+                className={styles.menuIcon}
+                src={exitImg}
+                alt={lang('Exit')}
+              />
+              <span className={styles.itemTitle}>
+                {lang('Exit')}
+              </span>
+              <i className={buildClassName(styles.iconChevronRight, 'icon-chevron-right')} aria-hidden />
             </div>
-          )}
+          </div>
 
           <div
             className={styles.version}
