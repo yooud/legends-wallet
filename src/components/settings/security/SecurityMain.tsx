@@ -110,7 +110,7 @@ function SecurityMain({
   });
 
   return (
-    <div className={styles.slide}>
+    <>
       {isInsideModal ? (
         <ModalHeader
           title={lang('Security')}
@@ -296,7 +296,7 @@ function SecurityMain({
           </p>
         </>
       </div>
-    </div>
+    </>
   );
 }
 
