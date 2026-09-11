@@ -63,12 +63,11 @@ export const CAN_AUTHENTICATE_WITH_BIOMETRIC_ONLY = IS_BIOMETRIC_AUTH_SUPPORTED;
 export const IS_DAPP_SUPPORTED = IS_EXTENSION || IS_ELECTRON;
 export const IS_VIEW_TRANSITION_SUPPORTED = typeof document.startViewTransition === 'function';
 
-// Note: As of 01-10-2025, Firefox extensions require `clipboardRead` permission in manifest to read data
-// Telegram Mini Apps expose their own consented clipboard reader since Bot API 6.4. Older clients
-// use the browser Clipboard API when it is available instead of logging an unsupported method call.
-export const IS_CLIPBOARDS_SUPPORTED = !IS_FIREFOX_EXTENSION && (
-  (IS_TELEGRAM_APP && getIsTelegramClipboardReadTextSupported()) || getIsClipboardReadTextSupported()
-);
+// Note: As of 01-10-2025, Firefox extensions require `clipboardRead` permission in manifest to read data.
+// Telegram only grants programmatic clipboard reads to a restricted set of Mini App launch contexts.
+export const IS_CLIPBOARDS_SUPPORTED = !IS_TELEGRAM_APP
+  && !IS_FIREFOX_EXTENSION
+  && getIsClipboardReadTextSupported();
 
 export const REM = parseInt(getComputedStyle(document.documentElement).fontSize, 10);
 export const STICKY_CARD_INTERSECTION_THRESHOLD = -3 * REM;
