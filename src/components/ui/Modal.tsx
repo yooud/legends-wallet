@@ -234,6 +234,7 @@ function Modal({
     forceBottomSheet && styles.forceBottomSheet,
     isInAppLock && styles.inAppLock,
   );
+  const hasDefaultHeader = !header && Boolean(title);
 
   const contentFullClassName = buildClassName(
     styles.content,
@@ -251,7 +252,7 @@ function Modal({
             onClick={!noBackdropClose ? onClose : undefined}
           />
           <div
-            className={buildClassName(styles.dialog, dialogClassName)}
+            className={buildClassName(styles.dialog, hasDefaultHeader && styles.dialogWithHeader, dialogClassName)}
             ref={dialogRef}
             dir={lang.isRtl ? 'rtl' : 'ltr'}
           >
