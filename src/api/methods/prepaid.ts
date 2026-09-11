@@ -18,6 +18,7 @@ import {
 } from '../chains/tron/sponsorship';
 import { getTronClient } from '../chains/tron/util/tronweb';
 import { fetchStoredChainAccount } from '../common/accounts';
+import { getBackendNow } from '../common/backendClock';
 import { getTokenBySlug } from '../common/tokens';
 import { ApiServerError } from '../errors';
 import { storage } from '../storages';
@@ -234,7 +235,7 @@ async function resolvePrepaidAccessSession(accountId: string, address: string) {
   }
   if (!session) return { session, didRefresh };
 
-  if (session.expires_at * 1000 - Date.now() <= PREPAID_ACCESS_REFRESH_THRESHOLD_MS) {
+  if (session.expires_at * 1000 - getBackendNow() <= PREPAID_ACCESS_REFRESH_THRESHOLD_MS) {
     try {
       const refreshedSession = await refreshPrepaidAccessSession(accountId, address, session);
       if (refreshedSession) {
@@ -246,7 +247,7 @@ async function resolvePrepaidAccessSession(accountId: string, address: string) {
         await removePrepaidAccessSession(accountId, address, session.access_token);
         return { session: undefined, didRefresh };
       }
-      if (session.expires_at * 1000 <= Date.now()) throw error;
+      if (session.expires_at * 1000 <= getBackendNow()) throw error;
     }
   }
 
@@ -303,7 +304,7 @@ async function refreshPrepaidAccessSessionInternal(
 function hasValidPrepaidRefreshToken(session: PrepaidAccessSession) {
   return typeof session.refresh_token === 'string'
     && Number.isFinite(session.refresh_expires_at)
-    && session.refresh_expires_at! * 1000 > Date.now();
+    && session.refresh_expires_at! * 1000 > getBackendNow();
 }
 
 function isPrepaidAccessError(error: unknown) {
@@ -335,12 +336,12 @@ async function ensureWalletPrepaidAccessInternal(accountId: string, enclaveToken
   if (account.type === 'view') return;
   const session = await getPrepaidAccessSession(accountId, address);
   if (session) {
-    if (session.expires_at * 1000 - Date.now() > PREPAID_ACCESS_REFRESH_THRESHOLD_MS) return;
+    if (session.expires_at * 1000 - getBackendNow() > PREPAID_ACCESS_REFRESH_THRESHOLD_MS) return;
 
     try {
       if (await refreshPrepaidAccessSession(accountId, address, session)) return;
     } catch (error) {
-      if (!isPrepaidAccessError(error) && session.expires_at * 1000 > Date.now()) return;
+      if (!isPrepaidAccessError(error) && session.expires_at * 1000 > getBackendNow()) return;
       if (!isPrepaidAccessError(error)) throw error;
       await removePrepaidAccessSession(accountId, address, session.access_token);
     }
@@ -423,7 +424,7 @@ async function getPrepaidAccessSession(accountId: string, address: string) {
   if (!session || typeof session.access_token !== 'string' || !Number.isFinite(session.expires_at)) {
     return undefined;
   }
-  if (session.expires_at * 1000 <= Date.now() && !hasValidPrepaidRefreshToken(session)) {
+  if (session.expires_at * 1000 <= getBackendNow() && !hasValidPrepaidRefreshToken(session)) {
     await removePrepaidAccessSession(accountId, address, session.access_token);
     return undefined;
   }

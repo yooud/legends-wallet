@@ -21,7 +21,7 @@ import isEmptyObject from '../../../util/isEmptyObject';
 import isMnemonicPrivateKey from '../../../util/isMnemonicPrivateKey';
 import { cloneDeep, compact, unique } from '../../../util/iteratees';
 import { getTranslation } from '../../../util/langProvider';
-import { logDebugError } from '../../../util/logs';
+import { logDebug, logDebugError } from '../../../util/logs';
 import { clearPoisoningCache, updatePoisoningCacheFromGlobalState } from '../../../util/poisoningHash';
 import { pause } from '../../../util/schedulers';
 import {
@@ -818,11 +818,17 @@ addActionHandler('enableBiometrics', async (global, actions, { isLoginFlow } = {
   try {
     // Get fresh token from current global state
     const currentToken = selectEnclaveToken(getGlobal());
+    logDebug('[biometrics] enable started', {
+      isLoginFlow: Boolean(isLoginFlow),
+      hasEnclaveSession: Boolean(currentToken),
+    });
     if (!currentToken) throw new Error('No enclave session token available');
 
     const shouldReplace = CAN_AUTHENTICATE_WITH_BIOMETRIC_ONLY;
     const newEnclaveSession = await enclave.migrateAuth(currentToken, 'biometric', undefined, shouldReplace);
     if (!newEnclaveSession) throw new Error('Failed to enable biometrics.');
+
+    logDebug('[biometrics] enable succeeded', { isLoginFlow: Boolean(isLoginFlow) });
 
     global = getGlobal();
     const currentAuthTypes = global.authTypes || [];
@@ -848,6 +854,7 @@ addActionHandler('enableBiometrics', async (global, actions, { isLoginFlow } = {
     void vibrateOnSuccess();
   } catch (err: any) {
     const error = err?.message || 'Biometric setup failed.';
+    logDebugError('[biometrics] enable failed', err);
 
     global = getGlobal();
 

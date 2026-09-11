@@ -8,6 +8,7 @@ import {
   APP_ENV,
   DEFAULT_AUTOLOCK_OPTION,
   IS_GRAM_WALLET,
+  IS_LEGENDS_WALLET,
   NO_MFA,
 } from '../../config';
 import {
@@ -230,8 +231,33 @@ function SettingsSecurity({
   }, [biometricsState]);
 
   const handleAuthorize = useLastCallback(async () => {
-    if (getDoesUsePinPad()) {
+    const doesUsePinPad = getDoesUsePinPad();
+    if (doesUsePinPad) {
       setIsPinAccepted();
+    }
+
+    if (IS_LEGENDS_WALLET && passwordPurpose === 'biometricsTurnOn') {
+      // Legends starts fee-balance authorization as soon as PasswordForm publishes the Enclave
+      // session. Start biometric migration before the haptic pause, while that session is still live.
+      const proceed = pendingProceedCb;
+      setPendingProceedCb(undefined);
+      if (proceed) {
+        setBiometricsSlide(BiometricsSlide.Registration);
+        setCurrentSlide(SLIDES.biometrics);
+        setNextKey(SLIDES.settings);
+        void proceed();
+      } else {
+        openSettingsSlide();
+      }
+
+      if (doesUsePinPad) {
+        await vibrateOnSuccess(true);
+      }
+
+      return;
+    }
+
+    if (doesUsePinPad) {
       await vibrateOnSuccess(true);
     }
 

@@ -13,6 +13,7 @@ import chains from '../chains';
 import { BACKEND_AUTH_SIGN_MESSAGE, buildBackendAuthToken } from '../chains/ton';
 import { fetchStoredAccounts, fetchStoredWallet, updateStoredWallet } from '../common/accounts';
 import { callBackendGet, callBackendPost } from '../common/backend';
+import { updateBackendClock } from '../common/backendClock';
 import { hexToBytes } from '../common/utils';
 import { SEC } from '../constants';
 import { handleServerError } from '../errors';
@@ -100,12 +101,24 @@ export function submitDiagnosticLogs(report: AnyLiteral) {
   );
 }
 
-export function submitWalletTelemetry(payload: WalletTelemetryPayload) {
-  return callBackendPost<{ ok: true; session_id: string; accepted: number }>(
+export async function submitWalletTelemetry(payload: WalletTelemetryPayload) {
+  const requestStartedAt = Date.now();
+  const result = await callBackendPost<{
+    ok: true;
+    session_id: string;
+    accepted: number;
+    server_time_ms?: number;
+  }>(
     '/wallet-client/telemetry',
     payload,
     { timeout: 10_000 },
   );
+
+  if (typeof result.server_time_ms === 'number') {
+    updateBackendClock(result.server_time_ms, requestStartedAt);
+  }
+
+  return result;
 }
 
 export function getLangCode() {
