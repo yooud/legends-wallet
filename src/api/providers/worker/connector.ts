@@ -16,6 +16,7 @@ import { POPUP_PORT } from '../extension/config';
 
 const HEALTH_CHECK_TIMEOUT = 150;
 const HEALTH_CHECK_MIN_DELAY = 5000; // 5 sec
+const API_RPC_TIMEOUT = 120_000;
 
 let updateCallback: OnApiUpdate;
 let worker: Worker | undefined;
@@ -33,14 +34,14 @@ export function initApi(onUpdate: OnApiUpdate, initArgs: ApiInitArgs) {
         initPromise = connector!.init(initArgs);
       };
 
-      connector = createExtensionConnector(POPUP_PORT, onUpdate, undefined, onReconnect);
+      connector = createExtensionConnector(POPUP_PORT, onUpdate, undefined, onReconnect, API_RPC_TIMEOUT);
 
       createWindowProviderForExtension();
     } else {
       worker = new Worker(
         /* webpackChunkName: "worker" */ new URL('./provider.ts', import.meta.url),
       );
-      connector = createConnector(worker, onUpdate);
+      connector = createConnector(worker, onUpdate, undefined, undefined, API_RPC_TIMEOUT);
 
       createWindowProvider(worker);
     }
@@ -60,16 +61,17 @@ export async function callApi<T extends keyof AllMethods>(
   fnName: T,
   ...args: MethodArgsWithMaybePrefix<T>
 ) {
-  if (!connector) {
+  const activeConnector = connector;
+  const activeInitPromise = initPromise;
+  if (!activeConnector || !activeInitPromise) {
     logDebugError('API is not initialized when calling', fnName);
     return undefined;
   }
 
-  await initPromise!;
-
   const startedAt = Date.now();
   try {
-    const result = await (connector.request({
+    await activeInitPromise;
+    const result = await (activeConnector.request({
       name: fnName,
       args,
     }) as Promise<MethodResponseWithMaybePrefix<T>>);
@@ -92,9 +94,13 @@ export async function callApiWithThrow<T extends keyof AllMethods>(
   fnName: T,
   ...args: MethodArgsWithMaybePrefix<T>
 ) {
-  await initPromise!;
+  const activeConnector = connector;
+  const activeInitPromise = initPromise;
+  if (!activeConnector || !activeInitPromise) throw new Error('API is not initialized');
 
-  return (connector!.request({
+  await activeInitPromise;
+
+  return (activeConnector.request({
     name: fnName,
     args,
   }) as MethodResponseWithMaybePrefix<T>);
@@ -113,6 +119,8 @@ function setupIosHealthCheck() {
 
 async function ensureWorkerPing() {
   let isResolved = false;
+  const checkedConnector = connector;
+  const checkedWorker = worker;
 
   try {
     await Promise.race([
@@ -123,8 +131,9 @@ async function ensureWorkerPing() {
   } catch (err) {
     logDebugError('ensureWorkerPing', err);
 
-    if (Date.now() - startedAt >= HEALTH_CHECK_MIN_DELAY) {
-      worker?.terminate();
+    if (Date.now() - startedAt >= HEALTH_CHECK_MIN_DELAY && connector === checkedConnector) {
+      checkedConnector?.destroy();
+      checkedWorker?.terminate();
       worker = undefined;
       connector = undefined;
       initPromise = undefined;

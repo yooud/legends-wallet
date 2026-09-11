@@ -263,15 +263,20 @@ addActionHandler('authorizeTransferFeeAccess', async (global, actions, payload) 
     await callApiWithThrow('ensureWalletPrepaidAccess', accountId, payload.enclaveToken);
   } catch {
     actions.releaseEnclaveSession({ enclaveToken: payload.enclaveToken });
-    setGlobal(updateCurrentTransfer(getGlobal(), {
+    global = getGlobal();
+    setGlobal(updateCurrentTransfer(global, selectCurrentAccountId(global) === accountId ? {
       isLoading: false,
       error: ApiCommonError.ServerError,
-    }));
+    } : { isLoading: false }));
     return;
   }
 
   global = getGlobal();
-  if (selectCurrentAccountId(global) !== accountId) return;
+  if (selectCurrentAccountId(global) !== accountId) {
+    actions.releaseEnclaveSession({ enclaveToken: payload.enclaveToken });
+    setGlobal(updateCurrentTransfer(global, { isLoading: false }));
+    return;
+  }
 
   const {
     tokenSlug, toAddress, amount, comment, shouldEncrypt, binPayload, stateInit,

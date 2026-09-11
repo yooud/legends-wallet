@@ -72,6 +72,10 @@ describe('add-account routing', () => {
     (setGlobal as jest.Mock).mockImplementation((next: GlobalState) => {
       store = next;
     });
+    (callApi as jest.Mock).mockReset().mockResolvedValue(true);
+    (callApiWithThrow as jest.Mock).mockReset().mockResolvedValue(true);
+    (enclave.importSecret as jest.Mock).mockReset().mockResolvedValue(undefined);
+    (enclave.duplicateSecret as jest.Mock).mockReset().mockResolvedValue(undefined);
   });
 
   async function run(name: string, global: GlobalState, actions: AnyLiteral = {}, payload?: AnyLiteral) {
@@ -126,6 +130,22 @@ describe('add-account routing', () => {
     expect(actions.createAccount).toHaveBeenCalled();
   });
 
+  it('stops account loading when mnemonic generation fails', async () => {
+    (callApi as jest.Mock).mockResolvedValueOnce(undefined);
+    const actions = { createAccount: jest.fn(), showError: jest.fn() };
+    const global = makeGlobal({
+      authTypes: ['passcode'],
+      enclaveSession: { token: 'passcode:aa' },
+    });
+    global.accounts!.isLoading = true;
+
+    const result = await run('startCreatingWallet', global, actions, { enclaveToken: 'passcode:aa' });
+
+    expect(result.accounts?.isLoading).toBeUndefined();
+    expect(actions.createAccount).not.toHaveBeenCalled();
+    expect(actions.showError).toHaveBeenCalled();
+  });
+
   it('does not offer to create a password to a not-yet-migrated user after the mnemonic is entered', async () => {
     const actions = { confirmDisclaimer: jest.fn() };
     const result = await run('afterImportMnemonic', makeGlobal({}), actions, { mnemonic: MNEMONIC });
@@ -165,12 +185,80 @@ describe('add-account routing', () => {
       await run('createAccount', makeGlobal({
         auth: { state: AuthState.safetyRules, method, mnemonic: MNEMONIC },
         enclaveSession: { token: 'passcode:aa' },
-      }), { showError: jest.fn() });
+      }), { releaseEnclaveSession: jest.fn(), showError: jest.fn() });
 
       expect(enclave.importSecret).toHaveBeenCalledWith(account.accountId, MNEMONIC.join(' '), 'passcode:aa');
       expect(callApiWithThrow).toHaveBeenCalledWith('ensureWalletPrepaidAccess', account.accountId, 'passcode:aa');
     },
   );
+
+  it('stops both loaders when account creation loses its authorization', async () => {
+    const actions = { showError: jest.fn() };
+    const global = makeGlobal({
+      auth: { state: AuthState.safetyRules, method: 'createAccount', mnemonic: MNEMONIC },
+    });
+    global.accounts!.isLoading = true;
+
+    const result = await run('createAccount', global, actions);
+
+    expect(result.auth.isLoading).toBeUndefined();
+    expect(result.accounts?.isLoading).toBeUndefined();
+    expect(actions.showError).toHaveBeenCalled();
+  });
+
+  it('stops both loaders when account import fails', async () => {
+    (callApi as jest.Mock).mockResolvedValueOnce(undefined);
+    const actions = { showError: jest.fn() };
+    const global = makeGlobal({
+      auth: { state: AuthState.safetyRules, method: 'createAccount', mnemonic: MNEMONIC },
+      enclaveSession: { token: 'passcode:aa' },
+    });
+    global.accounts!.isLoading = true;
+
+    const result = await run('createAccount', global, actions);
+
+    expect(result.auth.isLoading).toBeUndefined();
+    expect(result.accounts?.isLoading).toBeUndefined();
+    expect(actions.showError).toHaveBeenCalled();
+  });
+
+  it('does not keep wallet creation waiting for fee access', async () => {
+    let resolveAccess!: () => void;
+    const account = {
+      accountId: '0-tron-mainnet',
+      byChain: { tron: { address: 'TVpWp3GMyNY8Zemo3JHogbWq4o4eDLa5r8' } },
+    };
+    (callApi as jest.Mock).mockImplementation((apiMethod: string) => (
+      apiMethod === 'importMnemonic' ? Promise.resolve([account]) : Promise.resolve(true)
+    ));
+    (callApiWithThrow as jest.Mock).mockImplementation((method: string) => (
+      method === 'ensureWalletPrepaidAccess'
+        ? new Promise<void>((resolve) => { resolveAccess = resolve; })
+        : Promise.resolve(true)
+    ));
+    const actions = {
+      releaseEnclaveSession: jest.fn(),
+      showError: jest.fn(),
+    };
+
+    const global = makeGlobal({
+      auth: { state: AuthState.safetyRules, method: 'createAccount', mnemonic: MNEMONIC },
+      enclaveSession: { token: 'passcode:aa' },
+    });
+    global.accounts!.isLoading = true;
+
+    const result = await run('createAccount', global, actions);
+
+    expect(result.auth.isLoading).toBeUndefined();
+    expect(result.accounts?.isLoading).toBeUndefined();
+    expect(result.auth.accounts).toEqual([account]);
+    expect(actions.releaseEnclaveSession).not.toHaveBeenCalled();
+
+    resolveAccess();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(actions.releaseEnclaveSession).toHaveBeenCalledWith({ enclaveToken: 'passcode:aa' });
+  });
 
   it('establishes Fee Balance access when a discovered TRON subwallet is selected', async () => {
     const subwalletAccountId = '1-tron-mainnet';

@@ -101,10 +101,20 @@ class ConnectorClass<T extends InputRequestTypes> {
     private channel?: string,
     private shouldUseJson?: boolean,
     private targetOrigin = '*',
+    private requestTimeoutMs?: number,
   ) {
   }
 
   public destroy() {
+    this.rejectPendingRequests(new Error('Connector destroyed'));
+  }
+
+  public rejectPendingRequests(error: Error) {
+    for (const requestState of this.requestStates.values()) {
+      requestState.reject(error);
+    }
+    this.requestStates.clear();
+    this.requestStatesByCallback.clear();
   }
 
   init(...args: any[]) {
@@ -124,9 +134,13 @@ class ConnectorClass<T extends InputRequestTypes> {
     });
 
     requestStates.set(messageId, requestState);
+    const timeout = this.requestTimeoutMs
+      ? setTimeout(() => requestState.reject(new Error('Connector request timed out')), this.requestTimeoutMs)
+      : undefined;
     promise
       .catch(() => undefined)
       .finally(() => {
+        if (timeout) clearTimeout(timeout);
         requestStates.delete(messageId);
       });
 
@@ -161,9 +175,13 @@ class ConnectorClass<T extends InputRequestTypes> {
     }
 
     requestStates.set(messageId, requestState);
+    const timeout = this.requestTimeoutMs
+      ? setTimeout(() => requestState.reject(new Error('Connector request timed out')), this.requestTimeoutMs)
+      : undefined;
     promise
       .catch(() => undefined)
       .finally(() => {
+        if (timeout) clearTimeout(timeout);
         requestStates.delete(messageId);
 
         if (requestState.callback) {
@@ -248,8 +266,9 @@ export function createConnector<T extends InputRequestTypes>(
   onUpdate?: (update: ApiUpdate) => void,
   channel?: string,
   targetOrigin?: string,
+  requestTimeoutMs?: number,
 ) {
-  const connector = new ConnectorClass<T>(worker, onUpdate, channel, undefined, targetOrigin);
+  const connector = new ConnectorClass<T>(worker, onUpdate, channel, undefined, targetOrigin, requestTimeoutMs);
 
   function handleMessage({ data }: WorkerMessageEvent | MessageEvent) {
     connector.onMessage(data);
@@ -257,8 +276,10 @@ export function createConnector<T extends InputRequestTypes>(
 
   worker.addEventListener('message', handleMessage as any); // TS weirdly complains here
 
+  const destroy = connector.destroy.bind(connector);
   connector.destroy = () => {
     worker.removeEventListener('message', handleMessage as any);
+    destroy();
   };
 
   return connector;
@@ -273,8 +294,9 @@ export function createExtensionConnector(
   onUpdate?: (update: ApiUpdate) => void,
   channel?: string,
   onReconnect?: () => void,
+  requestTimeoutMs?: number,
 ) {
-  const connector = new ConnectorClass(connect(), onUpdate, channel, true);
+  const connector = new ConnectorClass(connect(), onUpdate, channel, true, '*', requestTimeoutMs);
 
   function connect() {
     const port = self.chrome.runtime.connect({ name });
@@ -285,6 +307,7 @@ export function createExtensionConnector(
 
     // For some reason port can suddenly get disconnected
     port.onDisconnect.addListener(() => {
+      connector.rejectPendingRequests(new Error('Connector disconnected'));
       connector.target = connect();
       onReconnect?.();
     });
@@ -322,6 +345,7 @@ export function createReverseExtensionConnector(portName: string) {
     });
 
     port.onDisconnect.addListener(() => {
+      connector.rejectPendingRequests(new Error('Connector disconnected'));
       connector.target = nullWorker;
     });
   });

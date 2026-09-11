@@ -54,7 +54,6 @@ import {
   ensureCurrentWalletPrepaidAccessInBackground,
   ensureWalletPrepaidAccessInBackground,
   holdEnclaveSession,
-  tryEnsureWalletPrepaidAccess,
   withEnclaveSessionRelease,
 } from '../../helpers/enclave';
 import { presentMigrationFailure } from '../../helpers/migrationFailure';
@@ -224,6 +223,14 @@ addActionHandler('startCreatingWallet', async (global, actions, payload) => {
   const [mnemonic] = await Promise.all(
     hasPassword ? [generateMnemonicPromise] : [generateMnemonicPromise, pause(CREATING_DURATION)],
   );
+
+  if (!mnemonic) {
+    global = updateAuth(getGlobal(), { isLoading: undefined });
+    global = updateAccounts(global, { isLoading: undefined });
+    setGlobal(global);
+    actions.showError({ error: ApiCommonError.Unexpected });
+    return;
+  }
 
   if (takeAbortDappConnectWalletCreationIfRequested()) {
     finalizeDappConnectWalletCreationAbort();
@@ -408,7 +415,13 @@ addActionHandler('createAccount', async (global, actions) => {
   }
 
   const enclaveToken = selectEnclaveToken(global);
-  if (!enclaveToken) throw new Error('Missing authorization');
+  if (!enclaveToken) {
+    global = updateAuth(getGlobal(), { isLoading: undefined });
+    global = updateAccounts(global, { isLoading: undefined });
+    setGlobal(global);
+    actions.showError({ error: ApiCommonError.Unexpected });
+    return;
+  }
 
   const isImporting = global.auth.method !== 'createAccount';
   const mnemonic = global.auth.mnemonic!;
@@ -438,8 +451,10 @@ addActionHandler('createAccount', async (global, actions) => {
     if (global.dappConnectRequest?.isCreatingAccount) {
       global = clearDappConnectRequest(global);
     }
-    setGlobal(updateAuth(global, { isLoading: undefined }));
-    actions.showError({ error: accounts?.error });
+    global = updateAuth(global, { isLoading: undefined });
+    global = updateAccounts(global, { isLoading: undefined });
+    setGlobal(global);
+    actions.showError({ error: accounts?.error ?? ApiCommonError.Unexpected });
     return;
   }
 
@@ -466,7 +481,7 @@ addActionHandler('createAccount', async (global, actions) => {
   }
 
   if (accounts[0]?.byChain.tron) {
-    await tryEnsureWalletPrepaidAccess(accounts[0].accountId, enclaveToken);
+    ensureWalletPrepaidAccessInBackground(actions, accounts[0].accountId, enclaveToken);
   }
 
   global = getGlobal();
@@ -503,6 +518,7 @@ addActionHandler('createAccount', async (global, actions) => {
     // TODO Confirm not needed
     // ...(isPasswordNumeric && { isPasswordNumeric: true }),
   });
+  global = updateAccounts(global, { isLoading: undefined });
   global = clearIsPinAccepted(global);
 
   if (isImporting) {
