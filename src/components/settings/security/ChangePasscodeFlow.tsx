@@ -41,6 +41,7 @@ interface OwnProps {
   currentSlide: ChangePasscodeSlide;
   isInsideModal?: boolean;
   isLoading?: boolean;
+  enclaveToken?: string;
   title?: string;
   onSlideChange: (slide: ChangePasscodeSlide) => void;
   onPasscodeSubmit?: (passcode: string) => void;
@@ -54,6 +55,7 @@ function ChangePasscodeFlow({
   currentSlide,
   isInsideModal,
   isLoading,
+  enclaveToken,
   title = 'Change Passcode',
   onSlideChange,
   onPasscodeSubmit,
@@ -87,6 +89,11 @@ function ChangePasscodeFlow({
 
     changePasscode({
       passcode,
+      enclaveToken,
+      onError: () => {
+        cleanup();
+        onCancel();
+      },
       onSuccess: () => {
         if (getDoesUsePinPad()) {
           cleanup();

@@ -11,6 +11,7 @@ import {
   IS_LEGENDS_WALLET,
   NO_MFA,
 } from '../../config';
+import { dropEnclaveSessionHold, holdEnclaveSession } from '../../global/helpers/enclave';
 import {
   selectAccount,
   selectCurrentAccount,
@@ -121,6 +122,7 @@ function SettingsSecurity({
     setAppLockValue,
     setIsAutoConfirmEnabled,
     setIsAllowSuspiciousActions,
+    releaseEnclaveSession,
   } = getActions();
 
   const lang = useLang();
@@ -143,6 +145,16 @@ function SettingsSecurity({
   // Sub-flow slide states
   const [changePasscodeSlide, setChangePasscodeSlide] = useState(ChangePasscodeSlide.NewPassword);
   const [biometricsSlide, setBiometricsSlide] = useState<BiometricsSlide | undefined>(undefined);
+  const [changePasscodeEnclaveToken, setChangePasscodeEnclaveToken] = useState<string>();
+
+  const releaseChangePasscodeSession = useLastCallback(() => {
+    if (!changePasscodeEnclaveToken) return;
+
+    if (dropEnclaveSessionHold(changePasscodeEnclaveToken)) {
+      releaseEnclaveSession({ enclaveToken: changePasscodeEnclaveToken });
+    }
+    setChangePasscodeEnclaveToken(undefined);
+  });
 
   const cleanup = useLastCallback(() => {
     setPinPadTitle(undefined);
@@ -150,6 +162,7 @@ function SettingsSecurity({
     setPendingProceedCb(undefined);
     setPasswordPurpose('default');
     clearIsPinAccepted();
+    releaseChangePasscodeSession();
   });
 
   // `forcePasscode` ensures the user re-authenticates with their passcode even when a valid
@@ -230,8 +243,15 @@ function SettingsSecurity({
     }
   }, [biometricsState]);
 
-  const handleAuthorize = useLastCallback(async () => {
+  const handleAuthorize = useLastCallback(async (enclaveToken: string) => {
     const doesUsePinPad = getDoesUsePinPad();
+    const purpose = passwordPurpose;
+
+    if (purpose === 'changePasscode') {
+      holdEnclaveSession(enclaveToken);
+      setChangePasscodeEnclaveToken(enclaveToken);
+    }
+
     if (doesUsePinPad) {
       setIsPinAccepted();
     }
@@ -262,10 +282,12 @@ function SettingsSecurity({
     }
 
     const proceed = pendingProceedCb;
-    const purpose = passwordPurpose;
     setPendingProceedCb(undefined);
 
     if (proceed) {
+      if (purpose === 'changePasscode') {
+        clearIsPinAccepted();
+      }
       if (purpose === 'biometricsTurnOn') {
         setBiometricsSlide(BiometricsSlide.Registration);
         setCurrentSlide(SLIDES.biometrics);
@@ -469,6 +491,7 @@ function SettingsSecurity({
             currentSlide={changePasscodeSlide}
             isInsideModal={isInsideModal}
             isLoading={isLoading}
+            enclaveToken={changePasscodeEnclaveToken}
             onSlideChange={setChangePasscodeSlide}
             onComplete={openSettingsSlide}
             onCancel={openSettingsSlide}

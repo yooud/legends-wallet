@@ -51,6 +51,7 @@ function AddAccountPasswordModal({
         isLoading={isLoading}
         error={error}
         operationType="passcode"
+        extraAuthUsages={1}
         submitLabel={lang('Confirm')}
         noAutoConfirm
         isFullWidthButton

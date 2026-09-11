@@ -5,6 +5,7 @@ import { AppState, AuthState } from '../../types';
 
 import { callApi, callApiWithThrow } from '../../../api';
 import { enclave, legacyAuth } from '../../../enclave';
+import { dropEnclaveSessionHold, holdEnclaveSession } from '../../helpers/enclave';
 import { addActionHandler, getGlobal, setGlobal } from '../../index';
 
 jest.mock('../../index', () => ({
@@ -120,19 +121,30 @@ describe('add-account routing', () => {
   // mounted for an existing wallet, so an unanswered request for a password shows up as a spinner
   // that never resolves rather than as a screen the user can recognise.
   it('starts creating the wallet when the account selector already authorized', async () => {
-    const actions = { createAccount: jest.fn() };
+    const enclaveToken = 'passcode:aa';
+    const actions = {
+      createAccount: jest.fn(({ enclaveToken: token }) => holdEnclaveSession(token)),
+      releaseEnclaveSession: jest.fn(),
+    };
+    holdEnclaveSession(enclaveToken);
     const result = await run('startCreatingWallet', makeGlobal({
       authTypes: ['passcode'],
-      enclaveSession: { token: 'passcode:aa' },
-    }), actions, { enclaveToken: 'passcode:aa' });
+      enclaveSession: { token: enclaveToken },
+    }), actions, { enclaveToken });
 
     expect(result.auth.state).toBe(AuthState.safetyRules);
-    expect(actions.createAccount).toHaveBeenCalled();
+    expect(actions.createAccount).toHaveBeenCalledWith({ enclaveToken });
+    expect(actions.releaseEnclaveSession).not.toHaveBeenCalled();
+    expect(dropEnclaveSessionHold(enclaveToken)).toBe(true);
   });
 
   it('stops account loading when mnemonic generation fails', async () => {
     (callApi as jest.Mock).mockResolvedValueOnce(undefined);
-    const actions = { createAccount: jest.fn(), showError: jest.fn() };
+    const actions = {
+      createAccount: jest.fn(),
+      releaseEnclaveSession: jest.fn(),
+      showError: jest.fn(),
+    };
     const global = makeGlobal({
       authTypes: ['passcode'],
       enclaveSession: { token: 'passcode:aa' },
@@ -204,6 +216,28 @@ describe('add-account routing', () => {
     expect(result.auth.isLoading).toBeUndefined();
     expect(result.accounts?.isLoading).toBeUndefined();
     expect(actions.showError).toHaveBeenCalled();
+  });
+
+  it('uses the authorization passed by the account selector even if the global session was cleared', async () => {
+    const account = {
+      accountId: '0-tron-mainnet',
+      byChain: { tron: { address: 'TVpWp3GMyNY8Zemo3JHogbWq4o4eDLa5r8' } },
+    };
+    (callApi as jest.Mock).mockImplementation((apiMethod: string) => (
+      apiMethod === 'importMnemonic' ? Promise.resolve([account]) : Promise.resolve(true)
+    ));
+    const actions = { releaseEnclaveSession: jest.fn(), showError: jest.fn() };
+
+    await run('createAccount', makeGlobal({
+      auth: { state: AuthState.safetyRules, method: 'createAccount', mnemonic: MNEMONIC },
+    }), actions, { enclaveToken: 'passcode:selector' });
+
+    expect(enclave.importSecret).toHaveBeenCalledWith(
+      account.accountId,
+      MNEMONIC.join(' '),
+      'passcode:selector',
+    );
+    expect(actions.showError).not.toHaveBeenCalled();
   });
 
   it('stops both loaders when account import fails', async () => {

@@ -225,15 +225,22 @@ addActionHandler('startCreatingWallet', async (global, actions, payload) => {
   );
 
   if (!mnemonic) {
+    logDebugError('startCreatingWallet', 'Mnemonic generation failed');
     global = updateAuth(getGlobal(), { isLoading: undefined });
     global = updateAccounts(global, { isLoading: undefined });
     setGlobal(global);
     actions.showError({ error: ApiCommonError.Unexpected });
+    if (enclaveToken && dropEnclaveSessionHold(enclaveToken)) {
+      actions.releaseEnclaveSession({ enclaveToken });
+    }
     return;
   }
 
   if (takeAbortDappConnectWalletCreationIfRequested()) {
     finalizeDappConnectWalletCreationAbort();
+    if (enclaveToken && dropEnclaveSessionHold(enclaveToken)) {
+      actions.releaseEnclaveSession({ enclaveToken });
+    }
     return;
   }
 
@@ -245,7 +252,10 @@ addActionHandler('startCreatingWallet', async (global, actions, payload) => {
   if (hasPassword) {
     setGlobal(global);
 
-    actions.createAccount();
+    actions.createAccount({ enclaveToken });
+    if (enclaveToken && dropEnclaveSessionHold(enclaveToken)) {
+      actions.releaseEnclaveSession({ enclaveToken });
+    }
 
     return;
   }
@@ -397,7 +407,7 @@ addActionHandler('skipBiometrics', (global, actions) => {
   actions.createAccount({ isPasswordNumeric: getDoesUsePinPad() });
 });
 
-addActionHandler('createAccount', async (global, actions) => {
+addActionHandler('createAccount', withEnclaveSessionRelease(async (global, actions, payload) => {
   if (IS_EXPLORER) return;
 
   if (takeAbortDappConnectWalletCreationIfRequested()) {
@@ -414,8 +424,9 @@ addActionHandler('createAccount', async (global, actions) => {
     return;
   }
 
-  const enclaveToken = selectEnclaveToken(global);
+  const enclaveToken = payload?.enclaveToken ?? selectEnclaveToken(global);
   if (!enclaveToken) {
+    logDebugError('createAccount', 'Missing authorization');
     global = updateAuth(getGlobal(), { isLoading: undefined });
     global = updateAccounts(global, { isLoading: undefined });
     setGlobal(global);
@@ -444,6 +455,7 @@ addActionHandler('createAccount', async (global, actions) => {
   global = getGlobal();
 
   if (isErrorTransferResult(accounts)) {
+    logDebugError('createAccount', accounts?.error ?? 'Account import failed');
     if (takeAbortDappConnectWalletCreationIfRequested()) {
       finalizeDappConnectWalletCreationAbort();
       return;
@@ -532,7 +544,7 @@ addActionHandler('createAccount', async (global, actions) => {
   if (!isImporting && getGlobal().dappConnectRequest?.isCreatingAccount) {
     actions.skipCheckMnemonic();
   }
-});
+}, { shouldEnsureWalletPrepaidAccess: false }));
 
 /**
  * Copies the secret of an account onto a wallet just derived from it. A missing source secret means the

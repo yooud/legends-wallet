@@ -1563,7 +1563,12 @@ export interface ActionPayloads {
   openBiometricsTurnOffWarning: undefined;
   enableBiometrics: { isLoginFlow?: boolean } | undefined;
   disableBiometrics: { newPassword?: string; isPasswordNumeric?: boolean } | undefined;
-  changePasscode: { passcode: string; onSuccess: NoneToVoidFunction };
+  changePasscode: {
+    passcode: string;
+    enclaveToken?: string;
+    onSuccess: NoneToVoidFunction;
+    onError?: (error: string) => void;
+  };
   changeBaseCurrency: { currency: ApiBaseCurrency };
   copyStorageData: undefined;
   setAppLockValue: { value?: AutolockValueType; isEnabled: boolean };

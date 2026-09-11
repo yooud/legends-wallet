@@ -6,6 +6,7 @@ import { SettingsState } from '../../types';
 import { getDoesUsePinPad } from '../../../util/biometrics';
 import { getChainsSupportingLedger } from '../../../util/chain';
 import { setLanguage } from '../../../util/langProvider';
+import { logDebugError } from '../../../util/logs';
 import switchTheme from '../../../util/switchTheme';
 import { callApi } from '../../../api';
 import { enclave } from '../../../enclave';
@@ -101,13 +102,15 @@ addActionHandler('openSettingsHardwareWallet', (global) => {
   setGlobal(global);
 });
 
-addActionHandler('changePasscode', async (global, actions, { passcode, onSuccess }) => {
+addActionHandler('changePasscode', async (global, actions, {
+  passcode, enclaveToken, onSuccess, onError,
+}) => {
   // TODO Settings should have nothing to do with "auth"
   global = updateAuth(global, { isLoading: true });
   setGlobal(global);
 
   try {
-    const currentEnclaveToken = selectEnclaveToken(global);
+    const currentEnclaveToken = enclaveToken ?? selectEnclaveToken(global);
     if (!currentEnclaveToken) {
       throw new Error('Enclave session expired');
     }
@@ -132,10 +135,13 @@ addActionHandler('changePasscode', async (global, actions, { passcode, onSuccess
     onSuccess();
   } catch (err: any) {
     const error = err?.message || 'Failed to setup auth';
+    logDebugError('changePasscode', err);
 
     global = getGlobal();
     global = updateAuth(global, { error });
     setGlobal(global);
+    actions.showError({ error });
+    onError?.(error);
   } finally {
     global = getGlobal();
     global = updateAuth(global, { isLoading: false });

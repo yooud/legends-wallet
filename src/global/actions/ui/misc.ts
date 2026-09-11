@@ -31,6 +31,7 @@ import {
   IS_ELECTRON,
 } from '../../../util/windowEnvironment';
 import { callApi } from '../../../api';
+import { dropEnclaveSessionHold, holdEnclaveSession } from '../../helpers/enclave';
 import { closeAllOverlays, parsePlainAddressQr } from '../../helpers/misc';
 import { addActionHandler, getGlobal, setGlobal } from '../../index';
 import {
@@ -257,40 +258,54 @@ addActionHandler('addAccount', async (global, actions, {
 }) => {
   const hasPassword = selectHasPassword(global);
   const isMnemonicImport = method === 'importMnemonic';
+  const shouldHoldEnclaveSession = method === 'createAccount' && Boolean(enclaveToken);
 
-  if (hasPassword) {
-    if (!isAuthFlow) {
-      global = updateAccounts(global, {
-        isLoading: true,
+  // Creating an account continues after haptics and mnemonic generation. Keep the operation's
+  // authorization alive if the Fee Balance sidecar finishes before those asynchronous steps do.
+  if (shouldHoldEnclaveSession) {
+    holdEnclaveSession(enclaveToken);
+  }
+
+  try {
+    if (hasPassword) {
+      if (!isAuthFlow) {
+        global = updateAccounts(global, {
+          isLoading: true,
+        });
+        setGlobal(global);
+      }
+
+      if (getDoesUsePinPad()) {
+        global = setIsPinAccepted(getGlobal());
+        setGlobal(global);
+      }
+      await vibrateOnSuccess(true);
+    }
+
+    global = getGlobal();
+    if (isMnemonicImport || !hasPassword) {
+      global = { ...global, isAccountSelectorOpen: undefined };
+    } else {
+      global = updateAccounts(global, { isLoading: true });
+    }
+    setGlobal(global);
+
+    if (clearDappConnectOnVerified) {
+      let newGlobal = getGlobal();
+      newGlobal = updateDappConnectRequest(newGlobal, {
+        isCreatingAccount: true,
       });
-      setGlobal(global);
+      newGlobal = updateAuth(newGlobal, { forceAddingTonOnlyAccount: undefined });
+      setGlobal(newGlobal);
     }
 
-    if (getDoesUsePinPad()) {
-      global = setIsPinAccepted(getGlobal());
-      setGlobal(global);
+    actions.addAccount2({ method, enclaveToken });
+  } catch (err) {
+    if (shouldHoldEnclaveSession && dropEnclaveSessionHold(enclaveToken)) {
+      actions.releaseEnclaveSession({ enclaveToken });
     }
-    await vibrateOnSuccess(true);
+    throw err;
   }
-
-  global = getGlobal();
-  if (isMnemonicImport || !hasPassword) {
-    global = { ...global, isAccountSelectorOpen: undefined };
-  } else {
-    global = updateAccounts(global, { isLoading: true });
-  }
-  setGlobal(global);
-
-  if (clearDappConnectOnVerified) {
-    let newGlobal = getGlobal();
-    newGlobal = updateDappConnectRequest(newGlobal, {
-      isCreatingAccount: true,
-    });
-    newGlobal = updateAuth(newGlobal, { forceAddingTonOnlyAccount: undefined });
-    setGlobal(newGlobal);
-  }
-
-  actions.addAccount2({ method, enclaveToken });
 });
 
 addActionHandler('addAccount2', (global, actions, { method, enclaveToken }) => {
